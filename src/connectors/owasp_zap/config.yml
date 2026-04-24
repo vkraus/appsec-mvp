@@ -1,0 +1,9 @@
+source: owasp_zap
+category: dast
+severity_map: config/severity/owasp-zap.yml
+status_map:   config/status/owasp-zap.yml
+bucket_secret_scope: mvp-connectors
+bronze_table: ${catalog}.bronze_owasp_zap.findings
+cicd_prefix: cicd/zap/
+zap_api_url_secret: zap_url
+zap_api_key_secret: zap_api_key

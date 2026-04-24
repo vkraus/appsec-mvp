@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Ruff
+.ruff_cache/
+
+# Databricks bundle local state
+.databricks/
+
+# Terraform
+infra/terraform/*.tfvars
+infra/terraform/.terraform/
+infra/terraform/terraform.tfstate*
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Private / local-only (kept outside the repo)
+CLAUDE.md
+docs/superpowers/
+.claude/

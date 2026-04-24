@@ -1,0 +1,4 @@
+[
+  {"id": 100, "full_name": "acme/payments-api", "default_branch": "main", "updated_at": "2026-04-20T10:00:00Z"},
+  {"id": 101, "full_name": "acme/loyalty-web", "default_branch": "main", "updated_at": "2026-04-20T09:30:00Z"}
+]

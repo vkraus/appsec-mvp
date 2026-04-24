@@ -1,0 +1,12 @@
+source: github
+category: scm
+base_url: https://api.github.com
+auth:
+  type: bearer
+  token_secret: gh_pat
+pagination:
+  strategy: cursor
+  page_size: 100
+hwm:
+  strategy: updated_at
+  column: updated_at

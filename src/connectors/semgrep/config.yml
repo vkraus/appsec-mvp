@@ -1,0 +1,9 @@
+source: semgrep
+category: sast
+severity_map: config/severity/semgrep-cli.yml
+status_map:   config/status/semgrep.yml
+bucket_secret_scope: mvp-connectors
+bronze_table: ${catalog}.bronze_semgrep.findings
+prefixes:
+  - periodic/semgrep/
+  - cicd/semgrep/

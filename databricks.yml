@@ -1,0 +1,39 @@
+bundle:
+  name: appsec
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog name, per environment
+    # default is overridden in every target, listed here so unset values fail loudly
+    default: appsec_dev
+  warehouse_id:
+    description: Unity Catalog SQL warehouse ID
+  servicenow_connection:
+    description: Name of the Databricks Connection for the ServiceNow tenant (provisioned out-of-band)
+    default: servicenow_connection
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: ${env.DATABRICKS_HOST}
+    variables:
+      catalog: appsec_dev
+  staging:
+    mode: production
+    workspace:
+      host: ${env.DATABRICKS_HOST}
+      root_path: /Shared/appsec-staging
+    variables:
+      catalog: appsec_staging
+  prod:
+    mode: production
+    workspace:
+      host: ${env.DATABRICKS_HOST}
+      root_path: /Shared/appsec
+    variables:
+      catalog: appsec_prod

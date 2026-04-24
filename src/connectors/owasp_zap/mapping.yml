@@ -1,0 +1,13 @@
+# ZAP baseline JSON → silver.findings.
+source_key: owasp_zap
+fields:
+  finding_id:        pluginid + "@" + site[0].alerts[*].url
+  tool_source:       "owasp_zap"
+  category:          "dast"
+  severity_canonical: lookup(risk, severity_map)
+  status_canonical:   "open"
+  cwe_id:             cweid
+  rule_id_native:     pluginid
+  file_path:          null
+  start_line:         null
+  url:                uri

@@ -1,0 +1,3 @@
+# ServiceNow CMDB records don't have a finding-style status; this file
+# exists for schema uniformity across connectors.
+OPEN: open

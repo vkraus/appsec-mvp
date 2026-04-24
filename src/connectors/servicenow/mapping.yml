@@ -1,0 +1,6 @@
+# Field-level mapping: ServiceNow cmdb_ci_business_app to silver.applications
+application_id: sys_id
+name: name
+owner_email: owned_by.email
+criticality_raw: u_criticality
+updated_at_raw: sys_updated_on

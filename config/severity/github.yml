@@ -1,0 +1,5 @@
+# Used only when ingesting GitHub Advanced Security findings (deferred).
+critical: critical
+high: high
+medium: medium
+low: low

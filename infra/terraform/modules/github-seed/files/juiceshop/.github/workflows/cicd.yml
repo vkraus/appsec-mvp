@@ -1,0 +1,91 @@
+name: cicd
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-scan-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build image
+        run: |
+          docker build -t "${{ vars.ECR_REGISTRY_URI }}:${{ github.sha }}" .
+          docker tag "${{ vars.ECR_REGISTRY_URI }}:${{ github.sha }}" "${{ vars.ECR_REGISTRY_URI }}:latest"
+
+      - name: Push image
+        run: |
+          docker push "${{ vars.ECR_REGISTRY_URI }}:${{ github.sha }}"
+          docker push "${{ vars.ECR_REGISTRY_URI }}:latest"
+
+      # ---------- CI/CD-step SAST ----------
+      - name: Semgrep scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto
+          generateSarif: "0"
+        continue-on-error: true
+
+      - name: Emit Semgrep JSON
+        run: |
+          docker run --rm -v "$PWD:/src" returntocorp/semgrep:latest \
+            semgrep scan --config=auto --json --output /src/semgrep-cicd.json /src || true
+
+      - name: Upload Semgrep JSON to artifact bucket
+        run: |
+          aws s3 cp semgrep-cicd.json \
+            "s3://${{ vars.ARTIFACT_BUCKET }}/cicd/semgrep/${{ github.repository }}/${{ github.sha }}.json" \
+            --metadata "trigger_context=cicd,repo=${{ github.repository }},commit_sha=${{ github.sha }}"
+
+      - name: SonarQube scan
+        uses: sonarsource/sonarqube-scan-action@v4
+        env:
+          SONAR_HOST_URL: ${{ vars.SONARQUBE_URL }}
+          SONAR_TOKEN:    ${{ secrets.SONARQUBE_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=juiceshop
+            -Dsonar.sources=.
+
+      # ---------- Deploy to EKS ----------
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${{ vars.AWS_REGION }}"
+
+      - name: Deploy Juice Shop
+        run: |
+          IMAGE="${{ vars.ECR_REGISTRY_URI }}:${{ github.sha }}"
+          envsubst < deploy/juiceshop.yaml | kubectl apply -f -
+          kubectl -n "${{ vars.JUICESHOP_NAMESPACE }}" rollout status deploy/juiceshop --timeout=300s
+
+      # ---------- CI/CD-step DAST ----------
+      - name: ZAP baseline scan
+        run: |
+          docker run --rm --network=host \
+            -v "$PWD/zap-reports:/zap/wrk" owasp/zap2docker-stable:2.14.0 \
+            zap-baseline.py \
+              -t "http://${{ vars.JUICESHOP_INGRESS_HOST }}" \
+              -J zap-cicd.json || true
+
+      - name: Upload ZAP JSON to artifact bucket
+        run: |
+          aws s3 cp zap-reports/zap-cicd.json \
+            "s3://${{ vars.ARTIFACT_BUCKET }}/cicd/zap/${{ github.repository }}/${{ github.sha }}.json" \
+            --metadata "trigger_context=cicd,repo=${{ github.repository }},commit_sha=${{ github.sha }}"

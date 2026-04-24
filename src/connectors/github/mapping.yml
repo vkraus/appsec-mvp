@@ -1,0 +1,5 @@
+# Maps GitHub /orgs/{org}/repos to silver.repositories
+repository_id: full_name
+full_name: full_name
+default_branch: default_branch
+updated_at: updated_at

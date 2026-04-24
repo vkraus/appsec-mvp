@@ -1,0 +1,14 @@
+# Semgrep JSON → silver.findings field mapping.
+# See https://semgrep.dev/docs/cli-reference#json-output for source schema.
+source_key: semgrep
+fields:
+  finding_id:        check_id + "@" + path + ":" + start.line
+  tool_source:       "semgrep"
+  category:          "sast"
+  severity_canonical: lookup(severity, severity_map)
+  status_canonical:   lookup(extra.metadata.state, status_map, default="open")
+  cwe_id:             extra.metadata.cwe[0]
+  rule_id_native:     check_id
+  file_path:          path
+  start_line:         start.line
+  url:                null

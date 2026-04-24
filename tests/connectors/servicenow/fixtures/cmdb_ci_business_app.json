@@ -1,0 +1,18 @@
+{
+  "result": [
+    {
+      "sys_id": "ba-001",
+      "name": "Payments",
+      "owned_by": {"email": "payments-team@example.com"},
+      "u_criticality": "1 - critical",
+      "sys_updated_on": "2026-04-20 10:00:00"
+    },
+    {
+      "sys_id": "ba-002",
+      "name": "Loyalty",
+      "owned_by": {"email": "loyalty@example.com"},
+      "u_criticality": "3 - medium",
+      "sys_updated_on": "2026-04-20 09:30:00"
+    }
+  ]
+}
