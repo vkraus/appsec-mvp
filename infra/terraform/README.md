@@ -1,8 +1,8 @@
 # Terraform — MVP operator procedure
 
 This tree is the infrastructure-as-code half of the operator procedure described at
-[https://vkraus.github.io/appsec-docs/platform/terraform-apply/](https://vkraus.github.io/appsec-docs/platform/terraform-apply/)
-(source: [`appsec-docs/docs/platform/terraform-apply.md`](https://github.com/vkraus/appsec-docs/blob/main/docs/platform/terraform-apply.md)).
+[https://vkraus.github.io/appsec-mvp/platform/terraform-apply/](https://vkraus.github.io/appsec-mvp/platform/terraform-apply/)
+(source: [`mkdocs/docs/platform/terraform-apply.md`](https://github.com/vkraus/appsec-mvp/blob/main/mkdocs/docs/platform/terraform-apply.md)).
 
 See the docs page for the walkthrough. This README is a compact reference for engineers
 who are already familiar with Terraform.
