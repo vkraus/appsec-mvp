@@ -77,13 +77,6 @@
   margin: 1rem auto 0;
 }
 
-/* Nested grid cards (Connectors sub-grid) render smaller than parent */
-
-.md-typeset .grid.cards .grid.cards {
-  font-size: 0.9em;
-  margin-top: 0.5rem;
-}
-
 /* Tighten hero on small screens */
 
 @media (max-width: 48em) {

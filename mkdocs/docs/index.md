@@ -54,22 +54,24 @@ flowchart LR
 
     Wire each AppSec source, in the order below.
 
-    <div class="grid cards" markdown>
-
-    -   **CMDB** — [ServiceNow](connectors/cmdb/index.md)
-    -   **SCM** — [GitHub, GitLab](connectors/scm/index.md)
-    -   **SAST** — [SonarQube, Semgrep](connectors/sast/index.md)
-    -   **SCA** — [Dependency-Track](connectors/sca/index.md)
-    -   **Secrets** — [TruffleHog](connectors/secrets/index.md)
-    -   **DAST** — [OWASP ZAP](connectors/dast/index.md)
-    -   **WAF** — [AWS WAF](connectors/waf/index.md)
-
-    </div>
-
 -   :material-chart-line:{ .lg .middle } **4. [Analytics](analytics/index.md)**
 
     ---
 
     Gold datasets, evidence scenarios, dashboards.
+
+</div>
+
+### Connector categories
+
+<div class="grid cards" markdown>
+
+-   **CMDB** — [ServiceNow](connectors/cmdb/index.md)
+-   **SCM** — [GitHub, GitLab](connectors/scm/index.md)
+-   **SAST** — [SonarQube, Semgrep](connectors/sast/index.md)
+-   **SCA** — [Dependency-Track](connectors/sca/index.md)
+-   **Secrets** — [TruffleHog](connectors/secrets/index.md)
+-   **DAST** — [OWASP ZAP](connectors/dast/index.md)
+-   **WAF** — [AWS WAF](connectors/waf/index.md)
 
 </div>
