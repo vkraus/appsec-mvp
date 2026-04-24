@@ -1,27 +1,75 @@
-# Application Security Data Platform
+---
+hide:
+  - toc
+---
 
-Product documentation for the application security data integration framework and its Databricks reference implementation.
+<div class="hero" markdown>
 
-## Adoption path
+<span class="eyebrow">Application Security · Databricks Reference MVP</span>
 
-1. **[Platform](platform/)** — Databricks workspace, prerequisites, terraform apply, Bronze/Silver/Gold architecture.
-2. **[Connectors](connectors/)** — one section per AppSec category (CMDB → SCM → SAST → SCA → Secrets → DAST → WAF), with a self-contained page per connector covering prerequisites, reference, setup, and validation.
-3. **[Analytics](analytics/)** — Gold datasets, evidence scenarios, dashboards, and the tests traceability index.
+# Unify AppSec findings across CMDB, SCM, SAST, SCA, Secrets, DAST, and WAF.
 
-## Source repositories
+<p class="subtitle">An MVP implementation of a data integration framework for application security, built on Databricks.</p>
 
-The MVP codebase backing this documentation lives at <https://github.com/vkraus/appsec-mvp>:
+<div class="actions" markdown>
+[Start setup →](platform/prerequisites.md){ .md-button .md-button--primary }
+[View on GitHub](https://github.com/vkraus/appsec-mvp){ .md-button }
+</div>
 
-- `src/` — Databricks reference implementation (connector library + per-source connectors).
-- `tests/` — `pytest` suites with `REQ-*` markers referenced by [Analytics → Tests & traceability](analytics/tests.md).
-- `config/` — severity and status normalization lookup tables.
-- `resources/` — Databricks Asset Bundle (DAB) job definitions.
-- `infra/terraform/` — AWS / Databricks / scanner provisioning.
+</div>
 
-This documentation site is published from <https://github.com/vkraus/appsec-docs>.
+<div class="landing-overview" markdown>
 
-## Conventions
+The platform ingests from AppSec sources via per-source connectors, normalizes findings to canonical schemas, and exposes analytics over them. The reference implementation runs on Databricks and is packaged as an Asset Bundle.
 
-- **SHALL** marks mandatory requirements. **SHOULD** marks recommended practices.
-- Schema excerpts list only fields consumed by the reference implementation's connectors; the full field catalog is in each source's official documentation.
-- Code spans like `config.yml` and `REQ-CONN-001` are clickable where they resolve to a file or anchor.
+```mermaid
+flowchart LR
+    src[Sources] --> bronze[(Bronze)]
+    bronze --> silver[(Silver)]
+    silver --> gold[(Gold)]
+    gold --> analytics[Analytics]
+```
+
+</div>
+
+## Install order
+
+<div class="grid cards" markdown>
+
+-   :material-clipboard-check:{ .lg .middle } **1. [Prerequisites](platform/prerequisites.md)**
+
+    ---
+
+    Databricks workspace, cloud account, Terraform, credentials.
+
+-   :material-server-network:{ .lg .middle } **2. [Terraform apply](platform/terraform-apply.md)**
+
+    ---
+
+    Provision workspace, UC metastore, secret scopes, bundle targets.
+
+-   :material-power-plug:{ .lg .middle } **3. [Connectors](connectors/index.md)**
+
+    ---
+
+    Wire each AppSec source, in the order below.
+
+    <div class="grid cards" markdown>
+
+    -   **CMDB** — [ServiceNow](connectors/cmdb/index.md)
+    -   **SCM** — [GitHub, GitLab](connectors/scm/index.md)
+    -   **SAST** — [SonarQube, Semgrep](connectors/sast/index.md)
+    -   **SCA** — [Dependency-Track](connectors/sca/index.md)
+    -   **Secrets** — [TruffleHog](connectors/secrets/index.md)
+    -   **DAST** — [OWASP ZAP](connectors/dast/index.md)
+    -   **WAF** — [AWS WAF](connectors/waf/index.md)
+
+    </div>
+
+-   :material-chart-line:{ .lg .middle } **4. [Analytics](analytics/index.md)**
+
+    ---
+
+    Gold datasets, evidence scenarios, dashboards.
+
+</div>
