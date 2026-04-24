@@ -1,0 +1,23 @@
+/* Site link/accent color (RGB 0,105,92). */
+
+:root {
+  --site-teal:        #00695C;
+  --site-teal-light:  #26A69A;
+  --site-teal-dark:   #004D40;
+}
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:        var(--site-teal);
+  --md-primary-fg-color--light:  var(--site-teal-light);
+  --md-primary-fg-color--dark:   var(--site-teal-dark);
+  --md-accent-fg-color:          var(--site-teal);
+  --md-typeset-a-color:          var(--site-teal);
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        var(--site-teal);
+  --md-primary-fg-color--light:  var(--site-teal-light);
+  --md-primary-fg-color--dark:   var(--site-teal-dark);
+  --md-accent-fg-color:          var(--site-teal-light);
+  --md-typeset-a-color:          var(--site-teal-light);
+}
