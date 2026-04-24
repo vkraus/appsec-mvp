@@ -3,7 +3,7 @@ import textwrap
 import pytest
 from pydantic import ValidationError
 
-from src.common.config import ConnectorConfig, SeverityMap, StatusMap, load_yaml
+from src.platform.config import ConnectorConfig, SeverityMap, StatusMap, load_yaml
 
 
 def test_connector_config_parses(tmp_path):

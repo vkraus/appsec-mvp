@@ -17,8 +17,8 @@ def test_ingest_wrapper_has_contract_signature() -> None:
 
 @pytest.mark.requirement("REQ-FW-CONTRACT")
 def test_ingest_wrapper_returns_batch_descriptor_for_lakeflow_delegation() -> None:
-    from src.common.contract import BatchDescriptor
     from src.connectors.servicenow import ingest as mod
+    from src.platform.contract import BatchDescriptor
 
     batch: BatchDescriptor = mod.ingest(
         run_id="r1",

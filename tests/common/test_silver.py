@@ -3,9 +3,9 @@ from datetime import datetime, timezone
 import pytest
 from pyspark.sql import SparkSession
 
-from src.common.config import SeverityMap, StatusMap
-from src.common.schemas import silver_findings
-from src.common.silver import (
+from src.platform.config import SeverityMap, StatusMap
+from src.platform.schemas import silver_findings
+from src.platform.silver import (
     normalize_severity,
     normalize_status,
     dedup_findings,

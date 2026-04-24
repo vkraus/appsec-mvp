@@ -1,4 +1,4 @@
-from src.common.cwe import extract_cwe_from_sonarqube, extract_cwe_from_semgrep
+from src.platform.cwe import extract_cwe_from_sonarqube, extract_cwe_from_semgrep
 
 
 def test_sonarqube_security_standards_with_cwe():

@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from pathlib import PurePosixPath
 
-from src.common.bronze_schema import with_envelope
-from src.common.contract import BatchDescriptor, ConnectorState
+from src.platform.bronze_schema import with_envelope
+from src.platform.contract import BatchDescriptor, ConnectorState
 
 _PREFIX_TO_CONTEXT = {
     "periodic": "periodic",

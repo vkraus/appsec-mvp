@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from src.common.hwm import HwmStore, UpdatedAtHwm, CommitShaHwm, ScanIdHwm
+from src.platform.hwm import HwmStore, UpdatedAtHwm, CommitShaHwm, ScanIdHwm
 
 
 @pytest.fixture

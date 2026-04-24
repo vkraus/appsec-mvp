@@ -7,7 +7,7 @@ only to surface the framework contract at the Python call-site.
 """
 from __future__ import annotations
 
-from src.common.contract import BatchDescriptor, ConnectorState
+from src.platform.contract import BatchDescriptor, ConnectorState
 
 
 def ingest(run_id: str, state: ConnectorState) -> BatchDescriptor:

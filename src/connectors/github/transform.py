@@ -6,7 +6,7 @@ from pyspark.sql import DataFrame, Row, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, StructField, StructType
 
-from src.common.schemas import silver_repositories
+from src.platform.schemas import silver_repositories
 
 
 _RAW_REPO_SCHEMA = StructType([

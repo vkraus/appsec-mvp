@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.common.bronze_schema import BRONZE_ENVELOPE_COLUMNS, with_envelope
+from src.platform.bronze_schema import BRONZE_ENVELOPE_COLUMNS, with_envelope
 
 
 @pytest.mark.requirement("REQ-FW-BRONZE-ENVELOPE")

@@ -7,8 +7,8 @@ from pyspark.sql import DataFrame, Row, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, StructField, StructType
 
-from src.common.config import SeverityMap, load_yaml
-from src.common.schemas import silver_applications
+from src.platform.config import SeverityMap, load_yaml
+from src.platform.schemas import silver_applications
 
 
 _SEVERITY_PATH = Path(__file__).parents[3] / "config" / "severity" / "servicenow.yml"

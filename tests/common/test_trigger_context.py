@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from src.common.schemas import silver_findings
+from src.platform.schemas import silver_findings
 
 
 def test_silver_findings_has_trigger_context_field():

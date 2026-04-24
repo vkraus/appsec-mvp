@@ -14,10 +14,10 @@ from datetime import datetime
 
 from github import Auth, Github, GithubRetry
 
-from src.common.contract import BatchDescriptor, ConnectorState
+from src.platform.contract import BatchDescriptor, ConnectorState
 
 # When the GitHub bronze write is implemented, call
-# ``src.common.bronze_schema.with_envelope`` on the dataframe before
+# ``src.platform.bronze_schema.with_envelope`` on the dataframe before
 # ``.writeTo`` so repositories, commits, and pulls carry the uniform
 # section 2.2.2 envelope from the first write. See OWASP ZAP and
 # Semgrep for the pattern.

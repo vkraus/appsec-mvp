@@ -1,6 +1,6 @@
 from pyspark.sql.types import StringType, TimestampType, IntegerType
 
-from src.common.schemas import (
+from src.platform.schemas import (
     silver_applications,
     silver_repositories,
     silver_findings,

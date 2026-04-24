@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.common.contract import BatchDescriptor, ConnectorState
+from src.platform.contract import BatchDescriptor, ConnectorState
 
 
 @pytest.mark.requirement("REQ-FW-CONTRACT")

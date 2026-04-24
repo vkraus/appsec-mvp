@@ -9,7 +9,7 @@ DAST dedup tuple: (url, rule_id_native)."""
 
 from pyspark.sql import DataFrame, functions as F
 
-from src.common.config import SeverityMap, StatusMap
+from src.platform.config import SeverityMap, StatusMap
 
 
 _SEVERITY_RANK = {
