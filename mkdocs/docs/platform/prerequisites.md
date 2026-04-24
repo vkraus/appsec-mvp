@@ -9,9 +9,17 @@ Read through once before starting — credential extraction is easier if you do 
 | # | Account | What to capture for Terraform |
 |---|---|---|
 | 1 | **AWS account** — sign up at [aws.amazon.com](https://aws.amazon.com). After verification, create an IAM user with `AdministratorAccess`; generate an access key. | `aws_access_key_id`, `aws_secret_access_key` |
-| 2 | **Databricks workspace on AWS** — create via the AWS Marketplace "Databricks Data Intelligence Platform" listing. Use the AWS account from step 1. After the workspace is up, create a personal access token in **User Settings → Developer → Access Tokens**. Note the Unity Catalog metastore ID (Admin Settings → Metastores). | `databricks_workspace_url`, `databricks_pat`, `databricks_account_id`, `databricks_metastore_id` |
+| 2 | **Databricks workspace on AWS** — any running workspace with a Unity Catalog metastore attached. Workspace creation is a generic Databricks setup step and out of scope for this MVP; see the note below for options. After the workspace is up, create a personal access token in **User Settings → Developer → Access Tokens** and note the Unity Catalog metastore ID (Admin Settings → Metastores). | `databricks_workspace_url`, `databricks_pat`, `databricks_account_id`, `databricks_metastore_id` |
 | 3 | **GitHub organization** — create a free organization at [github.com/organizations/new](https://github.com/organizations/new). Generate a PAT with permission to create and manage repositories in the organization (classic: `repo` + `admin:org`; fine-grained: equivalent organization + repository permissions). | `github_org`, `github_pat` |
 | 4 | **ServiceNow tenant** — register a [Personal Developer Instance (PDI)](https://developer.servicenow.com/) or use a licensed tenant. Capture the instance URL and an admin credential. | `servicenow_instance_url`, `servicenow_admin_username`, `servicenow_admin_password` |
+
+!!! note "Creating the Databricks workspace"
+    Workspace provisioning is the same across every Databricks deployment and adds no value to reproduce here. Pick whichever path suits you:
+
+    - **Manual (account console)** — follow the Databricks guide [Create a classic workspace](https://docs.databricks.com/aws/en/admin/workspace/create-workspace). ~1 hour end-to-end including the cross-account IAM role and root S3 bucket.
+    - **Automated (Terraform)** — copy the official [`aws-workspace-basic`](https://github.com/databricks/terraform-databricks-examples/tree/main/modules/aws-workspace-basic) module from `databricks/terraform-databricks-examples`. Requires an account-admin OAuth M2M service principal.
+
+    Either path produces the four values in the right-hand column. Pick the workspace name deliberately — the display name can be edited later, but the URL (`deployment_name`) is fixed at creation.
 
 !!! warning "ServiceNow PDI caveat"
     The operator procedure assumes the ServiceNow tenant supports Databricks Lakeflow Connect. PDIs may or may not expose the necessary interfaces — if the Lakeflow pipeline (Task 15) fails to authenticate, fall back to a licensed tenant.
