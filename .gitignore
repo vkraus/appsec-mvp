@@ -28,4 +28,8 @@ Thumbs.db
 # Private / local-only (kept outside the repo)
 CLAUDE.md
 mkdocs/superpowers/
-.claude/
+.claude/*
+!.claude/skills/
+
+# Git worktrees (used during multi-branch work)
+.worktrees/
