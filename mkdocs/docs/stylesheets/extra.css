@@ -21,3 +21,76 @@
   --md-accent-fg-color:          var(--site-teal-light);
   --md-typeset-a-color:          var(--site-teal-light);
 }
+
+/* ==== Landing page (index.md) ==== */
+
+.hero {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 3rem 1rem 2rem;
+  text-align: center;
+}
+
+.hero .eyebrow {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--site-teal);
+  margin-bottom: 0.75rem;
+}
+
+[data-md-color-scheme="slate"] .hero .eyebrow {
+  color: var(--site-teal-light);
+}
+
+.hero h1 {
+  font-size: 2.25rem;
+  line-height: 1.15;
+  margin: 0 0 0.75rem;
+}
+
+.hero .subtitle {
+  color: var(--md-default-fg-color--light);
+  max-width: 36rem;
+  margin: 0 auto 1.25rem;
+}
+
+.hero .actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Overview block sits between hero and cards */
+
+.landing-overview {
+  max-width: 44rem;
+  margin: 1rem auto 2rem;
+  text-align: center;
+}
+
+.landing-overview .mermaid {
+  max-width: 32rem;
+  margin: 1rem auto 0;
+}
+
+/* Nested grid cards (Connectors sub-grid) render smaller than parent */
+
+.md-typeset .grid.cards .grid.cards {
+  font-size: 0.9em;
+  margin-top: 0.5rem;
+}
+
+/* Tighten hero on small screens */
+
+@media (max-width: 48em) {
+  .hero {
+    padding: 2rem 0.75rem 1.5rem;
+  }
+  .hero h1 {
+    font-size: 1.6rem;
+  }
+}
