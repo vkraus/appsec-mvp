@@ -3,7 +3,7 @@ site_description: Product documentation for the AppSec data integration framewor
 site_url: https://vkraus.github.io/appsec-mvp/
 repo_url: https://github.com/vkraus/appsec-mvp
 repo_name: vkraus/appsec-mvp
-edit_uri: edit/main/docs/docs/
+edit_uri: edit/main/mkdocs/docs/
 
 docs_dir: docs
 

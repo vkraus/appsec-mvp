@@ -14,7 +14,7 @@ Serves as the thesis's **Requirements Specification attachment**: the content pr
 ## Local preview
 
 ```bash
-cd docs
+cd mkdocs
 pip install -r requirements.txt
 mkdocs serve
 ```
@@ -24,10 +24,10 @@ Site is served at <http://127.0.0.1:8000>.
 ## Build
 
 ```bash
-cd docs
+cd mkdocs
 mkdocs build          # output in site/
 ```
 
 ## Deployment
 
-Published to GitHub Pages via [.github/workflows/docs.yml](../.github/workflows/docs.yml) on every push to `main` that touches `docs/`.
+Published to GitHub Pages via [.github/workflows/docs.yml](../.github/workflows/docs.yml) on every push to `main` that touches `mkdocs/`.

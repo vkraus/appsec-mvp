@@ -11,7 +11,7 @@ __pycache__/
 .databricks/
 
 # MkDocs build output
-docs/site/
+mkdocs/site/
 .venv/
 
 # Terraform
@@ -27,5 +27,5 @@ Thumbs.db
 
 # Private / local-only (kept outside the repo)
 CLAUDE.md
-docs/superpowers/
+mkdocs/superpowers/
 .claude/

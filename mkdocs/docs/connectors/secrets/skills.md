@@ -1,11 +1,11 @@
-# SCM skills
+# Secrets skills
 
-Three skills operationalize the connector lifecycle for SCM sources.
+Three skills operationalize the connector lifecycle for Secrets sources.
 
 !!! info "Specialization pending"
-    These skills will be specialized for SCM sources (renamed to
-    `analyze-source-scm`, `generate-connector-scm`,
-    `validate-implementation-scm`) in a follow-up work item. Until then,
+    These skills will be specialized for Secrets sources (renamed to
+    `analyze-source-secrets`, `generate-connector-secrets`,
+    `validate-implementation-secrets`) in a follow-up work item. Until then,
     the category-generic versions below apply.
 
 ## `analyze-source`
@@ -20,7 +20,7 @@ description: Use when analyzing a new data source system (REST API, GraphQL, SDK
 
 # analyze-source
 
-Produce a per-connector documentation page for a data source to be integrated into the AppSec data platform framework. The output follows the five-section connector page template used across `docs/docs/connectors/<category>/`.
+Produce a per-connector documentation page for a data source to be integrated into the AppSec data platform framework. The output follows the five-section connector page template used across `mkdocs/docs/connectors/<category>/`.
 
 ## Inputs
 
@@ -31,7 +31,7 @@ Produce a per-connector documentation page for a data source to be integrated in
 
 ## Output
 
-Emit the Markdown page to stdout, ready for inclusion at `docs/docs/connectors/<category>/<source-slug>.md` where `<category>` is one of `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf` (matching the AppSec category input).
+Emit the Markdown page to stdout, ready for inclusion at `mkdocs/docs/connectors/<category>/<source-slug>.md` where `<category>` is one of `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf` (matching the AppSec category input).
 
 The page has five top-level sections:
 
@@ -113,7 +113,7 @@ A connector module at `src/connectors/{source}/` containing:
 
 ## Preconditions
 
-- The per-connector page exists at `docs/docs/connectors/<category>/<source-slug>.md` and has been reviewed for completeness.
+- The per-connector page exists at `mkdocs/docs/connectors/<category>/<source-slug>.md` and has been reviewed for completeness.
 - The framework's shared utilities (auth helpers, pagination handlers, normalization helpers under `src/common/`) are present.
 
 ## Steps
@@ -143,12 +143,12 @@ Source: [`.claude/skills/validate-implementation.md`](https://github.com/vkraus/
 ````markdown
 ---
 name: validate-implementation
-description: Use after generate-connector to run the test suite against a generated connector and populate the Validation section of the connector's page at docs/docs/connectors/<category>/<source>.md. Inputs are the source name, category, and connector module path.
+description: Use after generate-connector to run the test suite against a generated connector and populate the Validation section of the connector's page at mkdocs/docs/connectors/<category>/<source>.md. Inputs are the source name, category, and connector module path.
 ---
 
 # validate-implementation
 
-Run the test suite for a generated connector and populate the **Validation** section of its page at `docs/docs/connectors/<category>/<source>.md`.
+Run the test suite for a generated connector and populate the **Validation** section of its page at `mkdocs/docs/connectors/<category>/<source>.md`.
 
 ## Inputs
 
@@ -160,7 +160,7 @@ Run the test suite for a generated connector and populate the **Validation** sec
 
 ## Output
 
-- A Markdown table summarizing test outcomes per REQ-ID (pass / fail / missing), ready to replace the stub in the **Validation** section of `docs/docs/connectors/<category>/<source>.md`.
+- A Markdown table summarizing test outcomes per REQ-ID (pass / fail / missing), ready to replace the stub in the **Validation** section of `mkdocs/docs/connectors/<category>/<source>.md`.
 - Optional: a fix list for failing REQ-IDs with pointers to the failing test files.
 
 ## Steps
@@ -170,7 +170,7 @@ Run the test suite for a generated connector and populate the **Validation** sec
 3. For each REQ-ID in the category's applicable set (from `platform/reference/catalog`), record: is there a bound test? did it pass? what is the line coverage of the production code invoked by that test?
 4. Emit the Markdown table with one row per REQ-ID, using the symbols `PASS`, `FAIL`, or `—` (no bound test).
 5. Emit the fix list as plain text: for each failing REQ-ID, the failing test file path and a one-line summary of the failure.
-6. Replace the stub admonition in the **Validation** section of `docs/docs/connectors/<category>/<source>.md` with the completed Markdown table and fix list (if any).
+6. Replace the stub admonition in the **Validation** section of `mkdocs/docs/connectors/<category>/<source>.md` with the completed Markdown table and fix list (if any).
 
 ## Invariants
 
