@@ -4,7 +4,7 @@
 
 The platform ingests AppSec findings from heterogeneous sources (CMDB, SCM, SAST, SCA, Secrets, DAST, WAF), normalizes them to a canonical Bronze → Silver → Gold lakehouse, and surfaces evidence for analytics and compliance reviews. Python connectors run on Databricks (Unity Catalog) and are packaged as a Databricks Asset Bundle (DAB).
 
-This repository is the implementation half of a master's thesis. The companion docs site at <https://vkraus.github.io/appsec-mvp/> is the thesis's Requirements Specification attachment and the canonical operator-facing guide; this README is the engineer-facing entry point.
+This repository stores the MVP implementation part of my master's thesis. The companion docs site at <https://vkraus.github.io/appsec-mvp/> is the product documentation and the implementation guide; this README is the engineer-facing entry point.
 
 ---
 
