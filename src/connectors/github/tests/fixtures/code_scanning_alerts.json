@@ -1,0 +1,65 @@
+[
+  {
+    "number": 101,
+    "state": "open",
+    "severity": "warning",
+    "rule": {
+      "id": "py/sql-injection",
+      "severity": "warning",
+      "security_severity_level": "high"
+    },
+    "most_recent_instance": {
+      "location": {
+        "path": "src/api/db.py",
+        "start_line": 87
+      }
+    },
+    "created_at": "2026-04-10T12:00:00Z",
+    "updated_at": "2026-04-19T09:15:00Z",
+    "fixed_at": null,
+    "dismissed_at": null,
+    "html_url": "https://github.com/acme/payments-api/security/code-scanning/101"
+  },
+  {
+    "number": 102,
+    "state": "fixed",
+    "severity": "error",
+    "rule": {
+      "id": "py/clear-text-storage-of-sensitive-information",
+      "severity": "error",
+      "security_severity_level": "critical"
+    },
+    "most_recent_instance": {
+      "location": {
+        "path": "src/auth/tokens.py",
+        "start_line": 42
+      }
+    },
+    "created_at": "2026-04-08T08:00:00Z",
+    "updated_at": "2026-04-15T10:30:00Z",
+    "fixed_at": "2026-04-15T10:30:00Z",
+    "dismissed_at": null,
+    "html_url": "https://github.com/acme/payments-api/security/code-scanning/102"
+  },
+  {
+    "number": 103,
+    "state": "dismissed",
+    "severity": "note",
+    "rule": {
+      "id": "py/unused-import",
+      "severity": "note",
+      "security_severity_level": "low"
+    },
+    "most_recent_instance": {
+      "location": {
+        "path": "src/util/helpers.py",
+        "start_line": 5
+      }
+    },
+    "created_at": "2026-04-05T11:00:00Z",
+    "updated_at": "2026-04-12T09:00:00Z",
+    "fixed_at": null,
+    "dismissed_at": "2026-04-12T09:00:00Z",
+    "html_url": "https://github.com/acme/payments-api/security/code-scanning/103"
+  }
+]

@@ -1,0 +1,78 @@
+# ServiceNow connector configuration.
+#
+# CMDB / entity-only source. Reads the ServiceNow Table API for one or more
+# Configuration Item (CI) tables — `cmdb_ci_business_app` is the primary
+# endpoint, plus optional ownership-related CI table(s) per the deployment.
+# The connector lands raw records to Bronze; the Bronze-to-Silver join
+# against the Silver entity tables (`silver.applications`, `silver.teams`,
+# `silver.app_repo_mapping`) happens at transform time, never via the
+# ServiceNow relationship API.
+#
+# See mkdocs/docs/connectors/cmdb/servicenow.md for the reference profile.
+source: servicenow
+category: cmdb
+
+base_url: https://${var.servicenow_instance}.service-now.com
+
+# HTTP Basic with a service-account username + password resolved from the
+# platform secret scope (REQ-ING-AUTH). The connector NEVER reads
+# os.environ directly — credentials are injected by the DAB job driver
+# from the secret scope keys named below.
+auth:
+  type: basic
+  username_secret: servicenow_user
+  password_secret: servicenow_password
+
+# Offset-based pagination via `sysparm_offset` + `sysparm_limit`. Default
+# page size of 1000 per the CMDB category convention; the connector
+# advances the offset until the server returns fewer than `page_size`
+# records (the standard end-of-data signal).
+pagination:
+  strategy: offset
+  page_size: 1000
+
+# Native record-level high-water mark on `sys_updated_on`. Format is
+# `YYYY-MM-DD HH:MM:SS` in the instance-local timezone — converted to UTC
+# at the Bronze-to-Silver transform per REQ-TRF-TS. Per-table HWM keys
+# are subkeyed by table name in the platform HWM store.
+hwm:
+  strategy: updated_at
+  column: sys_updated_on
+
+# Tables consumed. The primary endpoint is `cmdb_ci_business_app`; the
+# ownership table list is a per-deployment knob — instances that model
+# ownership through `owned_by` on the application record need only
+# `sys_user_group`, while instances using a dedicated relationship table
+# (e.g. `cmdb_rel_ci`) extend this list.
+tables:
+  - cmdb_ci_business_app
+  - sys_user_group
+
+# Static query parameters applied to every Table API call.
+#
+# - `sysparm_display_value=false` returns raw `sys_id` strings for
+#   reference fields (rather than display labels), keeping joins stable
+#   across locale and admin renames.
+# - `sysparm_exclude_reference_link=true` flattens the default
+#   `{value, link}` reference shape to bare `sys_id` strings.
+# - `sysparm_query` carries the encoded HWM filter at runtime; the
+#   `ORDERBYsys_updated_on` clause makes pagination resumable.
+sysparm:
+  sysparm_display_value: "false"
+  sysparm_exclude_reference_link: "true"
+
+# Instance-local timezone used to interpret `sys_updated_on` /
+# `sys_created_on` strings. Read from `glide.sys.timezone` on the
+# instance where the property is exposed; otherwise overridden here per
+# deployment. UTC is the safe default if the instance runs UTC.
+instance_timezone: UTC
+
+# Bronze targets (one per consumed table; downstream Silver join happens
+# at transform time).
+bronze_table_prefix: ${catalog}.bronze_servicenow
+
+# Declarative lookups — N/A for CMDB; the files exist for the framework
+# every-connector-has-both-files contract but the mapping does not
+# reference them.
+severity_map: src/connectors/servicenow/severity.yml
+status_map:   src/connectors/servicenow/status.yml

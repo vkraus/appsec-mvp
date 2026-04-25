@@ -1,0 +1,65 @@
+# OWASP ZAP connector configuration.
+#
+# Hybrid DAST source — the same logical connector serves two operationally
+# distinct ingestion paths. Both paths land in `bronze_owasp_zap` and
+# project into `silver.findings` discriminated by `category="dast"`.
+#
+# Path 1 — CI/CD-step artefact path:
+#   hwm_kind: artefact_prefix
+#   pipelines run zap-baseline.py / zap-full-scan.py / zap-api-scan.py and
+#   emit JSON/SARIF reports under s3://<bucket>/cicd/zap/<run>/...; the
+#   connector autoloads from that prefix. There is no native authentication
+#   on the report files; access is governed by the bucket IAM policy.
+#
+# Path 2 — On-demand server path:
+#   hwm_kind: scan_id
+#   the ZAP daemon REST API is driven via scan-and-read orchestration. The
+#   numeric scanId returned by /JSON/{spider,ascan}/action/scan/ is the
+#   high-water mark per (target, scan_kind). Daemon restarts reset the
+#   counter — the connector treats a restart as an HWM reset.
+#
+# Per references/dast.md: the canonical DAST quirk is that scan IDs (or
+# artefact filenames) — not record-level updated_at — are the unit of
+# incremental work. ZAP exposes no per-finding modification timestamp.
+source: owasp_zap
+category: dast
+
+# Declarative lookups (severity/status are co-located alongside the
+# connector module per repo convention; the platform helpers consume
+# these YAML files directly).
+severity_map: src/connectors/owasp_zap/severity.yml
+status_map:   src/connectors/owasp_zap/status.yml
+
+# Bronze / Silver targets.
+bronze_table: ${catalog}.bronze_owasp_zap.findings
+silver_table: ${catalog}.silver.findings
+
+# DAST HWM shape. Two HWM kinds coexist on this connector — the two
+# paths advance independently. `state.hwm` discriminates on `path`
+# (`cicd_artefact` or `daemon`) so operators can reason about each
+# path in isolation.
+hwm_kind: artefact_prefix     # primary path; the daemon path uses scan_id
+
+# CI/CD-step artefact path knobs.
+cicd_prefix: cicd/zap/        # object-storage prefix the connector scans
+cicd_report_format: json      # `-J <file>` flavour; SARIF support is layered on top
+bucket_secret_scope: mvp-connectors
+bucket_secret: owasp_zap_artefact_bucket
+
+# On-demand server path knobs. `scan_orchestration_mode` is the
+# load-bearing operational distinction documented in §3 Quirks of the
+# connector page: `scan_and_read` drives scans itself; `read_only` only
+# consumes alerts produced out-of-band (operator-friendly fallback).
+scan_orchestration_mode: scan_and_read    # scan_and_read | read_only
+zap_api_url_secret: owasp_zap_url
+zap_api_key_secret: owasp_zap_apikey
+zap_alert_page_size: 5000     # /JSON/alert/view/alerts/ count parameter
+zap_inter_request_delay_ms: 100   # daemon-resource-bounded polite-poll delay
+
+# Documented discriminator-prefix routing — used by the ingest
+# trigger to classify a path/URL into one of the two paths.
+trigger_routing:
+  cicd_path_marker: /cicd/zap/
+  daemon_url_schemes:
+    - http://
+    - https://

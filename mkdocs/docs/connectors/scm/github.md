@@ -233,7 +233,7 @@ This connector page is produced by the connector lifecycle skills. The Generatio
 | Stage | Skill | Inputs | Outputs | Run on | Skills repo ref |
 |---|---|---|---|---|---|
 | Source analysis | `analyze-source` (scm) | name=GitHub; url=https://docs.github.com/en/rest; category=scm | mkdocs/docs/connectors/scm/github.md §1 to §3 | 2026-04-25 | 3cd1028 (regenerate-4-originals) |
-| Implementation | `generate-connector` (scm) | (pending) | (pending) | (pending) | (pending) |
+| Module generation | `generate-connector` (scm) | page hash=c1432ae8e1ec | src/connectors/github/__init__.py, src/connectors/github/config.yml, src/connectors/github/ingest.py, src/connectors/github/transform.py, src/connectors/github/mapping.yml, src/connectors/github/severity.yml, src/connectors/github/status.yml, src/connectors/github/resources/job.yml, src/connectors/github/tests/__init__.py, src/connectors/github/tests/conftest.py, src/connectors/github/tests/test_ingest.py, src/connectors/github/tests/test_transform.py, src/connectors/github/tests/fixtures/repositories.json, src/connectors/github/tests/fixtures/pull_requests.json, src/connectors/github/tests/fixtures/branch_protection.json, src/connectors/github/tests/fixtures/code_scanning_alerts.json, src/connectors/github/tests/fixtures/secret_scanning_alerts.json, src/connectors/github/tests/fixtures/dependabot_alerts.json | 2026-04-25 | 76c543e (regenerate-4-originals) |
 | Validation | `validate-implementation` (scm) | (pending) | (pending) | (pending) | (pending) |
 
 ## References

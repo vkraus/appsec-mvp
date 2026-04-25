@@ -133,7 +133,7 @@ The dedup key per the [DAST category reference](../../../.claude/skills/analyze-
 | Stage | Skill | Inputs | Outputs | Run on | Skills repo ref |
 |---|---|---|---|---|---|
 | Source analysis | `analyze-source` (dast) | name=OWASP ZAP; url=https://www.zaproxy.org/docs/api/; category=dast | mkdocs/docs/connectors/dast/owasp-zap.md §1–§3 | 2026-04-25 | 3cd1028 (regenerate-4-originals) |
-| Implementation | `generate-connector` (dast) | (pending) | (pending) | (pending) | (pending) |
+| Module generation | `generate-connector` (dast) | page hash=0a7a007c142c | src/connectors/owasp_zap/, src/connectors/owasp_zap/tests/, src/connectors/owasp_zap/severity.yml, src/connectors/owasp_zap/status.yml, src/connectors/owasp_zap/resources/job.yml | 2026-04-25 | 76c543e (regenerate-4-originals) |
 | Validation | `validate-implementation` (dast) | (pending) | (pending) | (pending) | (pending) |
 
 ## References

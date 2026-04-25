@@ -1,0 +1,87 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "semgrep",
+          "version": "1.50.0",
+          "rules": [
+            {
+              "id": "python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use",
+              "name": "dangerous-subprocess-use",
+              "shortDescription": {"text": "Dangerous subprocess use detected"},
+              "fullDescription": {"text": "Detected use of subprocess.Popen with shell=True."},
+              "properties": {
+                "tags": ["security", "CWE-78", "OWASP-A03:2021"],
+                "precision": "very-high"
+              }
+            },
+            {
+              "id": "javascript.express.security.audit.express-cookie-session-no-httponly.express-cookie-session-no-httponly",
+              "name": "express-cookie-session-no-httponly",
+              "shortDescription": {"text": "Cookie session lacks httpOnly"},
+              "properties": {
+                "tags": ["security", "cwe:1004"],
+                "precision": "high"
+              }
+            },
+            {
+              "id": "generic.style.unused-import",
+              "name": "unused-import",
+              "shortDescription": {"text": "Unused import"},
+              "properties": {
+                "tags": ["best-practice"]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {"text": "Detected use of subprocess.Popen with shell=True."},
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {"uri": "src/api/runner.py"},
+                "region": {"startLine": 42, "startColumn": 5, "endLine": 42, "endColumn": 60}
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "javascript.express.security.audit.express-cookie-session-no-httponly.express-cookie-session-no-httponly",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {"text": "Cookie session lacks httpOnly flag."},
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {"uri": "web/server.js"},
+                "region": {"startLine": 88, "startColumn": 3}
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "generic.style.unused-import",
+          "ruleIndex": 2,
+          "level": "note",
+          "message": {"text": "Unused import."},
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {"uri": "src/api/runner.py"},
+                "region": {"startLine": 3, "startColumn": 1}
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

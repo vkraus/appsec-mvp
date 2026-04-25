@@ -1,0 +1,16 @@
+{
+  "result": [
+    {
+      "sys_id": "3d4e5f60718293a4b5c6d7e8f9aabbcc",
+      "name": "EU Locale Application",
+      "short_description": "Instance configured for Europe/Berlin",
+      "business_criticality": "2 - somewhat critical",
+      "operational_status": "operational",
+      "owned_by": "abcdef0123456789abcdef0123456789",
+      "used_by": "",
+      "u_repository_id": "acme/eu-locale-app",
+      "sys_created_on": "2025-01-15 12:00:00",
+      "sys_updated_on": "2026-04-20 12:00:00"
+    }
+  ]
+}

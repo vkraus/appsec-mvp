@@ -1,0 +1,69 @@
+# ServiceNow Table API records -> silver entity tables.
+#
+# CMDB / entity-only shape. No `severity_canonical` / `status_canonical` /
+# `dedup_links` blocks — CMDB sources emit no findings. The transform
+# layer reads each Bronze table independently and joins them in Silver
+# rather than resolving relationships at ingestion via the ServiceNow
+# relationship API (per the CMDB capability contract and the
+# *Reference fields* quirk).
+#
+# Custom `u_*` columns flow through additively at Bronze under
+# schema-on-read; this file projects ONLY the canonical fields the
+# AppSec model consumes. Adding new canonical fields means editing this
+# file; adding deployment-specific `u_*` columns does NOT.
+#
+# Targets, plural per `references/cmdb.md` and the page §3:
+#   - silver.applications        (from cmdb_ci_business_app)
+#   - silver.teams               (from sys_user_group / equivalent)
+#   - silver.app_repo_mapping    (from the application -> repository link)
+source_key: servicenow
+
+# ---------------------------------------------------------------------
+# Block 1 — silver.applications (from `cmdb_ci_business_app`)
+# ---------------------------------------------------------------------
+applications:
+  source_table: cmdb_ci_business_app
+  target_table: silver.applications
+  fields:
+    application_id:        sys_id                # 32-char GUID; natural key
+    name:                  name
+    short_description:     short_description     # empty-string -> NULL at transform
+    business_criticality:  business_criticality  # raw value (sysparm_display_value=false)
+    operational_status:    operational_status    # entity lifecycle attribute (NOT finding status)
+    owned_by:              owned_by              # opaque sys_id; resolved at Silver join
+    used_by:               used_by               # opaque sys_id; resolved at Silver join
+    valid_from:            sys_created_on        # instance-local -> UTC at transform
+    updated_at:            sys_updated_on        # HWM column; instance-local -> UTC
+
+# ---------------------------------------------------------------------
+# Block 2 — silver.teams (from `sys_user_group` or equivalent ownership table)
+# ---------------------------------------------------------------------
+teams:
+  source_table: sys_user_group
+  target_table: silver.teams
+  fields:
+    team_id:        sys_id                       # 32-char GUID; natural key
+    name:           name
+    description:    description
+    email:          email                        # group mailbox; optional
+    manager:        manager                      # opaque sys_id; resolved at Silver join
+    updated_at:     sys_updated_on               # instance-local -> UTC
+
+# ---------------------------------------------------------------------
+# Block 3 — silver.app_repo_mapping (application -> team / repo linkage)
+# ---------------------------------------------------------------------
+#
+# In ServiceNow the application-to-repository link is NOT a first-class
+# CMDB concept: deployments express it via a `u_repository_id` custom
+# column on `cmdb_ci_business_app` (preferred) or via a relationship row
+# in `cmdb_rel_ci`. The transform builds `silver.app_repo_mapping` by
+# projecting from the application Bronze table when `u_repository_id`
+# is present; rows without a repository link DO NOT land in this table
+# (they remain in `silver.applications` only).
+app_repo_mapping:
+  source_table: cmdb_ci_business_app
+  target_table: silver.app_repo_mapping
+  fields:
+    application_id:  sys_id                      # same key as silver.applications
+    repository_id:   u_repository_id             # custom column (deployment-specific)
+    linked_at:       sys_updated_on              # instance-local -> UTC

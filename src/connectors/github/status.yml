@@ -1,0 +1,31 @@
+# GitHub Advanced Security lifecycle state -> canonical status.
+# See mkdocs/docs/connectors/scm/github.md § Enumerations.
+#
+# Three native vocabularies feed a single lookup. The transform composes
+# composite keys (STATE-DISMISSED_REASON) where the resolution refines
+# the bare state.
+#
+# Code scanning alerts (`state`):
+#   open / closed / dismissed / fixed
+# Secret scanning alerts (`state`, `resolution`):
+#   open / resolved (refined by resolution: false_positive, wont_fix,
+#   revoked, used_in_tests)
+# Dependabot alerts (`state`):
+#   open / dismissed / auto_dismissed / fixed
+open:                          open
+closed:                        resolved
+fixed:                         resolved
+dismissed:                     wontfix
+auto_dismissed:                wontfix
+resolved:                      resolved
+# Composite keys for resolution-refined cases.
+dismissed-false_positive:      false_positive
+dismissed-no_bandwidth:        wontfix
+dismissed-tolerable_risk:      wontfix
+dismissed-inaccurate:          false_positive
+dismissed-not_used:            wontfix
+# Secret scanning resolution composites (state=resolved + resolution=...).
+resolved-false_positive:       false_positive
+resolved-wont_fix:             wontfix
+resolved-revoked:              resolved
+resolved-used_in_tests:        false_positive

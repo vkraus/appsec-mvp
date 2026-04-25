@@ -1,0 +1,16 @@
+{
+  "_comment": "Fixture for the trigger-discriminator routing test. Each entry pairs an input source path/URL with the trigger_context the connector MUST classify it as. See ingest.classify_trigger and §3 Quirks of mkdocs/docs/connectors/dast/owasp-zap.md.",
+  "cases": [
+    {"input": "s3://example-bucket/cicd/zap/run-12345/baseline.json", "expected": "cicd"},
+    {"input": "s3a://example-bucket/cicd/zap/run-67890/full-scan.json", "expected": "cicd"},
+    {"input": "abfss://reports@stg.dfs.core.windows.net/cicd/zap/2026-04-21/", "expected": "cicd"},
+    {"input": "https://zap-daemon.internal:8080", "expected": "on_demand"},
+    {"input": "http://10.0.0.5:8090", "expected": "on_demand"}
+  ],
+  "rejected": [
+    "ftp://legacy/zap-output.json",
+    "s3://example-bucket/other/zap/report.json",
+    "",
+    "/local/path/no-scheme/scan.json"
+  ]
+}

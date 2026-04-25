@@ -1,0 +1,30 @@
+[
+  {
+    "id": "MDEwOlJlcG9zaXRvcnkxMjM0NTY3OA==",
+    "databaseId": 12345678,
+    "nameWithOwner": "acme/payments-api",
+    "defaultBranchRef": {"name": "main"},
+    "isPrivate": true,
+    "isArchived": false,
+    "isDisabled": false,
+    "visibility": "PRIVATE",
+    "primaryLanguage": {"name": "Python"},
+    "createdAt": "2024-01-15T08:30:00Z",
+    "updatedAt": "2026-04-20T10:00:00Z",
+    "pushedAt": "2026-04-20T09:55:00Z"
+  },
+  {
+    "id": "MDEwOlJlcG9zaXRvcnkyMzQ1Njc4OQ==",
+    "databaseId": 23456789,
+    "nameWithOwner": "acme/loyalty-web",
+    "defaultBranchRef": {"name": "main"},
+    "isPrivate": false,
+    "isArchived": false,
+    "isDisabled": false,
+    "visibility": "INTERNAL",
+    "primaryLanguage": {"name": "TypeScript"},
+    "createdAt": "2024-03-10T09:00:00Z",
+    "updatedAt": "2026-04-20T09:30:00Z",
+    "pushedAt": "2026-04-20T09:25:00Z"
+  }
+]

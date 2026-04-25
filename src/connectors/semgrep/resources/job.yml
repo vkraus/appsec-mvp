@@ -1,0 +1,41 @@
+resources:
+  jobs:
+    semgrep-connector:
+      name: semgrep-connector
+      parameters:
+        - name: source_name
+          default: "semgrep"
+        - name: target_catalog
+          default: "${var.catalog}"
+        - name: hwm_reset
+          default: "false"
+      schedule:
+        # Hourly — CI/CD-step artefacts arrive on every commit, periodic-global
+        # artefacts arrive on the EKS CronJob cadence; an hourly read of the
+        # S3 prefixes bounds Bronze ingestion latency without over-polling.
+        # Auto Loader's checkpointing handles file-level idempotence.
+        quartz_cron_expression: "0 0 * * * ?"
+        timezone_id: "UTC"
+      tasks:
+        - task_key: ingest
+          notebook_task:
+            notebook_path: ../ingest.py
+          job_cluster_key: shared
+          max_retries: 3
+          min_retry_interval_millis: 2000
+          retry_on_timeout: true
+        - task_key: transform
+          depends_on:
+            - task_key: ingest
+          notebook_task:
+            notebook_path: ../transform.py
+          job_cluster_key: shared
+          max_retries: 3
+          min_retry_interval_millis: 2000
+          retry_on_timeout: true
+      job_clusters:
+        - job_cluster_key: shared
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            num_workers: 1

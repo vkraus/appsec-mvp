@@ -1,0 +1,17 @@
+# Semgrep status lookup -> canonical status.
+#
+# N/A in vocabulary form -- Semgrep CLI exposes no finding lifecycle.
+# transform.py routes the literal "open" through the canonical platform
+# applicator (`src.platform.silver.normalize_status`); this YAML provides
+# the single recognised key so the lookup succeeds without falling back
+# to the unknown-default branch. transform.py MUST NOT include status-
+# transition logic.
+#
+# REQ-TRF-STS applies in degraded form (single literal mapping) per the
+# connector page section "Enumerations" (no status vocabulary).
+open: open
+
+# Reserved key carrying the configurable default for unknown native
+# inputs. Read by transform.py at module import; never matched against
+# real input.
+default: open

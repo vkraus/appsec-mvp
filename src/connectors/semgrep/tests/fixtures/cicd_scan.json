@@ -1,0 +1,56 @@
+{
+  "version": "1.50.0",
+  "results": [
+    {
+      "check_id": "python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use",
+      "path": "src/api/runner.py",
+      "start": {"line": 42, "col": 5},
+      "end": {"line": 42, "col": 60},
+      "extra": {
+        "message": "Detected use of subprocess.Popen with shell=True. This can lead to command injection.",
+        "severity": "ERROR",
+        "metadata": {
+          "cwe": ["CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"],
+          "owasp": ["A03:2021 - Injection"],
+          "category": "security",
+          "vulnerability_class": ["Command Injection"],
+          "technology": ["python"],
+          "references": ["https://owasp.org/www-community/attacks/Command_Injection"]
+        }
+      }
+    },
+    {
+      "check_id": "python.lang.security.use-defused-xml.use-defused-xml",
+      "path": "src/api/parser.py",
+      "start": {"line": 17, "col": 1},
+      "end": {"line": 17, "col": 30},
+      "extra": {
+        "message": "Use defusedxml package to avoid XXE attacks.",
+        "severity": "WARNING",
+        "metadata": {
+          "cwe": ["CWE-611: Improper Restriction of XML External Entity Reference"],
+          "owasp": ["A05:2021 - Security Misconfiguration"],
+          "category": "security",
+          "vulnerability_class": ["XML External Entity"],
+          "technology": ["python"]
+        }
+      }
+    },
+    {
+      "check_id": "generic.style.unused-import",
+      "path": "src/api/runner.py",
+      "start": {"line": 3, "col": 1},
+      "end": {"line": 3, "col": 25},
+      "extra": {
+        "message": "Unused import.",
+        "severity": "INFO",
+        "metadata": {
+          "category": "best-practice",
+          "technology": ["python"]
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "paths": {"scanned": ["src/"]}
+}

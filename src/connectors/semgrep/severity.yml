@@ -1,0 +1,33 @@
+# Semgrep severity -> canonical four-level model.
+#
+# Two vocabularies coexist in this single flat map because the same
+# connector ingests both `--json` (Semgrep-native) and `--sarif`
+# (SARIF v2.1.0) artefact flavours. The two vocabularies don't collide
+# because the JSON keys are uppercase and the SARIF keys are lowercase.
+# Both must be present per references/sast.md section "Default severity"
+# (the lookup MUST be exhaustive over the documented vocabulary).
+#
+# Per the connector page section "Enumerations":
+#   - Semgrep does NOT emit a value mapping to `critical`. Operators
+#     wanting a `critical` tier (e.g. for block-the-build rulesets) must
+#     apply per-rule overrides in deployment overlays.
+#   - Default for unknown values is `medium` per references/sast.md.
+#     The default is configured declaratively below via the reserved
+#     `default` key; transform.py reads it at module import and applies
+#     it via `src.platform.silver.normalize_severity`.
+
+# --json flavour (extra.severity).
+ERROR:   high
+WARNING: medium
+INFO:    low
+
+# --sarif flavour (results[].level).
+error:   high
+warning: medium
+note:    low
+none:    low
+
+# Reserved key carrying the configurable default for unknown native
+# inputs. Read by transform.py at module import; never matched against
+# real input.
+default: medium

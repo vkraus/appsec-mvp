@@ -1,0 +1,20 @@
+# OWASP ZAP status lookup.
+#
+# ZAP alerts have no native server-side lifecycle state — each scan is
+# a complete re-detection of findings observed at scan time. Per
+# `mkdocs/docs/connectors/dast/owasp-zap.md` § Enumerations, every
+# ingested ZAP alert lands as canonical `open`; the transition to
+# `resolved` is computed at the Silver layer by comparing successive
+# scans for the same `(target, alert_id, uri_path)` triple — an alert
+# that disappears from a subsequent scan is implicitly resolved by
+# absence.
+#
+# The `confidence` field (False Positive / Low / Medium / High /
+# Confirmed) is preserved as a domain column in Bronze for audit but
+# is NOT folded into status_canonical: False Positive records are
+# retained and excluded from the gold active-threat view downstream.
+#
+# REQ-TRF-STS is bound (PASS in the catalog matrix) because the
+# Silver-layer status derivation IS part of the connector contract —
+# the lookup just happens to collapse every input to a single value.
+open: open

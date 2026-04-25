@@ -1,0 +1,76 @@
+# OWASP ZAP alerts -> silver.findings (DAST finding shape).
+#
+# Per references/dast.md (DAST category contract):
+#   - target_silver_table = silver.findings (discriminator: category="dast")
+#   - dedup key = (target, alert_id, uri_path) — encoded literally below
+#     and consumed by transform.dedup_key_for to drive cross-scan linkage
+#     in the Silver dedup layer.
+#   - transform.py joins `target` (scanned URL) against `silver.deployments`
+#     to resolve `application_id`. Unmatched targets are emitted UNCHANGED
+#     for inventory-gap analysis (deliberate completeness signal — NOT a
+#     DQ failure).
+#
+# Source-field provenance:
+#   - `pluginid` (scanner-internal rule id) -> rule_id_native AND alert_id.
+#   - `alert` / `name` are equivalent and inconsistently populated across
+#     ZAP's two surfaces (REST API vs JSON report); transform.py reads
+#     `name` first and falls back to `alert`, then to `pluginid`.
+#   - `risk` (Informational/Low/Medium/High) is the severity axis —
+#     resolved via the lookup file by path.
+#   - `uri` carries the per-instance URI; transform splits it into
+#     `target` (scheme+host+port) and `uri_path` (path+query) for the
+#     dedup key. The full `uri` lands in `silver.findings.url`.
+#   - `cweid` may be the placeholder string `0` or `-1` when unmapped;
+#     transform converts to NULL before writing to Silver.
+#
+# DAST shape invariants:
+#   - file_path / start_line / cve_id / repository_id are NULL — DAST
+#     findings are URL-located, not file-located, and have no CVE axis.
+#   - status is hard-bound to `open` because ZAP exposes no native
+#     lifecycle (see status.yml).
+source_key: owasp_zap
+target_silver_table: silver.findings
+
+# Encoded literally per references/dast.md § "Deduplication key".
+dedup_key:
+  - target
+  - alert_id
+  - uri_path
+
+fields:
+  finding_id:        pluginid + "@" + uri        # synthesized; both halves required
+  tool_source:       "owasp_zap"
+  category:          "dast"                      # silver_findings discriminator
+  severity:
+    source_path: risk                            # ZAP four-level risk vocabulary
+    lookup: src/connectors/owasp_zap/severity.yml
+  status:
+    source_path: null                            # no native ZAP lifecycle
+    lookup: src/connectors/owasp_zap/status.yml
+    default: open                                # status-derivation contract: every alert -> open
+  cwe_id:             cweid                      # `0` / `-1` placeholders -> NULL in transform
+  cve_id:             null                       # DAST emits no CVE axis
+  rule_id_native:     pluginid
+  alert_id:           pluginid                   # scanner-internal rule id; dedup component
+  target:             site                       # scheme + host + port (split from uri at transform)
+  uri_path:           uri                        # per-path disambiguator
+  url:                uri                        # full per-instance URI (DAST: URL-located)
+  file_path:          null                       # DAST shape: no file_path
+  start_line:         null                       # DAST shape: no line number
+  repository_id:      null                       # DAST: no repository linkage
+  trigger_context:    artefact_or_daemon         # set per ingestion path: cicd | on_demand
+  first_seen_at:      _ingestion_timestamp       # bronze envelope's run-time stamp
+  last_seen_at:       _ingestion_timestamp
+
+# Domain columns preserved for downstream auditing (NOT projected onto
+# silver_findings; available via the Bronze envelope's `_raw_payload`).
+domain_columns:
+  - confidence       # False Positive / Low / Medium / High / Confirmed
+  - param            # request parameter triggering the alert
+  - attack           # ZAP-injected payload
+  - evidence         # response substring confirming the issue
+  - description      # long-form rule description
+  - solution         # remediation guidance
+  - reference        # CWE / WASC / external URLs
+  - wascid           # WASC threat-classification id
+  - sourceid         # passive vs active scan origin

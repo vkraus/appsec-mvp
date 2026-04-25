@@ -1,0 +1,20 @@
+{
+  "result": [
+    {
+      "sys_id": "abcdef0123456789abcdef0123456789",
+      "name": "Payments Platform Team",
+      "description": "Owns the payment processing services",
+      "email": "payments-team@example.com",
+      "manager": "11111111111111111111111111111111",
+      "sys_updated_on": "2026-04-15 09:00:00"
+    },
+    {
+      "sys_id": "fedcba9876543210fedcba9876543210",
+      "name": "Customer Experience Team",
+      "description": "",
+      "email": "",
+      "manager": "",
+      "sys_updated_on": "2026-04-18 14:45:00"
+    }
+  ]
+}

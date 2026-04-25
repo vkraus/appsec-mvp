@@ -1,0 +1,12 @@
+# N/A — CMDB sources emit no findings.
+#
+# The framework's every-connector-has-both-files contract requires this
+# file to exist even when severity normalisation does not apply. CMDB
+# entities (applications, teams, ownership relationships) have no
+# severity dimension; REQ-TRF-SEV is N/A on the ServiceNow row of the
+# traceability matrix.
+#
+# `mapping.yml` does not reference this lookup. Do not populate with
+# placeholder mappings — doing so would imply a finding model the
+# source does not emit.
+{}

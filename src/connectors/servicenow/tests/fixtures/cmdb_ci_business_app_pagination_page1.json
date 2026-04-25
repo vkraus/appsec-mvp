@@ -1,0 +1,28 @@
+{
+  "result": [
+    {
+      "sys_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+      "name": "Checkout Frontend",
+      "short_description": "Customer-facing checkout web application",
+      "business_criticality": "1 - most critical",
+      "operational_status": "operational",
+      "owned_by": "abcdef0123456789abcdef0123456789",
+      "used_by": "fedcba9876543210fedcba9876543210",
+      "u_repository_id": "acme/checkout-frontend",
+      "sys_created_on": "2024-09-15 08:30:00",
+      "sys_updated_on": "2026-04-20 14:22:11"
+    },
+    {
+      "sys_id": "1b2c3d4e5f60718293a4b5c6d7e8f9aa",
+      "name": "Payments Service",
+      "short_description": "PCI-scope payment processing API",
+      "business_criticality": "1 - most critical",
+      "operational_status": "operational",
+      "owned_by": "abcdef0123456789abcdef0123456789",
+      "used_by": "",
+      "u_repository_id": "acme/payments-api",
+      "sys_created_on": "2024-09-15 08:30:00",
+      "sys_updated_on": "2026-04-21 09:15:30"
+    }
+  ]
+}

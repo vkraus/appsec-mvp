@@ -1,0 +1,38 @@
+{
+  "alerts": [
+    {
+      "pluginId": "10038",
+      "name": "Content Security Policy (CSP) Header Not Set",
+      "alert": "CSP Header Not Set",
+      "risk": "Medium",
+      "confidence": "High",
+      "uri": "https://app.test/login",
+      "param": "",
+      "attack": "",
+      "evidence": "",
+      "description": "Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks.",
+      "solution": "Ensure that your web server, application server, load balancer, etc. is configured to set the Content-Security-Policy header.",
+      "reference": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP",
+      "cweid": "693",
+      "wascid": "15",
+      "sourceid": "3"
+    },
+    {
+      "pluginId": "40012",
+      "name": "Cross Site Scripting (Reflected)",
+      "alert": "Cross Site Scripting (Reflected)",
+      "risk": "High",
+      "confidence": "Medium",
+      "uri": "https://app.test/search?q=test",
+      "param": "q",
+      "attack": "<script>alert(1)</script>",
+      "evidence": "<script>alert(1)</script>",
+      "description": "Cross-site Scripting (XSS) is an attack technique that involves echoing attacker-supplied code into a user's browser.",
+      "solution": "Phase: Architecture and Design. Use a vetted library or framework that does not allow this weakness to occur or provides constructs that make this weakness easier to avoid.",
+      "reference": "https://owasp.org/www-community/attacks/xss/",
+      "cweid": "79",
+      "wascid": "8",
+      "sourceid": "3"
+    }
+  ]
+}

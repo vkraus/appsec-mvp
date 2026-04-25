@@ -1,0 +1,12 @@
+# N/A — CMDB sources emit no findings.
+#
+# CMDB entities have no finding lifecycle. The standard five-state status
+# model (`open`, `confirmed`, `resolved`, `false_positive`, `wontfix`)
+# does not apply. REQ-TRF-STS is N/A on the ServiceNow row of the
+# traceability matrix.
+#
+# Note: `operational_status` on `cmdb_ci_business_app` is an entity
+# lifecycle attribute (operational / non-operational / retired) — it
+# lands as a domain column on `silver.applications` without normalisation
+# against the finding-status canonical model. It is NOT mapped here.
+{}

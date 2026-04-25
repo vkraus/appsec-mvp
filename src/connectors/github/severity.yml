@@ -1,0 +1,31 @@
+# GitHub Advanced Security severity -> canonical four-level model.
+# See mkdocs/docs/connectors/scm/github.md § Enumerations.
+#
+# Three native vocabularies feed into a single lookup:
+#
+# 1. Code scanning alerts (`rule.security_severity_level`):
+#       critical / high / medium / low — identity mapping, CVSS-derived,
+#       authoritative per the canonical mapping. The rule-level `severity`
+#       (`error`/`warning`/`note`) is kept as a domain column upstream.
+#
+# 2. Secret scanning alerts: GitHub does not expose a native severity
+#       field. Per the connector page § Enumerations the connector emits
+#       `high` regardless of validity (operators may override per
+#       deployment for low-entropy detector classes).
+#
+# 3. Dependabot alerts (`security_vulnerability.severity`):
+#       low / medium / high / critical — identity mapping, CVSS-derived.
+#
+# Documented values map directly. Undocumented values fall through to the
+# configured default (`medium`) via src/platform/silver.normalize_severity,
+# which raises the data-quality warning under REQ-DQ.
+critical: critical
+high:     high
+medium:   medium
+low:      low
+# Code-scanning rule-level severity vocabulary (kept here so the lookup
+# answers correctly when a transform tests `rule.severity` rather than
+# `rule.security_severity_level`).
+error:    high
+warning:  medium
+note:     low

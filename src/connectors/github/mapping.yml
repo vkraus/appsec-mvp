@@ -1,0 +1,123 @@
+# GitHub Bronze -> Silver field mapping.
+#
+# Two top-level blocks per the SCM reference's dual-role guidance:
+# entities are always populated from the GraphQL org-wide repository
+# enumeration plus REST per-repo reads for pull requests and branch
+# protection. Findings are populated from the three GitHub Advanced
+# Security alert streams (code scanning, secret scanning, Dependabot)
+# and discriminated by category.
+#
+# See https://docs.github.com/en/rest for source-side schemas and
+# mkdocs/docs/connectors/scm/github.md § 4 (Resource schema excerpt) for
+# the per-field consumed-shape contract.
+
+source_key: github
+
+entities:
+
+  repositories:
+    # GraphQL `organization.repositories.nodes` and REST GET /repos/{owner}/{repo}
+    # -> silver.repositories
+    repository_id:   id                 # GraphQL `id` (node_id); natural key per canonical mapping
+    full_name:       nameWithOwner      # `org/repo` slug; GraphQL form. REST equivalent: full_name
+    default_branch:  defaultBranchRef.name
+    visibility:      visibility         # PUBLIC | PRIVATE | INTERNAL (GraphQL) / lowercase via REST
+    archived:        isArchived
+    disabled:        isDisabled
+    language:        primaryLanguage.name
+    created_at:      createdAt
+    updated_at:      updatedAt          # HWM column for repository polling
+    pushed_at:       pushedAt
+
+  pull_requests:
+    # REST GET /repos/{owner}/{repo}/pulls -> silver.pull_requests
+    number:           number
+    state:            state              # open | closed (see Enumerations)
+    merged_at:        merged_at
+    created_at:       created_at
+    updated_at:       updated_at         # HWM column for PR incremental polling
+    head_sha:         head.sha
+    source_branch:    head.ref
+    target_branch:    base.ref
+    author_username:  user.login
+    source:           "github"
+
+  branch_policies:
+    # REST GET /repos/{owner}/{repo}/branches/{branch}/protection -> silver.branch_policies
+    branch_name:                    "default_branch"   # supplied by the caller (the branch this protection applies to)
+    required_approving_reviews:     required_pull_request_reviews.required_approving_review_count
+    dismiss_stale_reviews:          required_pull_request_reviews.dismiss_stale_reviews
+    strict_status_checks:           required_status_checks.strict
+    required_status_check_contexts: required_status_checks.contexts
+    enforce_admins:                 enforce_admins.enabled
+
+findings:
+  # GitHub Advanced Security alert streams -> silver.findings.
+  # Three concurrent finding shapes share the silver.findings union table;
+  # transform.py branches on the `category` discriminator (set per stream)
+  # to emit the correct dedup-key tuple per the SCM reference §
+  # Deduplication key.
+  source_key: github
+  shapes:
+
+    code_scanning:
+      # REST GET /repos/{owner}/{repo}/code-scanning/alerts
+      category:           "sast"
+      finding_id:         'concat("github-code-", repository_id, "-", number)'
+      tool_source:        'literal("github")'
+      severity_canonical: 'lookup(rule.security_severity_level, severity_map, default=medium)'
+      status_canonical:   'lookup(state, status_map, default=open)'
+      rule_id_native:     rule.id
+      file_path:          most_recent_instance.location.path
+      start_line:         most_recent_instance.location.start_line
+      url:                html_url
+      first_seen_at:      created_at
+      last_seen_at:       updated_at
+      resolved_at:        'coalesce(fixed_at, dismissed_at)'
+      trigger_context:    'literal("periodic")'
+      cwe_id:             null
+      cve_id:             null
+      dedup_key:          [repository_id, file_path, start_line, rule_id_native]
+
+    secret_scanning:
+      # REST GET /repos/{owner}/{repo}/secret-scanning/alerts
+      category:           "secret"
+      finding_id:         'concat("github-secret-", repository_id, "-", number)'
+      tool_source:        'literal("github")'
+      severity_canonical: 'literal("high")'                   # native severity absent; per page § Enumerations
+      status_canonical:   'lookup(compose(state, resolution), status_map, default=open)'
+      rule_id_native:     secret_type
+      file_path:          locations[0].details.path           # follow-up call to locations_url; first location wins
+      start_line:         locations[0].details.start_line
+      url:                html_url
+      first_seen_at:      created_at
+      last_seen_at:       updated_at
+      resolved_at:        resolved_at
+      trigger_context:    'literal("periodic")'
+      cwe_id:             null
+      cve_id:             null
+      dedup_key:          [repository_id, secret_type, file_path, start_line]
+
+    dependabot:
+      # REST GET /repos/{owner}/{repo}/dependabot/alerts
+      category:           "sca"
+      finding_id:         'concat("github-dependabot-", repository_id, "-", number)'
+      tool_source:        'literal("github")'
+      severity_canonical: 'lookup(security_vulnerability.severity, severity_map, default=medium)'
+      status_canonical:   'lookup(state, status_map, default=open)'
+      rule_id_native:     security_advisory.cve_id            # CVE serves as the rule identifier for SCA
+      package_name:       dependency.package.name
+      ecosystem:          dependency.package.ecosystem
+      cve_id:             security_advisory.cve_id
+      cwe_id:             null
+      file_path:          null
+      start_line:         null
+      url:                html_url
+      first_seen_at:      created_at
+      last_seen_at:       updated_at
+      resolved_at:        'coalesce(fixed_at, dismissed_at, auto_dismissed_at)'
+      trigger_context:    'literal("periodic")'
+      dedup_key:          [repository_id, package_name, cve_id]
+
+  severity_map: src/connectors/github/severity.yml
+  status_map:   src/connectors/github/status.yml

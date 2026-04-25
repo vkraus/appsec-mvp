@@ -1,0 +1,47 @@
+[
+  {
+    "number": 22,
+    "state": "open",
+    "dependency": {
+      "package": {"name": "lodash", "ecosystem": "npm"}
+    },
+    "security_advisory": {"cve_id": "CVE-2024-12345"},
+    "security_vulnerability": {"severity": "high"},
+    "created_at": "2026-04-05T14:00:00Z",
+    "updated_at": "2026-04-18T09:00:00Z",
+    "fixed_at": null,
+    "dismissed_at": null,
+    "auto_dismissed_at": null,
+    "html_url": "https://github.com/acme/payments-api/security/dependabot/22"
+  },
+  {
+    "number": 23,
+    "state": "fixed",
+    "dependency": {
+      "package": {"name": "django", "ecosystem": "pip"}
+    },
+    "security_advisory": {"cve_id": "CVE-2023-99999"},
+    "security_vulnerability": {"severity": "critical"},
+    "created_at": "2026-04-09T10:00:00Z",
+    "updated_at": "2026-04-15T10:00:00Z",
+    "fixed_at": "2026-04-15T10:00:00Z",
+    "dismissed_at": null,
+    "auto_dismissed_at": null,
+    "html_url": "https://github.com/acme/payments-api/security/dependabot/23"
+  },
+  {
+    "number": 24,
+    "state": "dismissed",
+    "dependency": {
+      "package": {"name": "requests", "ecosystem": "pip"}
+    },
+    "security_advisory": {"cve_id": "CVE-2024-77777"},
+    "security_vulnerability": {"severity": "medium"},
+    "created_at": "2026-04-01T09:00:00Z",
+    "updated_at": "2026-04-08T11:00:00Z",
+    "fixed_at": null,
+    "dismissed_at": "2026-04-08T11:00:00Z",
+    "auto_dismissed_at": null,
+    "html_url": "https://github.com/acme/payments-api/security/dependabot/24"
+  }
+]

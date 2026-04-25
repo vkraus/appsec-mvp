@@ -1,0 +1,86 @@
+# Semgrep --json / --sarif → silver.findings field mapping.
+#
+# Source schemas documented in mkdocs/docs/connectors/sast/semgrep.md
+# § "Resource schema excerpt". Two flavours coexist: Semgrep-native JSON
+# (semgrep.dev/docs/semgrep-appsec-platform/json-and-sarif) and SARIF
+# v2.1.0 (docs.oasis-open.org/sarif/sarif/v2.1.0). The transform routes
+# by file extension and projects both into the single Silver table.
+#
+# Invariants per references/sast.md and the connector page:
+#   - severity is a lookup on the source field (NOT a literal) — covers
+#     both vocabularies via config/severity/semgrep.yml. See severity.yml.
+#   - status has no source vocabulary. Literal `open` is stamped on every
+#     row; transform.py MUST NOT include status-transition logic.
+#   - cwe_id extraction is opportunistic (rules may omit CWE tags) — see
+#     references/sast.md § "Quirks" (CWE category).
+#   - rule_id is retained verbatim across rule-pack versions; cross-time
+#     analytics needing stable grouping should join on cwe_id +
+#     vulnerability_class rather than rule_id.
+#   - dedup key is (repository_id, file_path, rule_id) per
+#     references/sast.md § "Deduplication key".
+#   - trigger_context discriminates the two artefact prefixes: 'periodic'
+#     for s3://<bucket>/periodic/semgrep/, 'cicd' for s3://<bucket>/cicd/
+#     semgrep/. Derived from the artefact key (NOT from a payload field).
+source_key: semgrep
+fields:
+  finding_id:         repository_id + ":" + file_path + "#" + rule_id + "@" + start_line
+  tool_source:        "semgrep"
+  category:           "sast"
+  severity_canonical:
+    json:
+      source_path: extra.severity
+    sarif:
+      source_path: runs[].results[].level
+    lookup: src/connectors/semgrep/severity.yml
+  status_canonical:
+    literal: open
+  cwe_id:
+    json:
+      source_path: extra.metadata.cwe[0]   # first element extracted; null when absent
+    sarif:
+      source_path: runs[].tool.driver.rules[ruleIndex].properties.tags[cwe-*]
+  rule_id_native:
+    json:
+      source_path: check_id
+    sarif:
+      source_path: runs[].results[].ruleId
+  message:
+    json:
+      source_path: extra.message
+    sarif:
+      source_path: runs[].results[].message.text
+  file_path:
+    json:
+      source_path: path
+    sarif:
+      source_path: runs[].results[].locations[0].physicalLocation.artifactLocation.uri
+  start_line:
+    json:
+      source_path: start.line
+    sarif:
+      source_path: runs[].results[].locations[0].physicalLocation.region.startLine
+  start_column:
+    json:
+      source_path: start.col
+    sarif:
+      source_path: runs[].results[].locations[0].physicalLocation.region.startColumn
+  end_line:
+    json:
+      source_path: end.line
+  end_column:
+    json:
+      source_path: end.col
+  # Trigger context is a function of the artefact's S3 prefix
+  # (`periodic/semgrep/...` vs `cicd/semgrep/...`) — NOT a payload field.
+  # The transform stamps it from the prefix it dispatched on.
+  trigger_context:
+    derive_from: artefact_prefix
+  # repository_id is encoded in the artefact's S3 key (`<prefix>/<repo>/...`),
+  # NOT in the JSON / SARIF body. Transform extracts it from the key.
+  repository_id:
+    derive_from: artefact_key
+# Dedup key per references/sast.md § "Deduplication key".
+dedup_key:
+  - repository_id
+  - file_path
+  - rule_id

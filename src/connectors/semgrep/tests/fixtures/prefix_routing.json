@@ -1,0 +1,33 @@
+{
+  "_comment": "Test fixture for the trigger_context discriminator. Each entry pairs an artefact key with the expected (trigger_context, repository_id, hwm_value) extracted by parse_artefact_key.",
+  "cases": [
+    {
+      "key": "cicd/semgrep/acme-payments-api/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0.json",
+      "expected_trigger_context": "cicd",
+      "expected_repository_id": "acme-payments-api",
+      "expected_hwm_value": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+      "expected_format": "json"
+    },
+    {
+      "key": "cicd/semgrep/acme-loyalty-web/c3d4e5f6a7b8.sarif",
+      "expected_trigger_context": "cicd",
+      "expected_repository_id": "acme-loyalty-web",
+      "expected_hwm_value": "c3d4e5f6a7b8",
+      "expected_format": "sarif"
+    },
+    {
+      "key": "periodic/semgrep/acme-payments-api/20260420T100000Z.json",
+      "expected_trigger_context": "periodic",
+      "expected_repository_id": "acme-payments-api",
+      "expected_hwm_value": "20260420T100000Z",
+      "expected_format": "json"
+    },
+    {
+      "key": "periodic/semgrep/acme-loyalty-web/20260420T101500Z.sarif",
+      "expected_trigger_context": "periodic",
+      "expected_repository_id": "acme-loyalty-web",
+      "expected_hwm_value": "20260420T101500Z",
+      "expected_format": "sarif"
+    }
+  ]
+}

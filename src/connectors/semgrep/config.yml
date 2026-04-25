@@ -1,0 +1,39 @@
+source: semgrep
+category: sast
+severity_map: src/connectors/semgrep/severity.yml
+# Status lookup file exists for framework-contract parity (both lookup files
+# must be present for every connector). Semgrep CLI emits no finding lifecycle
+# vocabulary; the literal `open` constant in mapping.yml is authoritative.
+status_map:   src/connectors/semgrep/status.yml
+bucket_secret_scope: mvp-connectors
+bronze_table: ${catalog}.bronze_semgrep.findings
+# CLI / Docker-artefact path (the documented exception alongside TruffleHog
+# per CLAUDE.md "Architectural rules" and references/sast.md "Ingestion-tooling
+# preference"). Semgrep runs in a Docker container — either as an EKS CronJob
+# (periodic-global lane) or as a GitHub Actions step (CI/CD-step lane) — and
+# writes `--json` or `--sarif` artefacts to S3. The connector reads those
+# artefacts via Auto Loader; it does not invoke `semgrep` itself and does not
+# call the Semgrep AppSec Platform Cloud API.
+#
+# REQ-ING-AUTH, REQ-ING-PAG, REQ-ING-RL are N/A for this surface — there is no
+# Semgrep API to authenticate to, paginate, or be rate-limited against. The
+# only credentials in play are the AWS reader credentials for the artefact
+# bucket, which are out of band of the ingest-contract auth model.
+#
+# Two artefact prefixes coexist; both land in the single bronze table with a
+# `trigger_context` discriminator (`periodic` | `cicd`). HWM strategy differs
+# by lane (full reload semantics; HWM is operator-facing observability):
+#   - periodic/semgrep/<repo>/<YYYYMMDDTHHMMSSZ>.{json,sarif}  -> scan_start_timestamp
+#   - cicd/semgrep/<repo>/<commit-sha>.{json,sarif}           -> commit_sha
+hwm:
+  strategy: per_lane
+  lanes:
+    cicd:
+      key: commit_sha
+      prefix: cicd/semgrep/
+    periodic:
+      key: scan_start_timestamp
+      prefix: periodic/semgrep/
+artefact_formats:
+  - json     # Semgrep --json (semgrep.dev/docs/semgrep-appsec-platform/json-and-sarif)
+  - sarif    # SARIF v2.1.0 (docs.oasis-open.org/sarif/sarif/v2.1.0)

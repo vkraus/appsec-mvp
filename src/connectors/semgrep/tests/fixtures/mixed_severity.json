@@ -1,0 +1,49 @@
+{
+  "version": "1.50.0",
+  "results": [
+    {
+      "check_id": "rule.error.example",
+      "path": "src/file_a.py",
+      "start": {"line": 10, "col": 1},
+      "end": {"line": 10, "col": 20},
+      "extra": {"message": "ERROR-level finding", "severity": "ERROR", "metadata": {}}
+    },
+    {
+      "check_id": "rule.warning.example",
+      "path": "src/file_b.py",
+      "start": {"line": 20, "col": 1},
+      "end": {"line": 20, "col": 20},
+      "extra": {"message": "WARNING-level finding", "severity": "WARNING", "metadata": {}}
+    },
+    {
+      "check_id": "rule.info.example",
+      "path": "src/file_c.py",
+      "start": {"line": 30, "col": 1},
+      "end": {"line": 30, "col": 20},
+      "extra": {"message": "INFO-level finding", "severity": "INFO", "metadata": {}}
+    },
+    {
+      "check_id": "rule.unknown.example",
+      "path": "src/file_d.py",
+      "start": {"line": 40, "col": 1},
+      "end": {"line": 40, "col": 20},
+      "extra": {"message": "Unmapped severity", "severity": "MYSTERY", "metadata": {}}
+    },
+    {
+      "check_id": "rule.duplicate.example",
+      "path": "src/file_a.py",
+      "start": {"line": 99, "col": 1},
+      "end": {"line": 99, "col": 20},
+      "extra": {"message": "Same (repo, file, rule) as a later record — dedup test", "severity": "ERROR", "metadata": {"cwe": ["CWE-22: Path Traversal"]}}
+    },
+    {
+      "check_id": "rule.duplicate.example",
+      "path": "src/file_a.py",
+      "start": {"line": 99, "col": 1},
+      "end": {"line": 99, "col": 20},
+      "extra": {"message": "Re-emission of the same dedup-key tuple", "severity": "ERROR", "metadata": {"cwe": ["CWE-22: Path Traversal"]}}
+    }
+  ],
+  "errors": [],
+  "paths": {"scanned": ["src/"]}
+}
