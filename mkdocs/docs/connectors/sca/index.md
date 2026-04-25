@@ -16,7 +16,7 @@ SCA sources populate the Silver `finding` table with SCA dedup key `(repository_
 
 ## Skills
 
-Three category-specialized skills cover the connector lifecycle for SCA sources: `analyze-source-sca`, `generate-connector-sca`, `validate-implementation-sca`. See [Skills](skills.md) for the current unspecialized baselines.
+Three skills cover the connector lifecycle for SCA sources, with category-specific facts at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## Connectors in this category
 

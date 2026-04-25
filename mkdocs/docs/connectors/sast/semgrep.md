@@ -217,3 +217,13 @@ Collected 10 requirement-bound tests via `pytest tests/connectors/semgrep/ -v --
 ### Tests
 
 Tests live under [`tests/connectors/semgrep/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/semgrep). The report table above is the per-REQ outcome of running the bound tests in that directory.
+
+## Provenance
+
+This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated provenance row is tracked as a deferred follow-up (see the design spec).
+
+| Stage              | Skill                            | Inputs       | Outputs                                            | Run on     | Skills repo ref |
+|--------------------|----------------------------------|--------------|----------------------------------------------------|------------|-----------------|
+| Source analysis    | `analyze-source` (sast)          | (pre-skill)  | `mkdocs/docs/connectors/sast/semgrep.md` §1–§3     | (pre-skill) | (pre-skill)     |
+| Module generation  | `generate-connector` (sast)      | (pre-skill)  | `src/connectors/semgrep/`, `tests/connectors/semgrep/` | (pre-skill) | (pre-skill)     |
+| Validation         | `validate-implementation` (sast) | (pre-skill)  | `mkdocs/docs/connectors/sast/semgrep.md` §5        | (pre-skill) | (pre-skill)     |
