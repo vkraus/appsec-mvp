@@ -1,7 +1,5 @@
 # TruffleHog
 
-This connector page is produced by the connector-lifecycle skills. The Generation log table records the skill runs that produce the page, the connector module, and the validation report.
-
 ## Overview
 
 TruffleHog is the dedicated secret-detection tool. Operational pattern: **CI/CD-step** — each `trufflehog` invocation is a complete scan scoped to a commit range, and the connector uses the latest scanned commit SHA per repository as the high-water mark (`--since-commit`). The connector invokes the TruffleHog CLI against each enrolled repository and parses its line-delimited JSON output to populate `silver.findings`. TruffleHog's distinguishing capability is live credential verification: with `--results=verified,unknown`, the tool validates each detected secret against the provider's authentication endpoint and emits a `Verified` boolean. This boolean is the primary signal for the canonical `validity_status` column.
@@ -127,15 +125,10 @@ The `unknown` category matters: it covers secrets on isolated networks or agains
 
 ## Generation log
 
+This connector page is produced by the connector-lifecycle skills. The Generation log table records the skill runs that produce the page, the connector module, and the validation report.
+
 | Stage              | Skill                              | Inputs                                                                              | Outputs                                                                            | Run on     | Skills repo ref                          |
 |--------------------|------------------------------------|-------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (secrets)         | name=TruffleHog; url=https://github.com/trufflesecurity/trufflehog; category=secrets | mkdocs/docs/connectors/secrets/trufflehog.md §1–§3                                 | 2026-04-25 | b3af2e0 (retrofit-9-connectors)          |
 | Module generation  | `generate-connector` (secrets)     | (pending)                                                                           | (pending)                                                                          | (pending)  | (pending)                                |
 | Validation         | `validate-implementation` (secrets)| (pending)                                                                           | (pending)                                                                          | (pending)  | (pending)                                |
-
-## References
-
-- TruffleHog GitHub repository — <https://github.com/trufflesecurity/trufflehog>
-- Secrets capability surface — `mkdocs/docs/connectors/secrets/index.md`
-- Canonical Silver findings schema — `mkdocs/docs/platform/reference/canonical-mapping.md`
-- REQ catalog — `mkdocs/docs/platform/reference/catalog.md`

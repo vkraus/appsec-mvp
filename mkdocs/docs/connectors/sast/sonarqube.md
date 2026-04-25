@@ -237,7 +237,7 @@ Tests live under [`tests/connectors/sonarqube/`](https://github.com/vkraus/appse
 
 ## Generation log
 
-This connector page is produced by the connector-lifecycle skills. The Generation log table records the skill runs that produce the page, the connector module, and the validation report.
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work. The SonarQube Web API docs render as a JavaScript SPA that WebFetch could not parse during the analyze-source run; the existing implementation-grounded prose was preserved verbatim and validated against widely-published SonarQube API conventions. The Generation log table records the actual skill runs that produced the reconciled artefacts.
 
 | Stage              | Skill                              | Inputs                                                                                  | Outputs                                                                            | Run on     | Skills repo ref                          |
 |--------------------|------------------------------------|-----------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|

@@ -8,14 +8,6 @@ The WAF reference profile prefers **log-stream consumption** (CloudWatch Logs / 
 
 **Category:** WAF (runtime, edge event stream) · **Integration pattern:** log-stream autoloader (preferred) / SDK boto3 (fallback)
 
-!!! info "Not in MVP scope"
-    A reference AWS WAF connector is not part of the MVP. The
-    Reference section below documents the intended integration per
-    the WAF capability surface (`mkdocs/docs/connectors/waf/index.md`)
-    and the analyze-source WAF reference. The traceability matrix in
-    `mkdocs/docs/platform/reference/catalog.md` shows N/A across
-    every REQ for AWS WAF for this reason.
-
 ## Prerequisites
 
 !!! info "Not implemented in MVP"
