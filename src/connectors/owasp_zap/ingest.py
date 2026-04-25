@@ -9,8 +9,8 @@ Both flow into the same bronze table with the appropriate trigger_context.
 
 from __future__ import annotations
 
-from src.common.bronze_schema import with_envelope
-from src.common.contract import BatchDescriptor, ConnectorState
+from src.platform.bronze_schema import with_envelope
+from src.platform.contract import BatchDescriptor, ConnectorState
 
 
 def classify_source(path_or_url: str) -> str:

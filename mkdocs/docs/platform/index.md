@@ -1,118 +1,113 @@
-# Platform
+# Setup platform
 
-The platform is a Databricks-based data integration framework for application security. It ingests from AppSec sources via connectors, normalizes to canonical schemas, and exposes an analytics layer over them.
+Phase 1 of the install flow. The platform layer is the Databricks-resident
+substrate that every connector lands data into and every analytics
+computation reads from. This section documents the four operator steps
+needed to stand it up.
 
-This page describes the **implementation-level architecture** of the Databricks reference MVP: module layout, shared libraries, per-connector components, data flow through Bronze / Silver / Gold, and Databricks Asset Bundle (DAB) orchestration.
+!!! note "Platform name disambiguation"
+    The word *platform* is used in two senses in this repository.
+    1. **Operator-facing setup phase** (this section) — the workspace
+       bootstrap that produces the DAB-deployed catalog, schemas, jobs, and
+       secret-scope container before any connector is installed.
+    2. **`src/platform/` Python framework** — the shared library
+       (HTTP client, pagination, severity/status normalization, dedup) that
+       every connector imports. See
+       [Project layout](reference/project-layout.md) for its module layout.
+    Both senses appear throughout the docs; context disambiguates which is
+    meant.
 
-## Architecture
+## Phase 1 — four steps
 
-Medallion layout across three layers:
+The redesigned platform is stood up in four sequential steps. Each page is
+self-sustained: an operator can finish the step from that page alone.
 
-- **Bronze** — raw landed data, one table per source endpoint, schema-on-read.
-- **Silver** — canonical entity and finding tables, severity and status normalized.
-- **Gold** — aggregations, evidence views, and dashboards consumed by [Analytics](../analytics/).
+<div class="grid cards" markdown>
 
-All tables live in Unity Catalog under a three-tier namespace (`<catalog>.bronze.*`, `<catalog>.silver.*`, `<catalog>.gold.*`) provisioned by the DAB bootstrap job at [`resources/bootstrap.yml`](https://github.com/vkraus/appsec-mvp/tree/main/resources).
+-   :material-clipboard-check:{ .lg .middle } **1. [Prerequisites](prerequisites.md)**
 
-## Top-level layout
+    ---
 
-Everything product-related lives in the [`appsec-mvp`](https://github.com/vkraus/appsec-mvp) repository:
+    Operator-supplied inputs: AWS backbone (VPC, EKS, S3, IAM), Databricks
+    workspace + UC metastore, local CLI tooling, env-var conventions.
 
-```text
-appsec-mvp/
-├── src/
-│   ├── common/           # Shared framework library
-│   │   ├── bronze.py     # HTTP client, pagination, HWM
-│   │   ├── silver.py     # Canonical mapping engine
-│   │   ├── severity.py   # Severity normalization
-│   │   ├── status.py     # Status normalization
-│   │   └── dedup.py      # Cross-tool deduplication
-│   └── connectors/
-│       ├── servicenow/   # Per-source connector modules
-│       ├── github/
-│       └── ...
-├── config/
-│   ├── severity/         # Per-source severity lookup YAML
-│   └── status/           # Per-source status lookup YAML
-├── resources/            # DAB job bundle fragments (one per source)
-├── tests/
-│   ├── common/           # Tests for shared framework library
-│   └── connectors/       # Tests for per-source connectors
-├── sql/                  # Silver and Gold SQL
-├── databricks.yml        # DAB root
-└── pyproject.toml        # Python package definition
-```
+-   :material-package-down:{ .lg .middle } **2. [Bundle deploy](bundle-deploy.md)**
 
-## Framework library: `src/common/`
+    ---
 
-The shared library implements the patterns the connector contract prescribes. Each module is small and focused:
+    `databricks bundle deploy --target dev`. Creates the catalog, schemas,
+    jobs, pipelines, volumes, and the ServiceNow connection.
 
-- **[`bronze.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/common/bronze.py)** — ingestion primitives: HTTP client with retry/rate-limit, pagination iterator, high-water-mark arithmetic.
-- **[`silver.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/common/silver.py)** — declarative Bronze-to-Silver mapping engine driven by per-connector `mapping.yml`.
-- **[`severity.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/common/severity.py)** — loads `config/severity/{source}.yml` and applies the canonical four-level scale with DQ warning on fallthrough.
-- **[`status.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/common/status.py)** — loads `config/status/{source}.yml` and applies the canonical five-state lifecycle model.
-- **[`dedup.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/common/dedup.py)** — cross-tool deduplication for the Silver Finding table.
+-   :material-key-chain:{ .lg .middle } **3. [Secrets bootstrap](secrets-bootstrap.md)**
 
-Per-connector modules import from `src/common/` and implement only the source-specific bits.
+    ---
 
-## Per-connector module shape
+    Run `src/platform/scripts/bootstrap.sh` to create the secret scope,
+    storage credential, and external location. Per-connector secret loaders
+    populate values when each connector is wired.
 
-Each connector at `src/connectors/{source}/` is a self-contained unit:
+-   :material-database-cog:{ .lg .middle } **4. [Platform bootstrap job](platform-bootstrap-job.md)**
 
-| File | Purpose |
-|---|---|
-| `config.yml` | Base URL, endpoints, pagination style, HWM column, target Bronze table, credential reference. |
-| `ingest.py` | Implements `ingest(run_id, state) -> batch`. LakeFlow Connect connectors leave this empty; SDK and dlt-based connectors fill it. |
-| `transform.py` | Implements `transform(bronze_df) -> silver_df` using the shared mapping engine. |
-| `mapping.yml` | Declarative Bronze-to-Silver column expressions. |
+    ---
 
-Corresponding side-car files:
+    `databricks bundle run platform-bootstrap`. Applies the silver-table
+    DDL via the platform's SQL warehouse.
 
-| File | Purpose |
-|---|---|
-| `config/severity/{source}.yml` | Native-severity → canonical-severity lookup. |
-| `config/status/{source}.yml` | Native-status → canonical-status lookup. |
-| `resources/{source}-job.yml` | DAB job bundle fragment (two-task ingest → transform). |
-| `tests/connectors/{source}/` | Connector tests with `@pytest.mark.requirement("REQ-...")` markers. |
+</div>
 
-## Ingestion category decision
+After all four steps land, Phase 1 is complete and the platform is ready to
+install connectors. Move on to [Install connectors](../connectors/index.md)
+— start with the [SCM category](../connectors/scm/index.md) because SCM
+connectors populate `silver.repositories`, which every other connector's
+findings reference.
 
-Each connector chooses one of three sanctioned ingestion categories in this preference order: Lakeflow Connect, Databricks SDK, then dlt. The per-connector pages under [Connectors](../connectors/) record the chosen category.
+## Architecture context
 
-## Data flow
+The platform implements a medallion layout across three layers:
 
-Sources land in Bronze through connector pipelines defined in [src/connectors/](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors). Silver transformations apply the canonical mappings documented in [Reference → Canonical mapping](reference/canonical-mapping.md). Gold materializations are defined per the analytics scenarios in [Analytics → Evidence scenarios](../analytics/).
+- **Bronze** — raw landed data, one schema per source (`bronze_<source>`),
+  schema-on-read.
+- **Silver** — canonical entity and finding tables, severity and status
+  normalized. Cross-source tables live in the `silver` schema; per-source
+  projections live in `silver_<source>` schemas.
+- **Gold** — aggregations, evidence views, and dashboards consumed by
+  [Analytics](../analytics/index.md).
 
 ```mermaid
 flowchart LR
     src[Source API / artifact] --> ingest[ingest.py<br/>per connector]
     ingest --> bronze[(Bronze table<br/>raw + ingestion metadata)]
-    bronze --> transform[transform.py<br/>+ common/silver.py]
+    bronze --> transform[transform.py<br/>+ src/platform/silver.py]
     transform --> silver[(Silver table<br/>canonical entities / findings)]
-    silver --> dedup[common/dedup.py]
+    silver --> dedup[src/platform/dedup.py]
     dedup --> silverlinks[(silver.dedup_links)]
-    silver --> gold[SQL in sql/gold/]
+    silver --> gold[SQL in src/analytics/sql/]
     gold --> gold_tables[(Gold<br/>app-level aggregates)]
 ```
 
-## Orchestration
-
-Each connector ships a DAB job fragment at `resources/{source}-job.yml` declaring a two-task pipeline (ingest → transform). The DAB root [`databricks.yml`](https://github.com/vkraus/appsec-mvp/blob/main/databricks.yml) assembles the fragments into a complete bundle. Deployment: `databricks bundle deploy`.
-
-## Setup path
-
-For reproducing the MVP end-to-end against real accounts — whether as a one-time operator or a third-party reader (examiner, future researcher) rebuilding from the docs alone:
-
-1. [Prerequisites](prerequisites.md) — Databricks workspace, cloud account, terraform.
-2. [Terraform apply](terraform-apply.md) — provision the workspace and bundle targets.
-3. [Connectors](../connectors/) — wire each source in the recommended order (CMDB first, then SCM, then scanners).
-4. [Analytics](../analytics/) — inspect Gold outputs and evidence.
+All tables live in Unity Catalog under a three-tier namespace
+(`<catalog>.bronze_<source>.*`, `<catalog>.silver.*`,
+`<catalog>.silver_<source>.*`, `<catalog>.gold.*`). The `<catalog>` token
+is per-environment: `appsec_dev`, `appsec_staging`, `appsec_prod`.
 
 ## Reference
 
-- [Canonical mapping](reference/canonical-mapping.md) — Silver schemas consumed by all connectors.
-- [REQ catalog](reference/catalog.md) — normative requirement identifiers with traceability.
-
-## Details in code
-
-This Platform page intentionally stays at the architecture-overview level. For line-level detail, read the code — every module above is linked to its source on GitHub. The Tests page links from each `REQ-*` to the test file that validates the corresponding module.
+- [Project layout](reference/project-layout.md) — top-level directory
+  structure and per-component module shape.
+- [Canonical mapping](reference/canonical-mapping.md) — Silver schemas
+  consumed by all connectors.
+- [REQ catalog](reference/catalog.md) — normative requirement identifiers
+  with traceability matrix.
+- [Connector skills](reference/connector-skills.md) — the three skills
+  (`analyze-source`, `generate-connector`, `validate-implementation`) that
+  drive the connector lifecycle.
+- [Source capability matrix](reference/source-capability-matrix.md) —
+  per-source protocol, pagination, HWM, severity.
+- [Source characteristics](reference/source-characteristics.md) — per-source
+  protocol decision context.
+- [Connector job template](reference/connector-job-template.md) — DAB
+  fragment shape every connector follows.
+- [Silver table ownership](reference/silver-table-ownership.md) — which
+  connector populates which Silver table.
+- [Single `silver.findings` rationale](reference/single-silver-findings-rationale.md) —
+  design decision for the cross-source findings table.

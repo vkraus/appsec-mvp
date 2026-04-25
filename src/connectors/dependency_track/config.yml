@@ -22,8 +22,8 @@ hwm:
   strategy: updated_at
   column: attributedOn
 bronze_table: ${catalog}.bronze_dependency_track.findings
-severity_map: config/severity/dependency_track.yml
-status_map:   config/status/dependency_track.yml
+severity_map: src/connectors/dependency_track/severity.yml
+status_map:   src/connectors/dependency_track/status.yml
 # Active projects only on incremental runs; operators widen the classifier
 # filter via `classifier_filter` for FRAMEWORK / LIBRARY projects.
 classifier_filter:

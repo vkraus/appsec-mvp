@@ -13,17 +13,18 @@ Silver tables and connectors do not line up one-to-one. Each table can be fed by
 | Silver Table | Populated By |
 |---|---|
 | applications | CMDB |
-| repositories | SCM |
+| repositories | SCM (canonical entity in `silver.repositories`; DDL at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql)) |
 | teams | CMDB; SCM |
 | commits | SCM |
 | pull_requests | SCM |
 | pipeline_runs | CI/CD; SCM for platform-integrated pipelines |
 | dependencies | SCA scanner; SCM for dependency-graph APIs |
 | branch_policies | SCM |
-| findings | all scanner categories: SAST, SCA, secret, DAST, container, IaC; also SCM for platform-integrated code/dependency/secret scanning. Records are discriminated by the `category` column. |
+| findings | all scanner categories: SAST, SCA, secret, DAST, container, IaC; also SCM for platform-integrated code/dependency/secret scanning. Records are discriminated by the `category` column. (`silver.findings`; DDL at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql)) |
 | vulnerabilities | NVD enrichment connector |
 | epss_scores | EPSS enrichment connector |
 | kev_entries | CISA KEV enrichment connector |
-| app_repo_mapping | CMDB; SCM |
+| app_repo | CMDB (canonical mapping in `silver.app_repo`; supersedes the prior `silver.app_repo_mapping` table) |
 | finding_cve_mapping | derived in the transformation layer |
 | dedup_links | derived in the transformation layer |
+| hwm | every connector (`silver.hwm`; cross-connector high-water-mark state) |

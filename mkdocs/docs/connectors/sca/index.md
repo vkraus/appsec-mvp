@@ -2,6 +2,12 @@
 
 SCA connectors ingest dependency-keyed findings with CVE correlation.
 
+!!! note "SCM-first dependency"
+    Connectors in this category depend on at least one SCM connector being
+    installed first; their findings reference `silver.repositories.repository_id`
+    populated by SCM. Walk the [SCM category](../scm/index.md) before installing
+    a SCA connector.
+
 ## Capability surface
 
 SCA sources emit dependency-keyed findings: package name, installed version, ecosystem, CVE identifier, and optional PURL. Severity vocabularies extend up to five CVSS-aligned labels (`None`, `Low`, `Medium`, `High`, `Critical`), with some tools adding a sixth for unassigned or informational findings; the specification requires per-tool severity lookup tables to the canonical four-level scale as for SAST.

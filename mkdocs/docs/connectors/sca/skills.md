@@ -16,7 +16,7 @@ From `mkdocs/docs/platform/reference/catalog.md`. SCA sources emit findings keye
 
 ### Default severity
 
-`medium`. Source severity vocabularies extend up to five CVSS-aligned labels (`None`, `Low`, `Medium`, `High`, `Critical`) and some tools add a sixth `UNASSIGNED` or informational level. Per-source lookup tables at `config/severity/{source}.yml` map each value to the canonical four-level model (`critical`, `high`, `medium`, `low`). Undocumented values fall through to `medium` and trigger a data-quality warning.
+`medium`. Source severity vocabularies extend up to five CVSS-aligned labels (`None`, `Low`, `Medium`, `High`, `Critical`) and some tools add a sixth `UNASSIGNED` or informational level. Per-source lookup tables at `src/connectors/{source}/severity.yml` map each value to the canonical four-level model (`critical`, `high`, `medium`, `low`). Undocumented values fall through to `medium` and trigger a data-quality warning.
 
 ### Incremental strategy
 
@@ -68,14 +68,14 @@ From `mkdocs/docs/platform/reference/catalog.md`. Bind one test function per REQ
 
 ### Default severity
 
-`medium`. Generate `config/severity/{source}.yml` covering the documented source vocabulary (typically five CVSS-aligned labels: `None`, `Low`, `Medium`, `High`, `Critical`; some tools add `UNASSIGNED` or informational levels) mapped to the canonical four-level model (`critical`, `high`, `medium`, `low`). Configurable default for unmatched values is `medium` with a data-quality warning.
+`medium`. Generate `src/connectors/{source}/severity.yml` covering the documented source vocabulary (typically five CVSS-aligned labels: `None`, `Low`, `Medium`, `High`, `Critical`; some tools add `UNASSIGNED` or informational levels) mapped to the canonical four-level model (`critical`, `high`, `medium`, `low`). Configurable default for unmatched values is `medium` with a data-quality warning.
 
 The `mapping.yml` `severity` field references the lookup file by path:
 
 ```yaml
 severity:
   source_path: <native-severity-field>
-  lookup: config/severity/{source}.yml
+  lookup: src/connectors/{source}/severity.yml
 ```
 
 Where the source emits a numeric CVSS score instead of (or alongside) a label, encode the derivation rule in `mapping.yml` (e.g. `>= 9.0 → critical`, `>= 7.0 → high`, etc.) and document it in the connector page Quirks.
@@ -104,7 +104,7 @@ The transform MUST also project `package_version`, `ecosystem`, and (where prese
 
 ### Authentication norms
 
-PAT or API-key based, as for SAST. Platform-integrated SCA inherits the host SCM connector's auth (PAT or OAuth). `ingest.py` reads credentials via the helper in `src/common/`; `config.yml` references the secret-scope key names only.
+PAT or API-key based, as for SAST. Platform-integrated SCA inherits the host SCM connector's auth (PAT or OAuth). `ingest.py` reads credentials via the helper in `src/platform/`; `config.yml` references the secret-scope key names only.
 
 ### Ingestion-tooling preference
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pyspark.sql import DataFrame
 
-from src.common.schemas import silver_findings
+from src.platform.schemas import silver_findings
 
 
 def transform(bronze_df: DataFrame) -> DataFrame:

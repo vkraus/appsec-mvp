@@ -21,10 +21,10 @@ from collections.abc import Iterator
 from datetime import datetime
 from typing import Any
 
-from src.common.contract import BatchDescriptor, ConnectorState
+from src.platform.contract import BatchDescriptor, ConnectorState
 
 # When the GitLab bronze write is implemented, call
-# ``src.common.bronze_schema.with_envelope`` on the dataframe before
+# ``src.platform.bronze_schema.with_envelope`` on the dataframe before
 # ``.writeTo`` so projects, commits, merge requests, protected branches,
 # and vulnerabilities carry the uniform section 2.2.2 envelope from the
 # first write. See OWASP ZAP and Semgrep for the pattern.

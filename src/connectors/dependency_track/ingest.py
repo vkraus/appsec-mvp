@@ -20,7 +20,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
-from src.common.contract import BatchDescriptor, ConnectorState
+from src.platform.contract import BatchDescriptor, ConnectorState
 
 _PURL_ECOSYSTEM_RE = re.compile(r"^pkg:([^/]+)/")
 

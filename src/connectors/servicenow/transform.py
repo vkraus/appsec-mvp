@@ -1,17 +1,16 @@
 """ServiceNow transform: bronze rows of cmdb_ci_business_app to silver."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pyspark.sql import DataFrame, Row, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, StructField, StructType
 
-from src.common.config import SeverityMap, load_yaml
-from src.common.schemas import silver_applications
+from src.platform.config import SeverityMap, load_yaml
+from src.platform.schemas import silver_applications
 
-
-_SEVERITY_PATH = Path(__file__).parents[3] / "config" / "severity" / "servicenow.yml"
+_SEVERITY_PATH = Path(__file__).parent / "severity.yml"
 
 
 _OWNED_BY_SCHEMA = StructType([
@@ -29,13 +28,13 @@ _CMDB_BA_SCHEMA = StructType([
 
 def _parse_sn_ts(raw: str) -> datetime:
     # ServiceNow format: "2026-04-20 10:00:00" UTC
-    return datetime.strptime(raw, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    return datetime.strptime(raw, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
 
 
 def _criticality_mapping_expr(column):
     """Return a Spark column expression that maps ServiceNow u_criticality
     values onto the canonical severity set via the declarative lookup at
-    config/severity/servicenow.yml. Unknown inputs map to ``info``.
+    src/connectors/servicenow/severity.yml. Unknown inputs map to ``info``.
     """
     sev = load_yaml(SeverityMap, _SEVERITY_PATH)
     pairs = []
@@ -50,7 +49,7 @@ def transform(bronze_df: DataFrame) -> DataFrame:
     Parses the bronze envelope's ``_raw_payload`` against the cmdb fields
     consumed by the silver layer and projects onto
     ``silver_applications``. Criticality passes through the
-    declarative lookup at ``config/severity/servicenow.yml``. Assumes
+    declarative lookup at ``src/connectors/servicenow/severity.yml``. Assumes
     ``owned_by`` is serialized as a struct with an ``email`` member; the
     Lakeflow-managed bronze view emits that shape by default.
     """

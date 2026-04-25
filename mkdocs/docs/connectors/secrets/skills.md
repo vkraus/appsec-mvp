@@ -17,7 +17,7 @@ From `mkdocs/docs/platform/reference/catalog.md`. Secrets sources emit findings 
 
 ### Default severity
 
-`high`. The specification maps every secret finding to `severity=high` by default; a per-deployment override at `config/severity/{source}.yml` is permitted for low-entropy detector classes (where false-positive rates are high enough to warrant a downgrade).
+`high`. The specification maps every secret finding to `severity=high` by default; a per-deployment override at `src/connectors/{source}/severity.yml` is permitted for low-entropy detector classes (where false-positive rates are high enough to warrant a downgrade).
 
 The Reference section's Enumerations fact MUST disclose that severity is conventional, not source-derived.
 
@@ -51,7 +51,7 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. CLI-
 - **No status transitions.** Secret findings do not have an open / resolved lifecycle in the source. The Silver `status` field is left null (or set to `open` on first emit) and `REQ-TRF-STS` does not apply.
 - **CI/CD-step dominance.** Secret detection is almost exclusively CI/CD-step in practice; every commit is a potential leak. The Reference section's Incremental hook fact records the commit SHA as the operative HWM.
 - **Periodic-global host-side scans.** Some platforms (GitHub Secret Scanning) also run periodic-global scans across repository history to catch historical leaks. Both outputs are labelled with `(repository_id, commit_sha)` so dedup unifies them.
-- **Detector-class severity overrides.** The `config/severity/{source}.yml` lookup may downgrade specific detector classes (low-entropy patterns, deprecated detectors) below the default `high`. Document the policy in the Quirks fact.
+- **Detector-class severity overrides.** The `src/connectors/{source}/severity.yml` lookup may downgrade specific detector classes (low-entropy patterns, deprecated detectors) below the default `high`. Document the policy in the Quirks fact.
 
 *Rendered from `.claude/skills/analyze-source/references/secrets.md`. Source-of-truth lives in the skill file.*
 
@@ -76,7 +76,7 @@ severity:
   literal: high
 ```
 
-The `config/severity/{source}.yml` file MUST still exist (every connector has both lookup files per the framework contract) and contain a single comment line:
+The `src/connectors/{source}/severity.yml` file MUST still exist (every connector has both lookup files per the framework contract) and contain a single comment line:
 
 ```
 # default high; per-deployment override permitted for low-entropy detector classes
@@ -113,8 +113,8 @@ The status field is NOT projected — secrets emit no lifecycle.
 
 ### Authentication norms
 
-- **CLI-based** (the dominant style — TruffleHog, gitleaks): no API auth. Access is governed by the artefact bucket's IAM policy. `config.yml` encodes the bucket prefix; `ingest.py` uses the autoloader / cloud-storage helpers in `src/common/`.
-- **Server-based** (rare): PAT or API-key, as for SAST. `ingest.py` reads credentials via the helper in `src/common/`.
+- **CLI-based** (the dominant style — TruffleHog, gitleaks): no API auth. Access is governed by the artefact bucket's IAM policy. `config.yml` encodes the bucket prefix; `ingest.py` uses the autoloader / cloud-storage helpers in `src/platform/`.
+- **Server-based** (rare): PAT or API-key, as for SAST. `ingest.py` reads credentials via the helper in `src/platform/`.
 
 The connector page identifies which path the source takes; emit the matching auth code (or its absence).
 
@@ -131,7 +131,7 @@ Standard order: Lakeflow Connect → Databricks SDK → dlt.
 - **Verification semantics.** Where the source supports live credential verification, populate `validity_status` from the verification flag in `mapping.yml`. Document the source field name (e.g. `Verified` for TruffleHog) in a transform-level comment.
 - **No status transitions.** `REQ-TRF-STS` is N/A; do not generate status-transition code or status-lookup references. The Silver `status` field is left null (or set to `open` on first emit) — encode the constant in `mapping.yml`, NOT a lookup.
 - **CI/CD-step dominance.** Secret detection is almost exclusively CI/CD-step in practice; the `config.yml` HWM shape is the commit SHA. Periodic-global host-side scans (GitHub Secret Scanning) use scan-start timestamp; both shapes co-exist on the four-tuple dedup key.
-- **Detector-class severity overrides.** The optional `config/severity/{source}.yml` deployment override may downgrade specific detector classes (low-entropy patterns, deprecated detectors) below the default `high`. The override path is opt-in; the default code path uses the `mapping.yml` literal.
+- **Detector-class severity overrides.** The optional `src/connectors/{source}/severity.yml` deployment override may downgrade specific detector classes (low-entropy patterns, deprecated detectors) below the default `high`. The override path is opt-in; the default code path uses the `mapping.yml` literal.
 
 *Rendered from `.claude/skills/generate-connector/references/secrets.md`. Source-of-truth lives in the skill file.*
 
@@ -193,6 +193,6 @@ Standard order: Lakeflow Connect → Databricks SDK → dlt. CLI-based secret sc
 - **Verification semantics.** Where the source supports verification, `REQ-TRF-MAP` asserts that `validity_status` is populated from the source's verification flag (e.g. TruffleHog `Verified`). Sources without verification leave the field null.
 - **No status transitions.** `REQ-TRF-STS` is N/A; no test is bound. The Silver `status` field is left null (or set to `open` on first emit) — this constant is asserted under `REQ-TRF-MAP`, not under the omitted `REQ-TRF-STS`.
 - **CI/CD-step dominance.** The connector's HWM shape is the commit SHA in practice. The test suite reflects that in the `REQ-ING-HWM` (or its absence) per the discussion above.
-- **Detector-class severity overrides.** When a per-deployment override at `config/severity/{source}.yml` is deployed, `REQ-TRF-SEV` asserts the override's coverage and the data-quality fallback. The default code path uses the `mapping.yml` literal `high` and asserts that constant.
+- **Detector-class severity overrides.** When a per-deployment override at `src/connectors/{source}/severity.yml` is deployed, `REQ-TRF-SEV` asserts the override's coverage and the data-quality fallback. The default code path uses the `mapping.yml` literal `high` and asserts that constant.
 
 *Rendered from `.claude/skills/validate-implementation/references/secrets.md`. Source-of-truth lives in the skill file.*

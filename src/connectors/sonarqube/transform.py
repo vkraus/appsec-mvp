@@ -3,8 +3,8 @@
 Per the SonarQube connector page (mkdocs/docs/connectors/sast/sonarqube.md,
 section "Mapping example"), this module projects
 ``bronze_sonarqube.issues`` onto ``silver_findings`` by applying the
-declarative severity and status lookups under ``config/severity/`` and
-``config/status/``, splitting the ``component`` field on the first colon
+declarative severity and status lookups under ``src/connectors/<source>/severity.yml`` and
+``src/connectors/<source>/status.yml``, splitting the ``component`` field on the first colon
 to derive ``file_path`` and ``repository_id``, and filtering the
 ``type`` enumeration to ``BUG`` / ``VULNERABILITY`` (CODE_SMELL findings
 are retained in Bronze but are not security findings and are excluded
@@ -28,7 +28,7 @@ local SparkSession fixtures):
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -36,14 +36,13 @@ from pyspark.sql import DataFrame, Row, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import IntegerType, StringType, StructField, StructType
 
-from src.common.config import SeverityMap, StatusMap, load_yaml
-from src.common.schemas import silver_findings
-from src.common.silver import normalize_severity, normalize_status
+from src.platform.config import SeverityMap, StatusMap, load_yaml
+from src.platform.schemas import silver_findings
+from src.platform.silver import normalize_severity, normalize_status
 
-
-_CONFIG_ROOT = Path(__file__).parents[3] / "config"
-_SEVERITY_PATH = _CONFIG_ROOT / "severity" / "sonarqube.yml"
-_STATUS_PATH = _CONFIG_ROOT / "status" / "sonarqube.yml"
+_CONNECTOR_DIR = Path(__file__).parent
+_SEVERITY_PATH = _CONNECTOR_DIR / "severity.yml"
+_STATUS_PATH = _CONNECTOR_DIR / "status.yml"
 
 
 _SILVER_TYPES_FOR_FINDINGS: frozenset[str] = frozenset({"BUG", "VULNERABILITY"})
@@ -81,7 +80,7 @@ def _parse_sonar_ts(raw: str | None) -> datetime | None:
     if normalized.endswith("Z"):
         normalized = normalized[:-1] + "+00:00"
     dt = datetime.fromisoformat(normalized)
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 def split_component(component: str) -> tuple[str, str]:
@@ -101,7 +100,7 @@ def split_component(component: str) -> tuple[str, str]:
 
 
 def compose_status_key(status: str | None, resolution: str | None) -> str:
-    """Compose the lookup key for ``config/status/sonarqube.yml``.
+    """Compose the lookup key for ``src/connectors/sonarqube/status.yml``.
 
     - Issues: when ``status`` is RESOLVED or CLOSED, resolution refines it;
       the composite key is ``STATUS-RESOLUTION``. Otherwise the bare status
@@ -111,7 +110,7 @@ def compose_status_key(status: str | None, resolution: str | None) -> str:
       identical to issues (``STATUS-RESOLUTION``).
 
     ``None`` inputs fall through to the upstream default (``open``) via
-    :func:`src.common.silver.normalize_status`.
+    :func:`src.platform.silver.normalize_status`.
     """
     if status is None:
         return ""

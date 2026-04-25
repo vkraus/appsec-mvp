@@ -1,7 +1,7 @@
 source: owasp_zap
 category: dast
-severity_map: config/severity/owasp_zap.yml
-status_map:   config/status/owasp_zap.yml
+severity_map: src/connectors/owasp_zap/severity.yml
+status_map:   src/connectors/owasp_zap/status.yml
 bucket_secret_scope: mvp-connectors
 bronze_table: ${catalog}.bronze_owasp_zap.findings
 # DAST HWM shape — DO NOT fall back to column-based updated_at.

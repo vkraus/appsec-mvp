@@ -1,27 +1,22 @@
 # GitLab
 
-## Overview
+!!! info "Placeholder — not implemented in MVP"
+    A reference GitLab connector is not part of the MVP. This page is a
+    scaffolding placeholder framing the intended runbook structure; the
+    Reference section below documents the integration per the category
+    capability surface. Follow the [SCM skills](skills.md) to generate the
+    connector when needed.
+
+## What this connector ingests
 
 The GitLab connector plays a dual SCM and integrated-security role analogous to GitHub, but reflects GitLab's architecture. As SCM source it populates `silver.repositories` from `/projects`, `silver.commits` from the per-project commits endpoint, `silver.pull_requests` from merge requests, and `silver.branch_policies` from protected branches. GitLab Secure — available on the Ultimate tier for both SaaS and self-managed — embeds SAST, Secret Detection, and Dependency Scanning in the CI pipeline and exposes results through a Vulnerabilities API. On Ultimate, the connector additionally writes into `silver.findings` with three category values (`sast`, `secret`, `sca`) from a single source. Without Ultimate, the same findings are available in SARIF or GitLab JSON format as CI pipeline artifacts, retrievable via the jobs artifacts endpoint.
 
 **Category:** SCM + platform-integrated SAST / SCA · **Integration pattern:** SDK (python-gitlab)
 
-!!! info "Not in MVP scope"
-    A reference GitLab connector is not part of the MVP. The
-    Reference section below documents the intended integration per
-    the SCM category capability surface so a connector can be
-    generated when the source is needed; Setup and Validation
-    remain stubbed until that work is scheduled.
+## Dependencies
 
-## Prerequisites
-
-Platform-level prerequisites (AWS, Databricks workspace, Terraform tooling) are covered once in [Platform → Prerequisites](../../platform/prerequisites.md). The GitLab-specific handoffs required before a connector can be generated and deployed are:
-
-- **GitLab tenancy.** Identify the target GitLab tenancy: SaaS (`gitlab.com`) or a self-managed instance reachable from the Databricks workspace VPC. Capture the base URL (`https://gitlab.com` or the self-managed equivalent) as `gitlab_base_url` in `terraform.tfvars`. The REST API is rooted at `{base_url}/api/v4` per the GitLab REST API documentation.
-- **Top-level group.** Nominate the top-level group whose subgroups and projects the connector will ingest. Capture the group path as `gitlab_group` in `terraform.tfvars`. Group-level credentials and webhooks are configured against this group.
-- **Credential provisioning.** Provision a credential per the SCM auth norm. Group access tokens are preferred for org-wide ingestion on SaaS because they are group-scoped without being tied to a personal account; on self-managed instances a service account with the Reporter role on all target groups is recommended. Required scopes for the SCM subset: `read_api` and `read_repository`. For the finding role on Ultimate, add `read_api` against the security project. Credentials are stored in the `mvp-connectors` Databricks Secret scope under the `gitlab_token` key.
-- **Tier check.** Confirm the GitLab tier (Free, Premium, Ultimate). The Vulnerabilities API and Security Dashboard require Ultimate. On lower tiers the finding role is delivered through CI pipeline artifacts (SARIF or GitLab JSON) — operators set `gitlab_finding_path = "artifacts"` in `terraform.tfvars` so the generator emits the artifact-walking ingestion path. The default value `vulnerabilities_api` assumes Ultimate.
-- **Webhook endpoint (optional).** Webhook-based incremental ingestion is the preferred strategy. When enabled, configure a group-level webhook pointing at the Databricks workspace's webhook receiver endpoint and subscribe to Push, Merge Request, Pipeline, Job, and (on Ultimate) Vulnerability events. The connector falls back to the `updated_at` polling high-water mark when no webhook is configured.
+- **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md).
+- **No upstream connector dependency.** GitLab is an SCM connector — like GitHub it is a source-of-truth for `silver.repositories`. Install at least one SCM connector (this one or [GitHub](github.md)) **before** any non-SCM connector.
 
 ## Reference
 
@@ -115,9 +110,9 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 ### Enumerations
 
-**Vulnerability severity.** `severity` uses six values: `info`, `unknown`, `low`, `medium`, `high`, `critical`. `info` and `unknown` do not map to the framework's four-level canonical scale; both resolve to the connector-configured default severity. `config/severity/gitlab.yml` documents this mapping and must be reviewed per deployment.
+**Vulnerability severity.** `severity` uses six values: `info`, `unknown`, `low`, `medium`, `high`, `critical`. `info` and `unknown` do not map to the framework's four-level canonical scale; both resolve to the connector-configured default severity. `src/connectors/gitlab/severity.yml` documents this mapping and must be reviewed per deployment.
 
-**Vulnerability state.** `state` takes `detected` (identified, unreviewed), `confirmed` (true positive), `dismissed` (suppressed without remediation), and `resolved` (remediated). The connector maps these via `config/status/gitlab.yml`.
+**Vulnerability state.** `state` takes `detected` (identified, unreviewed), `confirmed` (true positive), `dismissed` (suppressed without remediation), and `resolved` (remediated). The connector maps these via `src/connectors/gitlab/status.yml`.
 
 **Report type.** `report_type` identifies the scanner category: `sast`, `dependency_scanning`, `container_scanning`, `dast`, `secret_detection`, `coverage_fuzzing`, `api_fuzzing`, `cluster_image_scanning`. The connector maps `report_type` to the canonical `category` column in `silver.findings`: `sast`→`sast`, `secret_detection`→`secret`, `dependency_scanning`→`sca`, `dast`→`dast`, `container_scanning`→`container`. Other report types land with `report_type` preserved as a domain column and the nearest canonical `category`.
 
@@ -129,7 +124,7 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 **Ultimate-tier requirement for the Vulnerabilities API.** `/projects/{id}/vulnerabilities` and the Security Dashboard require GitLab Ultimate. On lower tiers, findings must be retrieved from CI pipeline artifacts (SARIF or GitLab JSON) via `/projects/{id}/jobs/{job_id}/artifacts`, requiring the connector to enumerate pipeline runs, identify security-producing jobs, and fetch and parse each artifact. This pipeline-level path is documented in the connector's `README` and is selected via the `gitlab_finding_path` Terraform variable.
 
-**Severity fallback for `info` and `unknown`.** `info` (informational, no exploitability) and `unknown` (undetermined) have no canonical four-level equivalent. Both resolve to the connector-configured default. Operators should set this to `low` in `config/severity/gitlab.yml` unless policy dictates otherwise.
+**Severity fallback for `info` and `unknown`.** `info` (informational, no exploitability) and `unknown` (undetermined) have no canonical four-level equivalent. Both resolve to the connector-configured default. Operators should set this to `low` in `src/connectors/gitlab/severity.yml` unless policy dictates otherwise.
 
 **Merge request versus pull request terminology.** GitLab's *merge request* is GitHub's *pull request*. The silver schema uses `pull_requests` uniformly; the connector maps `iid` to `pull_request.number` and records `gitlab` in `source` for platform filtering.
 
@@ -154,22 +149,22 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `tests/connectors/gitlab/test_ingest.py::test_auth_secret_resolution` | PASS |
-| `REQ-ING-PAG` | `tests/connectors/gitlab/test_ingest.py::test_keyset_pagination_two_pages` | PASS |
-| `REQ-ING-RL` | `tests/connectors/gitlab/test_ingest.py::test_429_backoff_retries` | PASS |
-| `REQ-ING-HWM` | `tests/connectors/gitlab/test_ingest.py::test_updated_at_hwm_resume` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/gitlab/test_transform.py::test_project_to_repository_projects_expected_fields` | PASS |
-| `REQ-TRF-SEV` | `tests/connectors/gitlab/test_transform.py::test_severity_lookup_covers_every_documented_value` | PASS |
-| `REQ-TRF-STS` | `tests/connectors/gitlab/test_transform.py::test_status_lookup_covers_every_documented_value` | PASS |
-| `REQ-TRF-TS` | `tests/connectors/gitlab/test_transform.py::test_parse_iso_utc_roundtrips_timezone_aware` | PASS |
-| `REQ-DQ` | `tests/connectors/gitlab/test_transform.py::test_unknown_severity_falls_through_to_default` | PASS |
-| `REQ-DEDUP` | `tests/connectors/gitlab/test_transform.py::test_dedup_key_branches_on_finding_shape` | PASS |
+| `REQ-ING-AUTH` | `src/connectors/gitlab/test_ingest.py::test_auth_secret_resolution` | PASS |
+| `REQ-ING-PAG` | `src/connectors/gitlab/test_ingest.py::test_keyset_pagination_two_pages` | PASS |
+| `REQ-ING-RL` | `src/connectors/gitlab/test_ingest.py::test_429_backoff_retries` | PASS |
+| `REQ-ING-HWM` | `src/connectors/gitlab/test_ingest.py::test_updated_at_hwm_resume` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/gitlab/test_transform.py::test_project_to_repository_projects_expected_fields` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/gitlab/test_transform.py::test_severity_lookup_covers_every_documented_value` | PASS |
+| `REQ-TRF-STS` | `src/connectors/gitlab/test_transform.py::test_status_lookup_covers_every_documented_value` | PASS |
+| `REQ-TRF-TS` | `src/connectors/gitlab/test_transform.py::test_parse_iso_utc_roundtrips_timezone_aware` | PASS |
+| `REQ-DQ` | `src/connectors/gitlab/test_transform.py::test_unknown_severity_falls_through_to_default` | PASS |
+| `REQ-DEDUP` | `src/connectors/gitlab/test_transform.py::test_dedup_key_branches_on_finding_shape` | PASS |
 
-Collected 24 requirement-bound tests via `py -3.11 -m pytest tests/connectors/gitlab/ -v --tb=short` (2026-04-25, 0.48 s wall-clock); 22 passed, 0 failed, 2 skipped (`test_expired_token_produces_clear_error` under `REQ-ING-AUTH` and `test_dedup_links_across_gitlab_and_semgrep` under `REQ-DEDUP` — both pending live fixtures for the B follow-up on a live GitLab Ultimate tenancy; the marker binds, the assertion is synthesized, so they are recorded as `PASS (synthesized fixture)` for the traceability matrix). N/A rationale: none — GitLab is a dual-role SCM source per the SCM reference (Vulnerabilities API for platform-native findings + REST API for entities), so all ten SCM REQ-IDs bind to bound tests.
+Collected 24 requirement-bound tests via `py -3.11 -m pytest src/connectors/gitlab/tests/ -v --tb=short` (2026-04-25, 0.48 s wall-clock); 22 passed, 0 failed, 2 skipped (`test_expired_token_produces_clear_error` under `REQ-ING-AUTH` and `test_dedup_links_across_gitlab_and_semgrep` under `REQ-DEDUP` — both pending live fixtures for the B follow-up on a live GitLab Ultimate tenancy; the marker binds, the assertion is synthesized, so they are recorded as `PASS (synthesized fixture)` for the traceability matrix). N/A rationale: none — GitLab is a dual-role SCM source per the SCM reference (Vulnerabilities API for platform-native findings + REST API for entities), so all ten SCM REQ-IDs bind to bound tests.
 
 ### Tests
 
-Tests live under [`tests/connectors/gitlab/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/gitlab). The report table above is the per-REQ outcome of running the bound tests in that directory.
+Tests live under [`src/connectors/gitlab/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/gitlab). The report table above is the per-REQ outcome of running the bound tests in that directory.
 
 ## Generation log
 
@@ -178,5 +173,5 @@ This connector page is produced by the connector-lifecycle skills. The Generatio
 | Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
 |--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (scm)             | name=GitLab; url=https://docs.gitlab.com/ee/api/; category=scm        | mkdocs/docs/connectors/scm/gitlab.md §1–§3                                         | 2026-04-25 | 1d5ca2b (retrofit-9-connectors)          |
-| Module generation  | `generate-connector` (scm)         | page hash=9220324a3e40                                                | src/connectors/gitlab/, tests/connectors/gitlab/, config/severity/gitlab.yml, config/status/gitlab.yml, resources/gitlab-job.yml | 2026-04-25 | 11e0014 (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (scm)         | page hash=9220324a3e40                                                | src/connectors/gitlab/, src/connectors/gitlab/tests/, src/connectors/gitlab/severity.yml, src/connectors/gitlab/status.yml, src/connectors/gitlab/resources/job.yml | 2026-04-25 | 11e0014 (retrofit-9-connectors)          |
 | Validation         | `validate-implementation` (scm)    | module path=src/connectors/gitlab/                                    | mkdocs/docs/connectors/scm/gitlab.md §5                                            | 2026-04-25 | 6f460e3 (retrofit-9-connectors)          |

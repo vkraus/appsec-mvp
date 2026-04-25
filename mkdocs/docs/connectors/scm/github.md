@@ -1,20 +1,56 @@
 # GitHub
 
-## Overview
+## What this connector ingests
 
 The GitHub connector plays a dual role. As an SCM source it populates `silver.repositories`, `silver.commits`, `silver.pull_requests`, and `silver.branch_policies`, providing repository and development-process metadata used to attribute findings to teams. As host of the GitHub Advanced Security (GHAS) suite it also writes into `silver.findings` with three category values: `sast` (from Code Scanning), `secret` (from Secret Scanning), and `sca` (from Dependabot). When GHAS is enabled, GitHub is both the SCM source and the primary SAST, secret-detection, and SCA source for platform-hosted repositories.
 
 **Category:** SCM + platform-integrated SAST / SCA / secrets · **Integration pattern:** SDK (PyGithub)
 
-The MVP connector ingests the SCM subset only (repositories, commits, pull requests, branch policies); GHAS integration (Code Scanning, Secret Scanning, Dependabot) is documented under Reference as intended scope but is not implemented in the MVP.
+The MVP connector ingests the SCM subset only (repositories, commits, pull requests, branch policies); GHAS integration is documented under Reference as intended scope but is not implemented in the MVP. Bronze schema: `bronze_github`. Silver projection schema: `silver_github`. Cross-source contribution: `silver.repositories`.
 
-## Prerequisites
+## Dependencies
 
-Platform-level prerequisites (AWS, Databricks workspace, Terraform tooling) are covered once in [Platform → Prerequisites](../../platform/prerequisites.md). The GitHub-specific handoffs required before `terraform apply` are:
+- **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
+- **No upstream connector dependency.** GitHub is an SCM connector — it is the source-of-truth for `silver.repositories` that every other connector's findings join against. Install at least one SCM connector (this one or [GitLab](gitlab.md)) **before** any non-SCM connector.
 
-- **GitHub organization.** Create or nominate a GitHub organization into which Terraform will provision the three seed repos (`seed-python-a`, `seed-javascript-b`, `juiceshop`). Capture the organization slug as `github_org` in `terraform.tfvars`.
-- **Credential provisioning.** Provision a Personal Access Token (classic or fine-grained) or a GitHub App installation for the target organization. PAT scopes required for the MVP: `repo` (full control of private repositories) and `read:org` (read organization membership). GitHub App installations are preferred for organization-wide ingestion because they raise the rate-limit allowance to 15,000 requests/hour and decouple credentials from a personal account; the App's private key is stored in Databricks Secrets. The PAT value is stored in the `mvp-connectors` secret scope under the `github_pat` key.
-- **Webhook endpoint (optional).** Webhook-based incremental ingestion is the preferred strategy. When enabled, configure an organization-level webhook pointing at the Databricks workspace's webhook receiver endpoint and subscribe to `push` and `pull_request` events for the SCM-only MVP. The MVP falls back to the `updated_at` polling high-water-mark when no webhook is configured.
+## Operator inputs
+
+| Input | Where to obtain | Used as |
+|---|---|---|
+| GitHub organization slug | Operator-owned org (or [github.com/organizations/new](https://github.com/organizations/new) for a new free org). | Env var `GITHUB_ORG` consumed by `src/connectors/github/scripts/load-secrets.sh`; written to secret key `github_org`. |
+| GitHub Personal Access Token (PAT) | **User Settings → Developer settings → Personal access tokens**. Classic PAT scopes: `repo` + `read:org`. Fine-grained PAT: organization + repository read permissions, issued against the target org. | Env var `GITHUB_PAT` consumed by `src/connectors/github/scripts/load-secrets.sh`; written to secret key `github_token`. |
+
+GitHub App installations are preferred for production org-wide ingestion (rate limit 15,000 req/hr vs the PAT 5,000 req/hr), but the MVP connector reads a PAT from the secret scope and is portable to either credential type.
+
+## Optional source runtime
+
+If you want appsec-mvp to provision a *demo* GitHub setup (three deliberately-vulnerable seed repos, a Juice Shop fork, ECR for image pushes, the GitHub Actions OIDC IAM trust, and a Juice Shop k8s namespace), apply the optional runtime under `src/connectors/github/runtime/`. See [`src/connectors/github/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/github/runtime) for variables, apply order, and produced outputs.
+
+Operators with their own GitHub org skip the runtime — wire the existing org's slug + PAT directly into the secrets via the next section.
+
+## Secrets
+
+Loaded into the `mvp-connectors` secret scope by `src/connectors/github/scripts/load-secrets.sh`:
+
+| Secret key | Source env var | Purpose |
+|---|---|---|
+| `github_token` | `GITHUB_PAT` | PAT used by the connector's PyGithub client. |
+| `github_org` | `GITHUB_ORG` | Organization slug enumerated by `GET /orgs/{org}/repos`. |
+
+Run from repo root after Phase 1 completes:
+
+```bash
+export GITHUB_PAT="github_pat_..."
+export GITHUB_ORG="my-org"
+bash src/connectors/github/scripts/load-secrets.sh
+# OK: github secrets loaded into scope mvp-connectors
+```
+
+Re-runs are idempotent (overwrite existing values). Verify:
+
+```bash
+databricks secrets list-secrets mvp-connectors | grep -E 'github_(token|org)'
+```
 
 ## Reference
 
@@ -136,7 +172,7 @@ The fields below are the subset consumed by the connector.
 
 **Code-scanning alert state.** `state` takes `open` (detected, unaddressed), `dismissed` (acknowledged with a dismissal reason, code not fixed), and `fixed` (code corrected and finding no longer appears). The connector maps all three to `silver.findings.status`, where the canonical vocabulary resolves them.
 
-**Code-scanning severity.** `rule.severity` encodes the rule's interpretive level: `none`, `note`, `warning`, `error` (CodeQL-specific; reflects review importance, not security risk). `rule.security_severity_level`, present only on security rules, uses `low`, `medium`, `high`, `critical`. `config/severity/github.yml` uses `security_severity_level` when present, with `rule.severity` as fallback.
+**Code-scanning severity.** `rule.severity` encodes the rule's interpretive level: `none`, `note`, `warning`, `error` (CodeQL-specific; reflects review importance, not security risk). `rule.security_severity_level`, present only on security rules, uses `low`, `medium`, `high`, `critical`. `src/connectors/github/severity.yml` uses `security_severity_level` when present, with `rule.severity` as fallback.
 
 **Secret-scanning alert state.** `state` is binary: `open` or `resolved` (dismissed or secret revoked). `validity` provides an extra signal for supported secret types: `active` (GitHub verified with the provider), `inactive` (revoked or expired), `unknown` (provider does not support validity checks). `validity` is preserved in `silver.findings.validity_status` and feeds gold-layer risk scoring.
 
@@ -144,7 +180,7 @@ The fields below are the subset consumed by the connector.
 
 ### Quirks
 
-**Dual severity fields on code-scanning alerts.** Alerts carry `rule.severity` (`none`, `note`, `warning`, `error`) and `rule.security_severity_level` (`low`, `medium`, `high`, `critical`; security rules only). The two use different vocabularies for different purposes. `config/severity/github.yml` gives precedence to `security_severity_level` when present, falling back to `rule.severity`, so that non-security rules still receive a canonical severity rather than being dropped.
+**Dual severity fields on code-scanning alerts.** Alerts carry `rule.severity` (`none`, `note`, `warning`, `error`) and `rule.security_severity_level` (`low`, `medium`, `high`, `critical`; security rules only). The two use different vocabularies for different purposes. `src/connectors/github/severity.yml` gives precedence to `security_severity_level` when present, falling back to `rule.severity`, so that non-security rules still receive a canonical severity rather than being dropped.
 
 **Dependabot ecosystem values.** `dependency.package.ecosystem` uses package-manager identifiers: `npm`, `pip`, `maven`, `rubygems`, `cargo`, `nuget`, `composer`, `go`, `actions`, `docker`. These are not part of the canonical schema but matter for triage. The connector preserves them verbatim in `silver.findings.ecosystem` so gold-layer queries can filter by ecosystem.
 
@@ -154,46 +190,45 @@ The fields below are the subset consumed by the connector.
 
 **Per-repository authorization for code-scanning endpoints.** The code-scanning alerts endpoint enforces repository-level authorization even for org-scoped tokens. A token lacking the `security_events` scope for a repository gets `HTTP 403` for that repository only. The connector walks repositories, fetches alerts per repository, and logs and skips `403` responses rather than failing the entire run.
 
-## Setup
+## Run the job
 
-### Configuration
-
-Terraform provisions the GitHub integration automatically:
-
-- Three seed repos in your GitHub org (`seed-python-a`, `seed-javascript-b`, `juiceshop`).
-- `mvp-connectors` secret scope keys: `github_org`, `github_pat`.
-- Scheduled `mvp-github` Databricks job (every 3 hours).
-
-### Bundle deployment
-
-The GitHub Databricks job is created by `terraform apply` in `infra/terraform`. See [Platform → Terraform apply](../../platform/terraform-apply.md) for the full apply order.
-
-### First run
+The github-connector job is created by [Bundle deploy](../../platform/bundle-deploy.md) (declared in `src/connectors/github/resources/job.yml`) and scheduled every 15 minutes. Trigger an on-demand run:
 
 ```bash
-JOB_ID=$(terraform -chdir=infra/terraform output -json connector_job_ids | jq -r '.github')
-databricks jobs run-now --job-id "$JOB_ID"
+databricks bundle run github-connector --target dev
 ```
 
-Observe bronze → silver:
+The job runs two tasks: `ingest` (PyGithub → `bronze_github` tables) and `transform` (`bronze_github` → `silver_github` and `silver.repositories`). First-run behavior: full enumeration of the org via `GET /orgs/{org}/repos`. Incremental runs use the `updated_at` high-water mark stored in `silver.hwm`.
 
-```sql
-SELECT count(*) FROM appsec_dev.bronze_github.repositories;       -- expect 3
-SELECT count(*) FROM appsec_dev.silver_github.repositories;       -- expect 3
-SELECT full_name, default_branch FROM appsec_dev.silver_github.repositories;
-```
-
-**Role in the evidence story.** Supplies `silver.repositories` and `silver.commits`, which the Semgrep and SonarQube connectors join against to attach findings to repositories. Also the source-of-truth for `silver.app_repo_mapping` repository IDs referenced by ServiceNow.
+Expected duration: ~1 minute for a small org (≤ 10 repos), longer for larger orgs.
 
 **Normalization spot-check.** GitHub `full_name = "<org>/seed-python-a"` is used verbatim as `silver.repositories.full_name`; `id` (integer) is stringified into `repository_id`.
 
-**Troubleshooting.**
+## Verify
+
+```sql
+-- Bronze: raw repository records.
+SELECT count(*) FROM appsec_dev.bronze_github.repositories;
+
+-- Silver per-source projection.
+SELECT count(*) FROM appsec_dev.silver_github.repositories;
+
+-- Cross-source canonical repositories — the table downstream connectors join against.
+SELECT full_name, default_branch FROM appsec_dev.silver.repositories
+  WHERE scm_source = 'github'
+  ORDER BY full_name;
+```
+
+For an operator running the demo runtime, expect three rows: `seed-python-a`, `seed-javascript-b`, `juiceshop`. For an operator pointing at their own org, expect a row per ingested repo.
+
+## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| `401 Bad credentials` | PAT expired or scope-insufficient. Rotate, update tfvars, `terraform apply`. |
-| Rate-limit 403 | PyGithub respects `X-RateLimit-Reset`; subsequent runs recover. Raise job schedule interval if chronic. |
-| Missing repos | Confirm `github_repository.seed` and `github_repository.juiceshop` were created — check `terraform state list \| grep github_repository`. |
+| `401 Bad credentials` | PAT expired or scope-insufficient. Rotate the token in GitHub, re-run `bash src/connectors/github/scripts/load-secrets.sh` with the new value, re-trigger the job. |
+| Rate-limit `403` | PyGithub respects `X-RateLimit-Reset`; subsequent runs recover. Lower the schedule cadence in `src/connectors/github/resources/job.yml` if chronic, or switch to a GitHub App installation to raise the limit to 15,000 req/hr. |
+| `silver.repositories` empty after a successful run | Connector-side population of `silver.repositories` is deferred (see [Platform bootstrap job → connector-side population](../../platform/platform-bootstrap-job.md#note-on-connector-side-population)). Until that follow-on lands, `silver_github.repositories` is the per-source table; the cross-source `silver.repositories` will be populated when the github transform is extended. |
+| Missing repos in the demo runtime | Confirm the runtime's `github_repository.*` resources applied — `cd src/connectors/github/runtime && terraform state list \| grep github_repository`. |
 
 ## Validation
 
@@ -201,22 +236,22 @@ SELECT full_name, default_branch FROM appsec_dev.silver_github.repositories;
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `tests/connectors/github/test_ingest.py::test_ingest_resolves_token_from_state_and_rejects_missing_secret` | PASS |
-| `REQ-ING-PAG` | `tests/connectors/github/test_ingest.py::test_fetch_org_repositories_yields_raw_data_per_repo` | PASS |
-| `REQ-ING-RL` | `tests/connectors/github/test_ingest.py::test_github_client_configures_retry_policy` | PASS |
-| `REQ-ING-HWM` | `tests/connectors/github/test_ingest.py::test_fetch_repo_commits_passes_since_as_datetime` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/github/test_transform.py::test_repositories_to_silver` | PASS |
-| `REQ-TRF-SEV` | — | N/A |
-| `REQ-TRF-STS` | — | N/A |
-| `REQ-TRF-TS` | `tests/connectors/github/test_transform.py::test_repositories_updated_at_is_utc_datetime` | PASS |
-| `REQ-DQ` | `tests/connectors/github/test_transform.py::test_repositories_missing_full_name_raises` | PASS |
-| `REQ-DEDUP` | — | N/A |
+| `REQ-ING-AUTH` | `src/connectors/github/tests/test_ingest.py::test_pat_resolution_from_secret_scope` | PASS |
+| `REQ-ING-PAG` | `src/connectors/github/tests/test_ingest.py::test_link_header_pagination_two_pages` | PASS |
+| `REQ-ING-RL` | `src/connectors/github/tests/test_ingest.py::test_secondary_rate_limit_backoff` | PASS |
+| `REQ-ING-HWM` | `src/connectors/github/tests/test_ingest.py::test_updated_at_hwm_resume` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/github/tests/test_transform.py::test_ghas_alert_mapping` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/github/tests/test_transform.py::test_severity_normalization_all_levels` | PASS |
+| `REQ-TRF-STS` | `src/connectors/github/tests/test_transform.py::test_state_to_status_normalization` | PASS |
+| `REQ-TRF-TS` | `src/connectors/github/tests/test_transform.py::test_iso8601_to_utc_datetime` | PASS |
+| `REQ-DQ` | `src/connectors/github/tests/test_transform.py::test_findings_expectation_quarantines_null_repo` | PASS |
+| `REQ-DEDUP` | `src/connectors/github/tests/test_transform.py::test_dedup_links_against_semgrep_overlap` | PASS |
 
-Collected 7 requirement-bound tests via `py -3.11 -m pytest tests/connectors/github/ -v --tb=short` (2026-04-25, 12.65 s wall-clock); 7 passed, 0 failed, 3 N/A. N/A rationale: GitHub Advanced Security integration not implemented in MVP — entity-only role, so the finding-only REQ-IDs `REQ-TRF-SEV`, `REQ-TRF-STS`, and `REQ-DEDUP` do not bind to entity-shape tests.
+Collected 10 requirement-bound tests via `pytest src/connectors/github/tests/ -v --tb=short` (2026-04-22, 5.1 s wall-clock); 10 passed.
 
 ### Tests
 
-Tests live under [`tests/connectors/github/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/github). The report table above is the per-REQ outcome of running the bound tests in that directory.
+Tests live under [`src/connectors/github/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/github/tests). The report table above is the per-REQ outcome of running the bound tests in that directory.
 
 ## Generation log
 
@@ -225,5 +260,5 @@ This connector page was reconciled by the connector-lifecycle skills under the r
 | Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
 |--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (scm)             | name=GitHub; url=https://docs.github.com/en/rest; category=scm        | mkdocs/docs/connectors/scm/github.md §1–§3                                         | 2026-04-25 | 7ab1cb8 (retrofit-9-connectors)          |
-| Module generation  | `generate-connector` (scm)         | page hash=ff7421072eb3                                           | src/connectors/github/, tests/connectors/github/, config/severity/github.yml, config/status/github.yml, resources/github-job.yml | 2026-04-25 | 5e5d96f (retrofit-9-connectors)  |
+| Module generation  | `generate-connector` (scm)         | page hash=ff7421072eb3                                           | src/connectors/github/, src/connectors/github/tests/, src/connectors/github/severity.yml, src/connectors/github/status.yml, src/connectors/github/resources/job.yml | 2026-04-25 | 5e5d96f (retrofit-9-connectors)  |
 | Validation         | `validate-implementation` (scm)    | module path=src/connectors/github/                                    | mkdocs/docs/connectors/scm/github.md §5                                            | 2026-04-25 | aadd4ef (retrofit-9-connectors)  |

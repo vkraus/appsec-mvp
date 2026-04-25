@@ -74,12 +74,12 @@ From `mkdocs/docs/platform/reference/catalog.md`. Bind one test function per REQ
 
 `medium`. Severity is **derived**, not source-supplied — there is no `severity` field on a WAF event. The canonical severity is computed from `action` (block / allow / count / challenge / captcha) plus rule-group category.
 
-The `config/severity/{source}.yml` lookup is therefore action-keyed, not severity-keyed. Generate the lookup with action-to-severity mappings covering every documented action value (e.g. `block: high`, `count: low`, `allow: low`, `challenge: medium`). The `mapping.yml` severity field references the lookup with `action` as the source path:
+The `src/connectors/{source}/severity.yml` lookup is therefore action-keyed, not severity-keyed. Generate the lookup with action-to-severity mappings covering every documented action value (e.g. `block: high`, `count: low`, `allow: low`, `challenge: medium`). The `mapping.yml` severity field references the lookup with `action` as the source path:
 
 ```yaml
 severity:
   source_path: action
-  lookup: config/severity/{source}.yml
+  lookup: src/connectors/{source}/severity.yml
 ```
 
 The configurable default for unmatched actions is `medium` with a data-quality warning.
@@ -118,7 +118,7 @@ Account-scoped, NOT per-tenant:
 - **Cloud-native WAFs** (AWS WAF, Cloudflare, Azure Front Door WAF): IAM role or access key bound to the cloud account hosting the WebACLs.
 - **On-prem appliances** (F5 ASM, Imperva, ModSecurity): service credential bound to the log-aggregation tier.
 
-`ingest.py` reads credentials via the helper in `src/common/`; `config.yml` references the secret-scope key names. There is no per-application authentication axis; do not generate one.
+`ingest.py` reads credentials via the helper in `src/platform/`; `config.yml` references the secret-scope key names. There is no per-application authentication axis; do not generate one.
 
 ### Ingestion-tooling preference
 
@@ -134,7 +134,7 @@ Standard order: Lakeflow Connect → Databricks SDK → dlt.
 - **Severity is derived.** Action plus rule-group category drives canonical severity through the action-keyed lookup. Generate the lookup as action-keyed; do NOT generate a severity-keyed lookup that mirrors a source severity field (there is none).
 - **Sampling weight preserved.** Where the source returns statistical samples, project the `Weight` field into Bronze. Downstream extrapolation depends on it.
 - **Application linkage via ARN.** WebACL ARN → `silver.deployments` join at transform time. Encode the ARN field name in `mapping.yml`; emit the join in `transform.py` (mirrors the DAST `target` join in shape).
-- **Append-only stream.** No status lifecycle; do not project a `status` field; do not generate status-transition code. The `config/status/{source}.yml` lookup MUST exist (per the every-connector-has-both-files contract) and contain `# N/A — WAF events are append-only; no status lifecycle`.
+- **Append-only stream.** No status lifecycle; do not project a `status` field; do not generate status-transition code. The `src/connectors/{source}/status.yml` lookup MUST exist (per the every-connector-has-both-files contract) and contain `# N/A — WAF events are append-only; no status lifecycle`.
 - **Action vocabulary.** Documented actions include `block`, `allow`, `count`, `challenge`, `captcha`. The severity lookup MUST cover every action the source emits — exhaustive over the documented vocabulary.
 - **Log-stream over SDK.** Prefer log-stream consumption. SDK sampled-request mode is fallback-only; document the deviation in a top-of-file comment in `ingest.py` if used.
 
@@ -198,7 +198,7 @@ Standard order: Lakeflow Connect → Databricks SDK → dlt. Autoloader-style in
 - **Severity is derived.** `REQ-TRF-SEV` asserts the lookup is action-keyed, not severity-keyed. A severity-keyed lookup that mirrors a source severity field is a `FAIL`.
 - **Sampling weight preserved.** Where the SDK sampled-request fallback is in use, `REQ-TRF-MAP` asserts the `Weight` field is projected into Bronze. Downstream extrapolation depends on it.
 - **Application linkage via ARN.** `REQ-TRF-MAP` asserts the WebACL ARN → `silver.deployments` join at transform time (mirrors the DAST `target` join in shape).
-- **Append-only stream.** No status lifecycle; `REQ-TRF-STS` is N/A; no `status` field is projected. The `config/status/{source}.yml` lookup contains `# N/A — WAF events are append-only; no status lifecycle` per the generate-connector WAF reference.
+- **Append-only stream.** No status lifecycle; `REQ-TRF-STS` is N/A; no `status` field is projected. The `src/connectors/{source}/status.yml` lookup contains `# N/A — WAF events are append-only; no status lifecycle` per the generate-connector WAF reference.
 - **Action vocabulary.** Documented actions include `block`, `allow`, `count`, `challenge`, `captcha`. `REQ-TRF-SEV` asserts coverage over the full action vocabulary the source emits.
 - **Log-stream over SDK.** `REQ-ING-PAG` and `REQ-ING-RL` are bound only when the SDK fallback is in use. Log-stream-only deployments mark them `N/A` with the rationale "log-stream mode has no API pagination/rate limit".
 

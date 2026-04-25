@@ -2,18 +2,24 @@ bundle:
   name: appsec
 
 include:
-  - resources/*.yml
+  - src/platform/resources/*.yml
+  - src/connectors/*/resources/*.yml
+  - src/analytics/resources/*.yml
 
 variables:
   catalog:
     description: Unity Catalog name, per environment
-    # default is overridden in every target, listed here so unset values fail loudly
     default: appsec_dev
   warehouse_id:
-    description: Unity Catalog SQL warehouse ID
-  servicenow_connection:
-    description: Name of the Databricks Connection for the ServiceNow tenant (provisioned out-of-band)
-    default: servicenow_connection
+    description: Unity Catalog SQL warehouse ID for the platform-bootstrap job
+  artifact_bucket:
+    description: S3 bucket for scanner artifacts (operator-supplied)
+  servicenow_host:
+    description: ServiceNow instance host (no protocol)
+  servicenow_username:
+    description: ServiceNow service account username
+  servicenow_password:
+    description: ServiceNow service account password
 
 targets:
   dev:

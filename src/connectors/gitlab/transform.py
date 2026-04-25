@@ -20,12 +20,12 @@ requirements.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pyspark.sql import DataFrame
-from src.common.schemas import silver_findings
 
+from src.platform.schemas import silver_findings
 
 # ---------------------------------------------------------------------------
 # Pure-Python projections (used by unit tests and bronze-bypass entry points).
@@ -55,8 +55,8 @@ def parse_iso_utc(ts: str | None) -> datetime | None:
         return None
     dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
 
 
 def project_to_repository(raw: dict[str, Any]) -> dict[str, Any]:

@@ -28,7 +28,8 @@ Invariants:
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from src.connectors.trufflehog.ingest import derive_validity_status
 
@@ -134,7 +135,7 @@ def transform_records(records: Iterable[dict]) -> list[dict]:
     """Apply ``record_to_silver`` across a batch. Preserves input order.
 
     Dedup on ``DEDUP_KEY`` is performed downstream in the Spark transform
-    (``src.common.silver.dedup_findings`` handles the generic case); this
+    (``src.platform.silver.dedup_findings`` handles the generic case); this
     function is the per-record projection that unit tests exercise.
     """
     return [record_to_silver(r) for r in records]
@@ -144,10 +145,10 @@ def transform(bronze_df):
     """Framework contract wrapper. Returns an empty silver_findings frame.
 
     The DAB job's Spark-side transform composes ``record_to_silver`` with
-    ``src.common.silver.dedup_findings``; the in-process stub returns an
+    ``src.platform.silver.dedup_findings``; the in-process stub returns an
     empty Silver frame so orchestration can chain without a runtime error,
     consistent with the Semgrep connector pattern.
     """
-    from src.common.schemas import silver_findings
+    from src.platform.schemas import silver_findings
 
     return bronze_df.sparkSession.createDataFrame([], schema=silver_findings)

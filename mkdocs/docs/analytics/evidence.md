@@ -8,7 +8,7 @@ Three scenarios that exercise the end-to-end pipeline. Completing all three is y
 
 ### Setup
 
-You already have the SAST seed repos (`seed-python-a`, `seed-javascript-b`) provisioned by Terraform, with four deliberately-planted vulnerabilities across them (CWE-89, CWE-78, CWE-79, CWE-22). Run the SonarQube scanner workflow in the [SonarQube connector page](../connectors/sast/sonarqube.md#first-run), then wait for the next scheduled Semgrep CronJob (or trigger it manually). Run the ingest jobs for both connectors.
+You already have SAST seed repos (`seed-python-a`, `seed-javascript-b`) provisioned by the github runtime under `src/connectors/github/runtime/`, with four deliberately-planted vulnerabilities across them (CWE-89, CWE-78, CWE-79, CWE-22). Scan each repo with `sonar-scanner-cli` per the [SonarQube connector page → Run the job](../connectors/sast/sonarqube.md#run-the-job), then wait for the next semgrep CronJob (or trigger one manually per the [Semgrep connector page → Run the job](../connectors/sast/semgrep.md#run-the-job)). Run the ingest jobs for both connectors via `databricks bundle run sonarqube-connector` and `databricks bundle run semgrep-connector`.
 
 ### Query
 
@@ -45,8 +45,8 @@ SELECT
   app.name AS business_app,
   count(DISTINCT f.finding_id) AS critical_findings
 FROM appsec_dev.silver_servicenow.applications app
-JOIN appsec_dev.silver.app_repo_mapping ar USING (application_id)
-JOIN appsec_dev.silver_github.repositories r ON r.repository_id = ar.repository_id
+JOIN appsec_dev.silver.app_repo ar USING (app_id)
+JOIN appsec_dev.silver.repositories r ON r.repository_id = ar.repository_id
 JOIN appsec_dev.silver.findings f ON f.repository_id = r.repository_id
 WHERE f.severity_canonical IN ('critical', 'high')
   AND f.status_canonical = 'open'

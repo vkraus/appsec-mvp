@@ -1,7 +1,7 @@
 source: semgrep
 category: sast
-severity_map: config/severity/semgrep.yml
-status_map:   config/status/semgrep.yml
+severity_map: src/connectors/semgrep/severity.yml
+status_map:   src/connectors/semgrep/status.yml
 bucket_secret_scope: mvp-connectors
 bronze_table: ${catalog}.bronze_semgrep.findings
 # Docker-hosted mode (CLI-artefact path). Two S3 prefixes share one
@@ -9,7 +9,7 @@ bronze_table: ${catalog}.bronze_semgrep.findings
 #   - periodic/semgrep/  — EKS CronJob (periodic-global pattern).
 #   - cicd/semgrep/      — Juice Shop GitHub Actions (CI/CD-step pattern).
 # HWM is the artefact filename's commit SHA (CI/CD) or scan-start timestamp
-# (periodic); see src/common/hwm.py::CommitShaHwm.
+# (periodic); see src/platform/hwm.py::CommitShaHwm.
 hwm:
   strategy: commit_sha
 prefixes:

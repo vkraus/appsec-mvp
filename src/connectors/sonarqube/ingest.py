@@ -13,7 +13,7 @@ is a paginated REST surface with a server-side ``createdAfter`` filter and a
 for SonarQube, and Lakeflow Connect does not ship a SonarQube ingestion
 definition; this module accordingly adopts the ``dlt`` REST-source shape
 (thesis section 2.4.1), honouring the framework contract at
-``src.common.contract``.
+``src.platform.contract``.
 
 The public helpers below are pure Python so ``pytest`` can verify the
 framework contract (REQ-ING-* / REQ-TRF-* / REQ-DQ / REQ-DEDUP) without a
@@ -27,8 +27,7 @@ import time
 from collections.abc import Callable, Iterator
 from typing import Any
 
-from src.common.contract import BatchDescriptor, ConnectorState
-
+from src.platform.contract import BatchDescriptor, ConnectorState
 
 # --- Secret-scope credential resolution (REQ-ING-AUTH) ---------------------
 
@@ -140,7 +139,7 @@ def advance_hwm(issues: list[dict[str, Any]], prev_hwm: str | None) -> str | Non
     The HWM is the maximum ``updateDate`` seen so far, as an ISO-8601 string.
     ``None`` passes through when the batch is empty and no prior HWM exists,
     so the first run's "epoch" semantics are preserved (see
-    src/common/hwm.UpdatedAtHwm).
+    src/platform/hwm.UpdatedAtHwm).
     """
     max_seen = prev_hwm
     for i in issues:

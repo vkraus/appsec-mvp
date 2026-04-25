@@ -113,14 +113,14 @@ This skill emits the eight-file connector module for a single source given a rev
 
 #### Inputs
 
-- **Source name** — determines the module path `src/connectors/{source}/` and the lookup filenames `config/severity/{source}.yml`, `config/status/{source}.yml`.
+- **Source name** — determines the module path `src/connectors/{source}/` and the lookup filenames `src/connectors/{source}/severity.yml`, `src/connectors/{source}/status.yml`.
 - **Per-connector page path** — `mkdocs/docs/connectors/{category}/{slug}.md` produced by `analyze-source`.
 - **AppSec category** — one of `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf`. Determines which `references/<category>.md` to load.
 
 Preconditions:
 
 - The per-connector page exists at `mkdocs/docs/connectors/{category}/{slug}.md` and has been reviewed for completeness (Reference section populated; Generation log row 1 filled by `analyze-source`).
-- The framework's shared utilities at `src/common/` are intact (HTTP client, pagination, HWM state, severity/status normalization, dedup helpers — referenced as `src/common/` in earlier code; the worktree path is `src/common/`).
+- The framework's shared utilities at `src/platform/` are intact (HTTP client, pagination, HWM state, severity/status normalization, dedup helpers — referenced as `src/platform/` in earlier code; the worktree path is `src/platform/`).
 
 #### Output
 
@@ -130,10 +130,10 @@ A connector module composed of exactly the following eight files (per the baseli
 - `src/connectors/{source}/ingest.py` — implements `ingest(run_id, state) -> batch` per the connector contract in `mkdocs/docs/platform/reference/catalog.md`.
 - `src/connectors/{source}/transform.py` — implements `transform(bronze_df) -> silver_df` per the normalization rules in `mkdocs/docs/platform/reference/canonical-mapping.md`.
 - `src/connectors/{source}/mapping.yml` — declarative Bronze-to-Silver column expressions referencing the severity and status lookups by file path.
-- `config/severity/{source}.yml` — per-source severity lookup. For categories where severity is N/A or conventional, see `references/<category>.md`.
-- `config/status/{source}.yml` — per-source status lookup. For categories where status is N/A, see `references/<category>.md`.
+- `src/connectors/{source}/severity.yml` — per-source severity lookup. For categories where severity is N/A or conventional, see `references/<category>.md`.
+- `src/connectors/{source}/status.yml` — per-source status lookup. For categories where status is N/A, see `references/<category>.md`.
 - `resources/{source}-job.yml` — canonical two-task Lakeflow job bundle fragment per the template at `mkdocs/docs/platform/reference/connector-job-template.md`.
-- `tests/connectors/{source}/` — pytest suite (`test_ingest.py`, `test_transform.py`, `fixtures/{endpoint}_{scenario}.json`) with one test function per applicable REQ-ID, each marked with `@pytest.mark.requirement("REQ-...")`.
+- `src/connectors/{source}/tests/` — pytest suite (`test_ingest.py`, `test_transform.py`, `fixtures/{endpoint}_{scenario}.json`) with one test function per applicable REQ-ID, each marked with `@pytest.mark.requirement("REQ-...")`.
 
 #### Procedure
 
@@ -142,18 +142,18 @@ A connector module composed of exactly the following eight files (per the baseli
 3. Emit `src/connectors/{source}/config.yml` with the extracted parameters. Use the HWM shape per the category reference (record-level `updated_at` for SAST/SCA/CMDB/SCM; scan-id for DAST server; commit-SHA or scan-start timestamp for full-reload categories — secrets, CLI-artefact paths).
 4. Select the ingestion tooling per the preference order in `references/<category>.md` (typical: Lakeflow Connect → Databricks SDK → dlt; CLI-artefact path is the documented exception for SAST CLI, secrets CLI, and DAST CLI). Emit `src/connectors/{source}/ingest.py` against the chosen tool.
 5. Emit `src/connectors/{source}/mapping.yml` with the shape required by the category reference: entity-only block (CMDB), finding-only block (SAST / SCA / secrets / DAST), dual entity+finding blocks (SCM), or event-shape block targeting `silver.waf_events` (WAF). Reference the severity and status lookup files by path.
-6. Emit `config/severity/{source}.yml` and `config/status/{source}.yml`. Cover every documented source value with a configurable default (`medium` for severity unless the category reference overrides) and a comment flagging the data-quality warning path. For CMDB, both files exist but contain `# N/A — CMDB sources emit no findings`. For secrets, severity is hard-coded `high` in `mapping.yml`; the lookup file exists with the comment `# default high; per-deployment override permitted for low-entropy detector classes`, and the status file is N/A. For WAF, status is N/A; severity is action-keyed (derived from the `action` field plus rule-group category).
+6. Emit `src/connectors/{source}/severity.yml` and `src/connectors/{source}/status.yml`. Cover every documented source value with a configurable default (`medium` for severity unless the category reference overrides) and a comment flagging the data-quality warning path. For CMDB, both files exist but contain `# N/A — CMDB sources emit no findings`. For secrets, severity is hard-coded `high` in `mapping.yml`; the lookup file exists with the comment `# default high; per-deployment override permitted for low-entropy detector classes`, and the status file is N/A. For WAF, status is N/A; severity is action-keyed (derived from the `action` field plus rule-group category).
 7. Emit `src/connectors/{source}/transform.py` applying the mapping plus the normalization rules from `mkdocs/docs/platform/reference/canonical-mapping.md`. For categories with a finding shape, encode the dedup-key tuple given in `references/<category>.md` literally (it drives `dedup_links` linkage in the transform). For DAST, emit the target → `silver.deployments` join. For SCA, emit the CVE-correlation step.
 8. Emit the bundle fragment at `resources/{source}-job.yml` using the canonical two-task shape from `mkdocs/docs/platform/reference/connector-job-template.md`, substituting the source name.
-9. Emit the test suite at `tests/connectors/{source}/`: one test function per REQ-ID applicable to the category (per `references/<category>.md`), each marked with `@pytest.mark.requirement("REQ-...")`. Fixtures named `{endpoint}_{scenario}.json` under `tests/connectors/{source}/fixtures/`. Tests cover the framework contract from `src/common/`; pure-Python only — no local `SparkSession`.
+9. Emit the test suite at `src/connectors/{source}/tests/`: one test function per REQ-ID applicable to the category (per `references/<category>.md`), each marked with `@pytest.mark.requirement("REQ-...")`. Fixtures named `{endpoint}_{scenario}.json` under `src/connectors/{source}/tests/fixtures/`. Tests cover the framework contract from `src/platform/`; pure-Python only — no local `SparkSession`.
 10. Record the invocation: list the generated file paths, run `git rev-parse --short HEAD` for the skill repo ref, and compute `sha256sum mkdocs/docs/connectors/{category}/{slug}.md` for the page hash that pins this generation to a specific page revision.
 11. Update the connector page's Generation log section: fill in row 2 (`generate-connector`) with the run date, inputs (page hash via `sha256sum mkdocs/docs/connectors/{category}/{slug}.md`), outputs (the eight-file list above), and the skill repo ref via `git rev-parse --short HEAD`. Mark row 3 unchanged (`(pending)`) so `validate-implementation` has a target to overwrite.
 
 #### Invariants
 
-- No file is written outside `src/connectors/{source}/`, `tests/connectors/{source}/`, `config/severity/{source}.yml`, `config/status/{source}.yml`, or `resources/{source}-job.yml`. The connector generation is self-contained.
-- Both `config/severity/{source}.yml` and `config/status/{source}.yml` exist for every connector — even for categories where one or both are N/A. The N/A files carry an explanatory comment per `references/<category>.md`.
-- All imports in `ingest.py` and `transform.py` reference only functions that already exist in `src/common/`. New shared helpers are NOT introduced by this skill; if a missing helper is identified, halt and report the gap rather than adding it inline.
+- No file is written outside `src/connectors/{source}/`, `src/connectors/{source}/tests/`, `src/connectors/{source}/severity.yml`, `src/connectors/{source}/status.yml`, or `resources/{source}-job.yml`. The connector generation is self-contained.
+- Both `src/connectors/{source}/severity.yml` and `src/connectors/{source}/status.yml` exist for every connector — even for categories where one or both are N/A. The N/A files carry an explanatory comment per `references/<category>.md`.
+- All imports in `ingest.py` and `transform.py` reference only functions that already exist in `src/platform/`. New shared helpers are NOT introduced by this skill; if a missing helper is identified, halt and report the gap rather than adding it inline.
 - Every REQ-ID applicable to the category (per `references/<category>.md`) has at least one bound test function carrying `@pytest.mark.requirement("REQ-...")`. REQ-IDs marked N/A for the category are not bound.
 - The Generation log section of `mkdocs/docs/connectors/{category}/{slug}.md` has row 2 filled and row 3 still marked `(pending)` after this skill runs. Row 1 (set by `analyze-source`) is not modified.
 - Output is code, configuration, and test fixtures only — plus the single-line Generation log row update on the connector page. No new Markdown files are created.
@@ -165,7 +165,7 @@ Category-specific invariants (target Silver tables, dedup-key tuple, ingestion-t
 Append exactly one row to the connector page's Generation log table, overwriting the `(pending)` placeholder for `generate-connector`. Use this row shape verbatim, replacing the bracketed placeholders:
 
 ```
-| Module generation | generate-connector ({category}) | page hash={sha256_of_page} | src/connectors/{source}/, tests/connectors/{source}/, config/severity/{source}.yml, config/status/{source}.yml | {YYYY-MM-DD} | {git_short_sha} ({branch}) |
+| Module generation | generate-connector ({category}) | page hash={sha256_of_page} | src/connectors/{source}/, src/connectors/{source}/tests/, src/connectors/{source}/severity.yml, src/connectors/{source}/status.yml | {YYYY-MM-DD} | {git_short_sha} ({branch}) |
 ```
 
 - `{category}` — the AppSec category input (`cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, or `waf`).
@@ -183,17 +183,17 @@ Row 3 (`validate-implementation`) MUST remain marked `(pending)` so the next ski
 
 #### Overview
 
-This skill runs `pytest tests/connectors/{source}/`, summarises outcomes into a per-REQ-ID Validation table, emits a fix list for failing REQs, and updates the Validation and Generation log sections of the connector page at `mkdocs/docs/connectors/{category}/{source}.md`. It is observational over the codebase: it modifies only the per-connector Markdown page.
+This skill runs `pytest src/connectors/{source}/tests/`, summarises outcomes into a per-REQ-ID Validation table, emits a fix list for failing REQs, and updates the Validation and Generation log sections of the connector page at `mkdocs/docs/connectors/{category}/{source}.md`. It is observational over the codebase: it modifies only the per-connector Markdown page.
 
 #### Inputs
 
-- **Source name** — determines the test directory `tests/connectors/{source}/` and the connector page filename slug.
+- **Source name** — determines the test directory `src/connectors/{source}/tests/` and the connector page filename slug.
 - **AppSec category** — one of `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf`. Determines which `references/<category>.md` to load. The category-applicable REQ-ID set, with explicit N/A reasons drawn from `mkdocs/docs/platform/reference/catalog.md`, lives in `references/<category>.md` and is the load-bearing per-category artefact for this skill.
 - **Connector module path** — `src/connectors/{source}/`. Used to resolve the per-source code under test for the fix list and as input for the Generation log row.
 
 Preconditions:
 
-- The connector module and test suite at `src/connectors/{source}/` and `tests/connectors/{source}/` exist (typically emitted by `generate-connector`).
+- The connector module and test suite at `src/connectors/{source}/` and `src/connectors/{source}/tests/` exist (typically emitted by `generate-connector`).
 - The connector page at `mkdocs/docs/connectors/{category}/{source}.md` exists with a stub Validation section (an `!!! info "Pending validation"` admonition emitted by `analyze-source`) and a Generation log table whose row 3 is marked `(pending)`.
 
 #### Output
@@ -207,11 +207,11 @@ No file outside the connector page is modified by this skill.
 #### Procedure
 
 1. **Read `references/<category>.md` to get the category's applicable REQ-ID set and N/A reasons.** This is the load-bearing per-category artefact for this skill — it lists which REQ-IDs bind to tests for connectors in this category, in catalog order, with explicit N/A reasons quoted from `mkdocs/docs/platform/reference/catalog.md` and `mkdocs/docs/connectors/<category>/index.md`.
-2. Run `pytest tests/connectors/{source}/ -v --tb=short`. Treat timeouts as failures (not skips). Capture stdout/stderr; preserve the wall-clock duration for the run summary.
+2. Run `pytest src/connectors/{source}/tests/ -v --tb=short`. Treat timeouts as failures (not skips). Capture stdout/stderr; preserve the wall-clock duration for the run summary.
 3. Collect every test function carrying a `@pytest.mark.requirement("REQ-...")` marker and its outcome (`passed` / `failed` / `skipped` / `timed-out`).
 4. For each REQ-ID in the category's applicable set (from step 1, in the order they appear in `mkdocs/docs/platform/reference/catalog.md`), record: is there a bound test? did it pass? what is the test path? For REQ-IDs marked N/A by the category reference, record `N/A` with no bound test path.
 5. Emit the Markdown table with one row per REQ-ID using `PASS`, `FAIL`, or `N/A`. The table columns match the example at `mkdocs/docs/connectors/cmdb/servicenow.md` § "## Validation" (`Requirement | Bound test | Outcome`). For N/A rows, the bound-test cell is `—`.
-6. Emit the fix list as plain text below the table: for each `FAIL` row, one line listing the failing test file path (`tests/connectors/{source}/test_*.py::test_name`) and a one-line summary of the failure drawn from the pytest `--tb=short` output. Omit the fix list entirely if there are no failures.
+6. Emit the fix list as plain text below the table: for each `FAIL` row, one line listing the failing test file path (`src/connectors/{source}/tests/test_*.py::test_name`) and a one-line summary of the failure drawn from the pytest `--tb=short` output. Omit the fix list entirely if there are no failures.
 7. Replace the stub admonition in the **Validation** section of `mkdocs/docs/connectors/{category}/{source}.md` with the table from step 5 and the fix list from step 6 (if any). Append a one-line summary noting how many requirement-bound tests were collected, the wall-clock duration, the pass / fail / N/A split, and the N/A rationale for the category (sourced from `references/<category>.md`).
 8. Update the connector page's Generation log section row 3 (`validate-implementation`) with the run date, inputs (the connector module path `src/connectors/{source}/`), outputs (the connector page §5), and the skill repo ref via `git rev-parse --short HEAD`. Use the row template below.
 

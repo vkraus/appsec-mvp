@@ -1,0 +1,42 @@
+resources:
+  jobs:
+    servicenow-connector:
+      name: servicenow-connector
+      parameters:
+        - name: source_name
+          default: "servicenow"
+        - name: target_catalog
+          default: "${var.catalog}"
+        - name: hwm_reset
+          default: "false"
+      schedule:
+        # Hourly — CMDB data changes on a daily rather than sub-minute cadence;
+        # hourly picks up backdated edits without hammering the Table API.
+        quartz_cron_expression: "0 0 * * * ?"
+        timezone_id: "UTC"
+      tasks:
+        - task_key: ingest
+          # Lakeflow Connect ingestion is declared in
+          # resources/servicenow-pipeline.yml; this task triggers that
+          # pipeline and records the framework-contract BatchDescriptor.
+          notebook_task:
+            notebook_path: ../ingest.py
+          job_cluster_key: shared
+          max_retries: 3
+          min_retry_interval_millis: 2000
+          retry_on_timeout: true
+        - task_key: transform
+          depends_on:
+            - task_key: ingest
+          notebook_task:
+            notebook_path: ../transform.py
+          job_cluster_key: shared
+          max_retries: 3
+          min_retry_interval_millis: 2000
+          retry_on_timeout: true
+      job_clusters:
+        - job_cluster_key: shared
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            num_workers: 1

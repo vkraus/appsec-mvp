@@ -1,0 +1,5 @@
+resources:
+  schemas:
+    bronze_gitlab:
+      catalog_name: ${var.catalog}
+      name: bronze_gitlab

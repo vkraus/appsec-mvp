@@ -20,7 +20,7 @@ from typing import Any
 import yaml
 from pyspark.sql import DataFrame
 
-from src.common.schemas import silver_findings
+from src.platform.schemas import silver_findings
 
 _DEFAULT_SEVERITY = "medium"
 

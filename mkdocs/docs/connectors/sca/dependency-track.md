@@ -1,18 +1,22 @@
 # Dependency-Track
 
-## Overview
+!!! info "Placeholder — not implemented in MVP"
+    A reference Dependency-Track connector is not part of the MVP. This
+    page is a scaffolding placeholder framing the intended runbook
+    structure; the Reference section below documents the integration per
+    the category capability surface. Follow the [SCA skills](skills.md)
+    to generate the connector when needed.
+
+## What this connector ingests
 
 The Dependency-Track connector is the dedicated SCA source for organizations operating an on-premises software composition analysis platform rather than GitHub's hosted Dependabot. Operational pattern: **periodic-global** — the Dependency-Track server continuously re-evaluates the SBOMs it holds against fresh advisory feeds, and the connector polls via its REST API with a `lastOccurrence` high-water mark. It populates `silver.findings` with projects, components, and per-component findings. Dependency-Track is an OWASP project that ingests CycloneDX or SPDX SBOMs and correlates them against NVD, OSV, GitHub Advisories, and VulnDB. Because it accepts SBOMs from any pipeline, it covers ecosystems and internal registries not reachable by SCM-hosted scanners, complementing rather than substituting for Dependabot.
 
 **Category:** SCA (server, periodic-global) · **Integration pattern:** REST + dlt
 
-## Prerequisites
+## Dependencies
 
-!!! info "Not implemented in MVP"
-    A reference Dependency-Track connector is not part of the MVP. The
-    Reference section above documents the intended integration per
-    the category capability surface; follow the SCA skills
-    to generate a connector when needed.
+- **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md).
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** Dependency-Track findings carry a project that maps to a `repository_id`; the value must resolve to a row in `silver.repositories` for downstream rollups to attribute findings to a repository (and through `silver.app_repo`, to a business application).
 
 ## Reference
 
@@ -74,7 +78,7 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 ### Enumerations
 
-**Severity.** `vulnerability.severity` uses six values: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`, `UNASSIGNED`. `config/severity/dependency-track.yml` maps CRITICAL→`critical`, HIGH→`high`, MEDIUM→`medium`, LOW→`low`, INFO→`low`. `UNASSIGNED` is common for advisories without a CVSS score; it falls through to the severity-fallback rule, which substitutes the connector's default severity (medium unless overridden).
+**Severity.** `vulnerability.severity` uses six values: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`, `UNASSIGNED`. `src/connectors/dependency_track/severity.yml` maps CRITICAL→`critical`, HIGH→`high`, MEDIUM→`medium`, LOW→`low`, INFO→`low`. `UNASSIGNED` is common for advisories without a CVSS score; it falls through to the severity-fallback rule, which substitutes the connector's default severity (medium unless overridden).
 
 **Vulnerability source.** `vulnerability.source` identifies the advisory database: `NVD`, `OSV`, `GITHUB`, `VULNDB`, or `INTERNAL` (manually entered).
 
@@ -107,22 +111,22 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `tests/connectors/dependency_track/test_ingest.py::test_ingest_contract_rejects_missing_api_key` | PASS |
-| `REQ-ING-PAG` | `tests/connectors/dependency_track/test_ingest.py::test_project_list_pagination_covers_two_pages_without_duplication` | PASS |
-| `REQ-ING-RL` | `tests/connectors/dependency_track/test_ingest.py::test_run_ingest_pipeline_deferred_to_databricks_dlt_source` | PASS |
-| `REQ-ING-HWM` | `tests/connectors/dependency_track/test_ingest.py::test_select_finding_hwm_picks_maximum_attributed_on` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/dependency_track/test_transform.py::test_flatten_to_silver_row_projects_all_silver_columns` | PASS |
-| `REQ-TRF-SEV` | `tests/connectors/dependency_track/test_transform.py::test_severity_lookup_covers_every_documented_value` | PASS |
-| `REQ-TRF-STS` | `tests/connectors/dependency_track/test_transform.py::test_status_lookup_covers_every_documented_state` | PASS |
-| `REQ-TRF-TS` | `tests/connectors/dependency_track/test_transform.py::test_attributed_on_parses_to_utc_datetime` | PASS |
-| `REQ-DQ` | `tests/connectors/dependency_track/test_transform.py::test_unassigned_severity_routes_to_dq_default_not_dropped` | PASS |
-| `REQ-DEDUP` | `tests/connectors/dependency_track/test_transform.py::test_dedup_key_collapses_same_cve_across_advisory_sources` | PASS |
+| `REQ-ING-AUTH` | `src/connectors/dependency_track/tests/test_ingest.py::test_ingest_contract_rejects_missing_api_key` | PASS |
+| `REQ-ING-PAG` | `src/connectors/dependency_track/tests/test_ingest.py::test_project_list_pagination_covers_two_pages_without_duplication` | PASS |
+| `REQ-ING-RL` | `src/connectors/dependency_track/tests/test_ingest.py::test_run_ingest_pipeline_deferred_to_databricks_dlt_source` | PASS |
+| `REQ-ING-HWM` | `src/connectors/dependency_track/tests/test_ingest.py::test_select_finding_hwm_picks_maximum_attributed_on` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/dependency_track/tests/test_transform.py::test_flatten_to_silver_row_projects_all_silver_columns` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/dependency_track/tests/test_transform.py::test_severity_lookup_covers_every_documented_value` | PASS |
+| `REQ-TRF-STS` | `src/connectors/dependency_track/tests/test_transform.py::test_status_lookup_covers_every_documented_state` | PASS |
+| `REQ-TRF-TS` | `src/connectors/dependency_track/tests/test_transform.py::test_attributed_on_parses_to_utc_datetime` | PASS |
+| `REQ-DQ` | `src/connectors/dependency_track/tests/test_transform.py::test_unassigned_severity_routes_to_dq_default_not_dropped` | PASS |
+| `REQ-DEDUP` | `src/connectors/dependency_track/tests/test_transform.py::test_dedup_key_collapses_same_cve_across_advisory_sources` | PASS |
 
-Collected 10 requirement-bound tests via `pytest tests/connectors/dependency_track/ -v --tb=short` (2026-04-25, 0.35 s wall-clock); 10 passed, 0 failed, 0 N/A. The overall suite reports 25 passed and 1 skipped — the skip is a live-API placeholder (`test_live_api_key_header_is_x_api_key`) guarded by `@pytest.mark.skip` because a Dependency-Track instance is not reachable from the unit-test environment. All ten REQ-IDs apply to this server-based SCA connector per the category reference; none are N/A.
+Collected 10 requirement-bound tests via `pytest src/connectors/dependency_track/tests/ -v --tb=short` (2026-04-25, 0.35 s wall-clock); 10 passed, 0 failed, 0 N/A. The overall suite reports 25 passed and 1 skipped — the skip is a live-API placeholder (`test_live_api_key_header_is_x_api_key`) guarded by `@pytest.mark.skip` because a Dependency-Track instance is not reachable from the unit-test environment. All ten REQ-IDs apply to this server-based SCA connector per the category reference; none are N/A.
 
 ### Tests
 
-Tests live under [`tests/connectors/dependency_track/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/dependency_track). The report table above is the per-REQ outcome.
+Tests live under [`src/connectors/dependency_track/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/dependency_track). The report table above is the per-REQ outcome.
 
 ## Generation log
 
@@ -131,5 +135,5 @@ This connector page is produced by the connector-lifecycle skills. The Generatio
 | Stage              | Skill                              | Inputs                                                                                          | Outputs                                                                            | Run on     | Skills repo ref                          |
 |--------------------|------------------------------------|-------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (sca)             | name=Dependency-Track; url=https://docs.dependencytrack.org/integrations/rest-api/; category=sca | mkdocs/docs/connectors/sca/dependency-track.md §1–§3                               | 2026-04-25 | 8143eee (retrofit-9-connectors)          |
-| Module generation  | `generate-connector` (sca)         | page hash=1b08b07046bc                                           | src/connectors/dependency_track/, tests/connectors/dependency_track/, config/severity/dependency_track.yml, config/status/dependency_track.yml, resources/dependency_track-job.yml | 2026-04-25 | 26a3f61 (retrofit-9-connectors)  |
+| Module generation  | `generate-connector` (sca)         | page hash=1b08b07046bc                                           | src/connectors/dependency_track/, src/connectors/dependency_track/tests/, src/connectors/dependency_track/severity.yml, src/connectors/dependency_track/status.yml, src/connectors/dependency_track/resources/job.yml | 2026-04-25 | 26a3f61 (retrofit-9-connectors)  |
 | Validation         | `validate-implementation` (sca)    | module path=src/connectors/dependency_track/                                                    | mkdocs/docs/connectors/sca/dependency-track.md §5                                  | 2026-04-25 | 9aa0b2c (retrofit-9-connectors)          |

@@ -2,6 +2,12 @@
 
 Secrets connectors ingest credential-leak detections from pipelines and repository history.
 
+!!! note "SCM-first dependency"
+    Connectors in this category depend on at least one SCM connector being
+    installed first; their findings reference `silver.repositories.repository_id`
+    populated by SCM. Walk the [SCM category](../scm/index.md) before installing
+    a Secrets connector.
+
 ## Capability surface
 
 Secret-detection sources differ from other scanner categories in that severity is rarely a first-class output: a single detection carries at most a confidence or verification flag. The specification maps every secret finding to `severity=high` by default; a per-deployment override is permitted for low-entropy detector classes.

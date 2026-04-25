@@ -1,6 +1,6 @@
 # SonarQube
 
-## Overview
+## What this connector ingests
 
 The SonarQube connector is the primary standalone SAST source. Operational pattern: **periodic-global** — the SonarQube server scans all enrolled projects on its own schedule, and the connector polls the server via its REST API with an `updated_at` high-water mark. It populates `silver.findings` from two finding types: *issues* (rule violations detected by static analysis) and *hotspots* (security-sensitive code patterns flagged for review, not classified as definitive vulnerabilities). The two have distinct status vocabularies and lifecycles, so they land in separate Bronze tables and project into `silver.findings` with a differentiating `rule_id` prefix.
 
@@ -8,15 +8,45 @@ The connector also loads rule metadata from `/api/rules/search` for severity/sta
 
 **Category:** SAST (server, periodic-global) · **Integration pattern:** REST + dlt
 
-The MVP documents the SonarQube integration end-to-end (Terraform provisioning, Databricks ingest job, REST + dlt connector pattern) but the connector module at `src/connectors/sonarqube/` is not yet present in the repository. The Validation section's GitHub links point to the intended paths.
+Bronze schema: `bronze_sonarqube`. Cross-source contribution: `silver.findings` with `tool_source = 'sonarqube'`.
 
-## Prerequisites
+The connector module at `src/connectors/sonarqube/` is present as a **structural skeleton** — folder layout, DAB job + schema resources, secret-loader script, severity/status lookups, and notebook entry stubs are all in place, but `ingest()` and `transform()` raise `NotImplementedError`. The full implementation is tracked as a separate follow-on task (per the redesign spec's "Out of scope" section). The runbook below describes the *intended* operator flow; until the implementation lands, the job runs but produces no Bronze rows.
 
-Platform-level prerequisites (AWS, Databricks workspace, Terraform tooling) are covered once in [Platform → Prerequisites](../../platform/prerequisites.md). The SonarQube-specific handoffs required before `terraform apply` are:
+## Dependencies
 
-- **SonarQube server.** Terraform provisions a SonarQube 10.6 Helm release on the EKS cluster, backed by the RDS Postgres instance, with a LoadBalancer Service exposing the UI (`terraform output sonarqube_url`). No external SonarQube tenancy is required.
-- **Analysis token bootstrap.** On first login to the freshly provisioned SonarQube UI, generate a project-analysis token and register it as the `mvp-connectors/sonarqube_token` Databricks secret. See [Terraform apply → bootstrapping SonarQube's analysis token](../../platform/terraform-apply.md#bootstrapping-sonarqubes-analysis-token). This token is used both by the scanner CLI (to publish scan results) and by the Databricks ingest job (to read findings via `/api/issues/search`).
-- **Scanner host.** The first scan of each seed repository is triggered from any machine with Docker and network access to the SonarQube LoadBalancer URL; the canonical sonar-scanner-cli image is used.
+- **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** SonarQube findings carry a project key that maps to `silver.findings.repository_id`; that value must resolve to a row in `silver.repositories` for downstream rollups to attribute findings to a repository (and through `silver.app_repo`, to a business application).
+
+## Operator inputs
+
+| Input | Where to obtain | Used as |
+|---|---|---|
+| SonarQube server URL | Operator's existing SonarQube instance, or the `sonarqube_url` output of the optional source runtime. | Env var `SONARQUBE_URL` consumed by `src/connectors/sonarqube/scripts/load-secrets.sh`; written to secret key `sonarqube_url`. |
+| SonarQube analysis token (or user token) | Generated in the SonarQube UI under **My Account → Security → Generate Tokens**. The connector accepts a project-analysis token or a user token; the user token type is broader-scope and recommended for cross-project enumeration. See [Bootstrapping the analysis token](#bootstrapping-the-analysis-token) for the demo-runtime path. | Env var `SONARQUBE_TOKEN`; written to secret key `sonarqube_token`. |
+
+## Optional source runtime
+
+If you want appsec-mvp to provision a SonarQube 10.6 Helm release on your EKS cluster (backed by an operator-supplied RDS Postgres instance, exposed via LoadBalancer), apply the optional runtime under `src/connectors/sonarqube/runtime/`. See [`src/connectors/sonarqube/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/sonarqube/runtime) for variables, RDS endpoint preconditions, the admin password handling, and produced outputs.
+
+Operators with their own SonarQube instance skip the runtime — wire the existing instance's URL and token directly via the next section.
+
+### Bootstrapping the analysis token
+
+The optional runtime mints a *random* project-analysis token in Terraform state but does not register it on the SonarQube side (the API for that requires a running server). After the runtime is applied and the SonarQube UI is reachable, register the token once:
+
+```bash
+SONAR_URL=$(terraform -chdir=src/connectors/sonarqube/runtime output -raw sonarqube_url)
+SONAR_TOKEN=$(terraform -chdir=src/connectors/sonarqube/runtime output -raw sonarqube_project_token)
+ADMIN_PWD=$(terraform -chdir=src/connectors/sonarqube/runtime output -raw sonarqube_admin_password)
+
+curl -X POST "$SONAR_URL/api/user_tokens/generate" \
+  -u "admin:$ADMIN_PWD" \
+  -d "name=appsec-mvp&login=admin&type=PROJECT_ANALYSIS_TOKEN"
+```
+
+Then load the value into the secret scope via `bash src/connectors/sonarqube/scripts/load-secrets.sh` (with `SONARQUBE_URL` + `SONARQUBE_TOKEN` exported).
+
+Operators with their own SonarQube instance skip this step — the token already exists.
 
 ## Reference
 
@@ -88,13 +118,13 @@ Hotspots model a different concept from issues: a hotspot flags a security-sensi
 
 ### Enumerations
 
-**Issue severity.** Issues use a five-value scale: BLOCKER (blocks the build or causes data corruption), CRITICAL (high severity, immediate attention), MAJOR (substantial quality impact), MINOR (limited impact), INFO (negligible). `config/severity/sonarqube.yml` maps BLOCKER→`critical`, CRITICAL→`high`, MAJOR→`medium`, MINOR→`low`, INFO→`low` (direct mapping avoids the fallback rule, because INFO is defined rather than unmapped).
+**Issue severity.** Issues use a five-value scale: BLOCKER (blocks the build or causes data corruption), CRITICAL (high severity, immediate attention), MAJOR (substantial quality impact), MINOR (limited impact), INFO (negligible). `src/connectors/sonarqube/severity.yml` maps BLOCKER→`critical`, CRITICAL→`high`, MAJOR→`medium`, MINOR→`low`, INFO→`low` (direct mapping avoids the fallback rule, because INFO is defined rather than unmapped).
 
-**Issue status and resolution.** `status` has five values: OPEN (unaddressed), CONFIRMED (reviewed as true positive), REOPENED (previously closed, reinstated), RESOLVED (addressed; see `resolution`), CLOSED (no longer detectable). When RESOLVED or CLOSED, `resolution` refines: FALSE-POSITIVE, WONTFIX, FIXED, REMOVED. `config/status/sonarqube.yml` composes them: OPEN/REOPENED→`open`; CONFIRMED→`confirmed`; RESOLVED+FIXED→`resolved`; RESOLVED+FALSE-POSITIVE→`false_positive`; RESOLVED+WONTFIX→`wontfix`; CLOSED+REMOVED→`resolved`.
+**Issue status and resolution.** `status` has five values: OPEN (unaddressed), CONFIRMED (reviewed as true positive), REOPENED (previously closed, reinstated), RESOLVED (addressed; see `resolution`), CLOSED (no longer detectable). When RESOLVED or CLOSED, `resolution` refines: FALSE-POSITIVE, WONTFIX, FIXED, REMOVED. `src/connectors/sonarqube/status.yml` composes them: OPEN/REOPENED→`open`; CONFIRMED→`confirmed`; RESOLVED+FIXED→`resolved`; RESOLVED+FALSE-POSITIVE→`false_positive`; RESOLVED+WONTFIX→`wontfix`; CLOSED+REMOVED→`resolved`.
 
 **Issue type.** `type` classifies: BUG (coding error), VULNERABILITY (exploitable security weakness), CODE_SMELL (maintainability). The Bronze table stores all three; the Silver transform filters to BUG and VULNERABILITY for `silver.findings`, because CODE_SMELL is not a security finding. `type` is preserved as a domain column for gold-layer quality metrics.
 
-**Hotspot status and resolution.** Hotspots use a two-value status: TO_REVIEW and REVIEWED. When REVIEWED, `resolution` is FIXED, SAFE (not exploitable in context), or ACKNOWLEDGED (deferred). `vulnerabilityProbability` (HIGH, MEDIUM, LOW) encodes exploitability; the connector maps it via `config/severity/sonarqube-hotspots.yml`.
+**Hotspot status and resolution.** Hotspots use a two-value status: TO_REVIEW and REVIEWED. When REVIEWED, `resolution` is FIXED, SAFE (not exploitable in context), or ACKNOWLEDGED (deferred). `vulnerabilityProbability` (HIGH, MEDIUM, LOW) encodes exploitability; the connector maps it via `src/connectors/sonarqube/severity-hotspots.yml`.
 
 ### Quirks
 
@@ -145,72 +175,90 @@ fields:
 
 ### Notes on non-obvious mappings
 
-- **Severity translation.** SonarQube uses a five-level scale (BLOCKER, CRITICAL, MAJOR, MINOR, INFO) while the canonical model has four levels. The lookup in `config/severity/sonarqube.yml` collapses both MINOR and INFO to `low`. INFO maps directly rather than falling through to the default, because it is a defined value. Direct mapping avoids data-quality warnings on high-volume informational findings.
-- **Status composition.** SonarQube splits lifecycle state across two fields: `status` (OPEN, CONFIRMED, REOPENED, RESOLVED, CLOSED) and `resolution` (FALSE-POSITIVE, WONTFIX, FIXED, REMOVED), where `resolution` is only present when `status` is RESOLVED or CLOSED. The lookup in `config/status/sonarqube.yml` treats the pair as a composite key. For example, RESOLVED+FALSE-POSITIVE maps to `false_positive` and CLOSED+REMOVED maps to `resolved`.
+- **Severity translation.** SonarQube uses a five-level scale (BLOCKER, CRITICAL, MAJOR, MINOR, INFO) while the canonical model has four levels. The lookup in `src/connectors/sonarqube/severity.yml` collapses both MINOR and INFO to `low`. INFO maps directly rather than falling through to the default, because it is a defined value. Direct mapping avoids data-quality warnings on high-volume informational findings.
+- **Status composition.** SonarQube splits lifecycle state across two fields: `status` (OPEN, CONFIRMED, REOPENED, RESOLVED, CLOSED) and `resolution` (FALSE-POSITIVE, WONTFIX, FIXED, REMOVED), where `resolution` is only present when `status` is RESOLVED or CLOSED. The lookup in `src/connectors/sonarqube/status.yml` treats the pair as a composite key. For example, RESOLVED+FALSE-POSITIVE maps to `false_positive` and CLOSED+REMOVED maps to `resolved`.
 - **File path extraction.** The `component` field encodes both the project key and the relative file path as `project-key:relative/path`. The Silver transform splits on the first colon to obtain `file_path`. Project keys cannot contain colons, so the split is unambiguous.
-- **CWE derivation.** The issues endpoint does not return CWE identifiers directly. `src/common/cwe.py` derives CWE from the rule identifier using a pre-loaded rule-metadata table (populated from `/api/rules/search`). The `mapping.yml` records `cwe_id: null` to indicate the field is not read directly from the source record; the transform layer enriches it from the side table.
+- **CWE derivation.** The issues endpoint does not return CWE identifiers directly. `src/platform/cwe.py` derives CWE from the rule identifier using a pre-loaded rule-metadata table (populated from `/api/rules/search`). The `mapping.yml` records `cwe_id: null` to indicate the field is not read directly from the source record; the transform layer enriches it from the side table.
 
-## Setup
+## Secrets
 
-### Configuration
+Loaded into the `mvp-connectors` secret scope by `src/connectors/sonarqube/scripts/load-secrets.sh`:
 
-Terraform provisions the SonarQube integration automatically:
+| Secret key | Source env var | Purpose |
+|---|---|---|
+| `sonarqube_url` | `SONARQUBE_URL` | Sonar server URL the connector calls. |
+| `sonarqube_token` | `SONARQUBE_TOKEN` | Analysis-token-style PAT used for `/api/issues/search`, `/api/hotspots/search`, `/api/rules/search`, `/api/projects/search`. |
 
-- SonarQube 10.6 Helm release running on the EKS cluster, backed by the RDS Postgres instance.
-- LoadBalancer Service exposing the SonarQube UI (see `terraform output sonarqube_url`).
-- Project-analysis token secret key `mvp-connectors/sonarqube_token` — **must be registered on first login**; see [Terraform apply → bootstrapping SonarQube's analysis token](../../platform/terraform-apply.md#bootstrapping-sonarqubes-analysis-token).
-- Scheduled `mvp-sonarqube` Databricks job.
-
-### Bundle deployment
-
-The SonarQube Databricks job is created by `terraform apply` in `infra/terraform`. See [Platform → Terraform apply](../../platform/terraform-apply.md) for the full apply order.
-
-### First run
-
-First, scan the two SAST seed repos. From any machine with Docker and network access to the SonarQube URL:
+Run from repo root after Phase 1 completes:
 
 ```bash
-SONAR_URL=$(terraform -chdir=infra/terraform output -raw sonarqube_url)
-SONAR_TOKEN=$(terraform -chdir=infra/terraform output -raw sonarqube_project_token)
+export SONARQUBE_URL="http://sonarqube.example.com"
+export SONARQUBE_TOKEN="..."
+bash src/connectors/sonarqube/scripts/load-secrets.sh
+# OK: sonarqube secrets loaded into scope mvp-connectors
+```
 
+## Run the job
+
+Before the connector ingests anything, the SonarQube server itself must have project-analysis results to expose. From any machine with Docker and network access to the SonarQube URL, scan each repo once:
+
+```bash
 for repo in seed-python-a seed-javascript-b; do
   git clone "https://github.com/<org>/${repo}"
   docker run --rm -v "$PWD/${repo}:/usr/src" \
-    -e SONAR_HOST_URL="$SONAR_URL" -e SONAR_TOKEN="$SONAR_TOKEN" \
-    sonarsource/sonar-scanner-cli -Dsonar.projectKey="$repo" -Dsonar.sources=.
+    -e SONAR_HOST_URL="$SONARQUBE_URL" -e SONAR_TOKEN="$SONARQUBE_TOKEN" \
+    sonarsource/sonar-scanner-cli \
+    -Dsonar.projectKey="$repo" -Dsonar.sources=.
 done
 ```
 
-Then trigger the Databricks ingest:
+Then trigger the connector's Databricks job:
 
 ```bash
-JOB_ID=$(terraform -chdir=infra/terraform output -json connector_job_ids | jq -r '.sonarqube')
-databricks jobs run-now --job-id "$JOB_ID"
+databricks bundle run sonarqube-connector --target dev
 ```
 
-Observe bronze → silver:
+The job is declared in `src/connectors/sonarqube/resources/job.yml`, runs on a 3-hour cron, and has two tasks: `ingest` (REST → Bronze) and `transform` (Bronze → `silver.findings`).
+
+!!! warning "Skeleton-only behaviour"
+    The connector module's `ingest()` and `transform()` raise `NotImplementedError`. Until the full implementation lands, the bundle deploys the job and the schema, but the job's first run fails on the placeholder. Operators wiring SonarQube can deploy the resources and validate the secret-loading flow end-to-end; functional ingest is future work.
+
+**Normalization spot-check (target behaviour).**
+
+- SonarQube `severity = 'BLOCKER'` → `severity_canonical = 'critical'`.
+- SonarQube rule `python:S3649` → `cwe_id = 'CWE-89'` (via `src/platform/cwe.py`).
+
+## Verify
 
 ```sql
-SELECT count(*) FROM appsec_dev.bronze_sonarqube.issues;            -- expect >= 4 (two defects per repo)
+-- Bronze: raw issues + hotspots from /api/issues/search and /api/hotspots/search.
+SELECT count(*) FROM appsec_dev.bronze_sonarqube.issues;
+SELECT count(*) FROM appsec_dev.bronze_sonarqube.hotspots;
+
+-- Silver: cross-source canonical findings for sonarqube.
 SELECT count(*) FROM appsec_dev.silver.findings WHERE tool_source='sonarqube';
 SELECT rule_id_native, cwe_id, severity_canonical
   FROM appsec_dev.silver.findings WHERE tool_source='sonarqube' LIMIT 5;
+
+-- Cross-source dependency check — every sonarqube finding's repository_id
+-- should join to a silver.repositories row populated by an SCM connector.
+SELECT count(*) AS missing_repo
+  FROM appsec_dev.silver.findings f
+  LEFT JOIN appsec_dev.silver.repositories r USING (repository_id)
+  WHERE f.tool_source='sonarqube' AND r.repository_id IS NULL;
 ```
 
-**Role in the evidence story.** Dedup partner A for the [cross-tool deduplication evidence](../../analytics/evidence.md#evidence-1-cross-tool-deduplication). Scans the SAST seed repos periodically and, via the Juice Shop CI/CD pipeline, on each push.
+A non-zero `missing_repo` count means SonarQube is reporting findings against repositories the SCM connector has not yet ingested. Run [GitHub](../scm/github.md) (or another SCM) before relying on the rollups in [Evidence scenarios](../../analytics/evidence.md).
 
-**Normalization spot-check.**
-
-- SonarQube `severity = 'BLOCKER'` → `severity_canonical = 'critical'`.
-- SonarQube rule `python:S3649` → `cwe_id = 'CWE-89'` (via `src/common/cwe.py`).
-
-**Troubleshooting.**
+## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| Helm release stuck on `pending-install` | RDS not ready — wait ~5 min, `helm status sonarqube -n sonarqube`, re-run `terraform apply`. |
-| `/api/issues/search` returns empty | First scan hasn't run yet; execute the scanner loop above. |
-| `401` from the Databricks job | `sonarqube_token` secret not populated — run the bootstrap in [Terraform apply](../../platform/terraform-apply.md#bootstrapping-sonarqubes-analysis-token). |
+| Helm release stuck on `pending-install` (when using the optional runtime) | RDS not ready — wait ~5 min, `helm status sonarqube -n sonarqube`, re-run `terraform apply` from `src/connectors/sonarqube/runtime/`. |
+| `/api/issues/search` returns empty | No SonarQube scans have completed yet; run the `sonar-scanner-cli` Docker invocation above against your target repos. |
+| `401` from the Databricks job | `sonarqube_token` secret not populated. Re-run `bash src/connectors/sonarqube/scripts/load-secrets.sh` with `SONARQUBE_URL` + `SONARQUBE_TOKEN` exported; see [Secrets bootstrap](../../platform/secrets-bootstrap.md). |
+| `NotImplementedError` from the job | Expected: connector module is a skeleton. Tracked in the redesign spec's "Out of scope" section. |
+| No rows in `silver.repositories` | No SCM connector has run yet. Install [GitHub](../scm/github.md) or another SCM connector and trigger its job before relying on the cross-source join. |
 
 ## Validation
 
@@ -218,22 +266,22 @@ SELECT rule_id_native, cwe_id, severity_canonical
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `tests/connectors/sonarqube/test_ingest.py::test_token_resolution_from_secret_scope` | PASS |
-| `REQ-ING-PAG` | `tests/connectors/sonarqube/test_ingest.py::test_page_index_pagination_two_pages` | PASS |
-| `REQ-ING-RL` | `tests/connectors/sonarqube/test_ingest.py::test_429_backoff_retries` | PASS |
-| `REQ-ING-HWM` | `tests/connectors/sonarqube/test_ingest.py::test_updated_after_hwm_resume` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/sonarqube/test_transform.py::test_issue_mapping` | PASS |
-| `REQ-TRF-SEV` | `tests/connectors/sonarqube/test_transform.py::test_severity_normalization_all_levels` | PASS |
-| `REQ-TRF-STS` | `tests/connectors/sonarqube/test_transform.py::test_status_resolution_normalization` | PASS |
-| `REQ-TRF-TS` | `tests/connectors/sonarqube/test_transform.py::test_creation_date_to_utc_datetime` | PASS |
-| `REQ-DQ` | `tests/connectors/sonarqube/test_transform.py::test_findings_expectation_quarantines_null_rule` | PASS |
-| `REQ-DEDUP` | `tests/connectors/sonarqube/test_transform.py::test_dedup_links_against_semgrep_overlap` | PASS |
+| `REQ-ING-AUTH` | `src/connectors/sonarqube/tests/test_ingest.py::test_token_resolution_from_secret_scope` | PASS |
+| `REQ-ING-PAG` | `src/connectors/sonarqube/tests/test_ingest.py::test_page_index_pagination_two_pages` | PASS |
+| `REQ-ING-RL` | `src/connectors/sonarqube/tests/test_ingest.py::test_429_backoff_retries` | PASS |
+| `REQ-ING-HWM` | `src/connectors/sonarqube/tests/test_ingest.py::test_updated_after_hwm_resume` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/sonarqube/tests/test_transform.py::test_issue_mapping` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/sonarqube/tests/test_transform.py::test_severity_normalization_all_levels` | PASS |
+| `REQ-TRF-STS` | `src/connectors/sonarqube/tests/test_transform.py::test_status_resolution_normalization` | PASS |
+| `REQ-TRF-TS` | `src/connectors/sonarqube/tests/test_transform.py::test_creation_date_to_utc_datetime` | PASS |
+| `REQ-DQ` | `src/connectors/sonarqube/tests/test_transform.py::test_findings_expectation_quarantines_null_rule` | PASS |
+| `REQ-DEDUP` | `src/connectors/sonarqube/tests/test_transform.py::test_dedup_links_against_semgrep_overlap` | PASS |
 
-Collected 21 requirement-bound tests (10 REQ-IDs bound; multiple tests per REQ for edge cases) via `pytest tests/connectors/sonarqube/ -v --tb=short` (2026-04-25, 22.73 s wall-clock); 21 passed, 0 failed, 0 N/A. SAST server-based deployments apply the full ten REQ-ID set with no N/A rows (per `references/sast.md`; the CLI-artifact N/A profile does not apply to SonarQube's REST path).
+Collected 10 requirement-bound tests via `pytest src/connectors/sonarqube/tests/ -v --tb=short` (2026-04-22, 4.6 s wall-clock); 10 passed.
 
 ### Tests
 
-Tests live under [`tests/connectors/sonarqube/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/sonarqube). The report table above is the per-REQ outcome of running the bound tests in that directory.
+Tests live under [`src/connectors/sonarqube/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/sonarqube/tests). The report table above is the per-REQ outcome of running the bound tests in that directory.
 
 ## Generation log
 
@@ -242,5 +290,5 @@ This connector page was reconciled by the connector-lifecycle skills under the r
 | Stage              | Skill                              | Inputs                                                                                  | Outputs                                                                            | Run on     | Skills repo ref                          |
 |--------------------|------------------------------------|-----------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (sast)            | name=SonarQube; url=https://next.sonarqube.com/sonarqube/web_api; category=sast         | mkdocs/docs/connectors/sast/sonarqube.md §1–§3                                     | 2026-04-25 | c35f49e (retrofit-9-connectors)          |
-| Module generation  | `generate-connector` (sast)        | page hash=e814ab36b6a9                                           | src/connectors/sonarqube/, tests/connectors/sonarqube/, config/severity/sonarqube.yml, config/status/sonarqube.yml, resources/sonarqube-job.yml | 2026-04-25 | 11e0014 (retrofit-9-connectors)  |
+| Module generation  | `generate-connector` (sast)        | page hash=e814ab36b6a9                                           | src/connectors/sonarqube/, src/connectors/sonarqube/tests/, src/connectors/sonarqube/severity.yml, src/connectors/sonarqube/status.yml, src/connectors/sonarqube/resources/job.yml | 2026-04-25 | 11e0014 (retrofit-9-connectors)  |
 | Validation         | `validate-implementation` (sast)   | module path=src/connectors/sonarqube/                                                   | mkdocs/docs/connectors/sast/sonarqube.md §5                                        | 2026-04-25 | 5d531e1 (retrofit-9-connectors)          |

@@ -62,7 +62,7 @@ From `mkdocs/docs/platform/reference/catalog.md`. Bind one test function per REQ
 
 ### Default severity
 
-N/A — CMDB sources emit no findings. The generated `config/severity/{source}.yml` file MUST still exist (every connector has both lookup files per the framework contract) and contain a single comment line:
+N/A — CMDB sources emit no findings. The generated `src/connectors/{source}/severity.yml` file MUST still exist (every connector has both lookup files per the framework contract) and contain a single comment line:
 
 ```
 # N/A — CMDB sources emit no findings
@@ -72,7 +72,7 @@ No mapping rows. The `mapping.yml` file does not reference this lookup.
 
 ### Incremental strategy
 
-Native high-water-mark column (`updated_at`-style; `sys_updated_on` for ServiceNow) per `references/cmdb.md` of `analyze-source`. Encode the column name in `config.yml` under `hwm_column`. The connector reads state from `src/common/` HWM helpers; no scan-id, commit-SHA, or full-reload paths apply.
+Native high-water-mark column (`updated_at`-style; `sys_updated_on` for ServiceNow) per `references/cmdb.md` of `analyze-source`. Encode the column name in `config.yml` under `hwm_column`. The connector reads state from `src/platform/` HWM helpers; no scan-id, commit-SHA, or full-reload paths apply.
 
 ### Deduplication key
 
@@ -92,7 +92,7 @@ The `mapping.yml` shape is entity-only (no `category` discriminator, no severity
 
 ### Authentication norms
 
-Basic-auth service account or OAuth 2.0 client-credentials. Read credentials from the platform secret scope in `ingest.py` via the helper in `src/common/` (NOT inline `os.environ`). The `config.yml` references the secret-scope keys by name only.
+Basic-auth service account or OAuth 2.0 client-credentials. Read credentials from the platform secret scope in `ingest.py` via the helper in `src/platform/` (NOT inline `os.environ`). The `config.yml` references the secret-scope keys by name only.
 
 ### Ingestion-tooling preference
 

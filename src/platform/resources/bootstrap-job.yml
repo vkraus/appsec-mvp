@@ -1,0 +1,12 @@
+resources:
+  jobs:
+    platform-bootstrap:
+      name: platform-bootstrap
+      tasks:
+        - task_key: silver_tables
+          sql_task:
+            file:
+              path: ../sql/silver_tables.sql
+            warehouse_id: ${var.warehouse_id}
+      # No schedule — operator runs once on-demand:
+      #   databricks bundle run platform-bootstrap

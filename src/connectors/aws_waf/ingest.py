@@ -25,8 +25,8 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from src.common.bronze_schema import with_envelope
-from src.common.contract import BatchDescriptor, ConnectorState
+from src.platform.bronze_schema import with_envelope
+from src.platform.contract import BatchDescriptor, ConnectorState
 
 # Documented AWS WAF action values. Used to normalise observed actions
 # into the severity lookup's vocabulary; undocumented values fall

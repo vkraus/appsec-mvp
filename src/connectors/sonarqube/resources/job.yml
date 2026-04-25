@@ -1,0 +1,37 @@
+resources:
+  jobs:
+    sonarqube-connector:
+      name: sonarqube-connector
+      parameters:
+        - name: source_name
+          default: "sonarqube"
+        - name: target_catalog
+          default: "${var.catalog}"
+        - name: hwm_reset
+          default: "false"
+      schedule:
+        quartz_cron_expression: "0 */30 * * * ?"
+        timezone_id: "UTC"
+      tasks:
+        - task_key: ingest
+          notebook_task:
+            notebook_path: ../ingest_entry.py
+          job_cluster_key: shared
+          max_retries: 3
+          min_retry_interval_millis: 2000
+          retry_on_timeout: true
+        - task_key: transform
+          depends_on:
+            - task_key: ingest
+          notebook_task:
+            notebook_path: ../transform_entry.py
+          job_cluster_key: shared
+          max_retries: 3
+          min_retry_interval_millis: 2000
+          retry_on_timeout: true
+      job_clusters:
+        - job_cluster_key: shared
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            num_workers: 1

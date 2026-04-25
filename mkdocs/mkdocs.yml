@@ -90,10 +90,12 @@ plugins:
 
 nav:
   - Home: index.md
-  - Platform:
+  - Setup platform:
       - platform/index.md
       - Prerequisites: platform/prerequisites.md
-      - Terraform apply: platform/terraform-apply.md
+      - Bundle deploy: platform/bundle-deploy.md
+      - Secrets bootstrap: platform/secrets-bootstrap.md
+      - Platform bootstrap job: platform/platform-bootstrap-job.md
       - Reference:
           - Canonical mapping: platform/reference/canonical-mapping.md
           - REQ catalog: platform/reference/catalog.md
@@ -104,17 +106,17 @@ nav:
           - Source characteristics: platform/reference/source-characteristics.md
           - Source capability matrix: platform/reference/source-capability-matrix.md
           - Connector skills: platform/reference/connector-skills.md
-  - Connectors:
+  - Install connectors:
       - connectors/index.md
-      - CMDB:
-          - connectors/cmdb/index.md
-          - Skills: connectors/cmdb/skills.md
-          - ServiceNow: connectors/cmdb/servicenow.md
       - SCM:
           - connectors/scm/index.md
           - Skills: connectors/scm/skills.md
           - GitHub: connectors/scm/github.md
           - GitLab: connectors/scm/gitlab.md
+      - CMDB:
+          - connectors/cmdb/index.md
+          - Skills: connectors/cmdb/skills.md
+          - ServiceNow: connectors/cmdb/servicenow.md
       - SAST:
           - connectors/sast/index.md
           - Skills: connectors/sast/skills.md
@@ -136,7 +138,7 @@ nav:
           - connectors/waf/index.md
           - Skills: connectors/waf/skills.md
           - AWS WAF: connectors/waf/aws-waf.md
-  - Analytics:
+  - Build analytics:
       - analytics/index.md
       - Gold datasets: analytics/gold-datasets.md
       - Evidence scenarios: analytics/evidence.md

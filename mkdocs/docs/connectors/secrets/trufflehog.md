@@ -1,26 +1,22 @@
 # TruffleHog
 
-## Overview
+!!! info "Placeholder — not implemented in MVP"
+    A reference TruffleHog connector is not part of the MVP. This page is
+    a scaffolding placeholder framing the intended runbook structure; the
+    Reference section below documents the integration per the category
+    capability surface. Follow the [Secrets skills](skills.md) to generate
+    the connector when needed.
+
+## What this connector ingests
 
 TruffleHog is the dedicated secret-detection tool. Operational pattern: **CI/CD-step** — each `trufflehog` invocation is a complete scan scoped to a commit range, and the connector uses the latest scanned commit SHA per repository as the high-water mark (`--since-commit`). The connector invokes the TruffleHog CLI against each enrolled repository and parses its line-delimited JSON output to populate `silver.findings`. TruffleHog's distinguishing capability is live credential verification: with `--results=verified,unknown`, the tool validates each detected secret against the provider's authentication endpoint and emits a `Verified` boolean. This boolean is the primary signal for the canonical `validity_status` column.
 
 **Category:** Secrets (CLI; CI/CD-step) · **Integration pattern:** Artifact path (CI/CD-step output → Databricks Volume)
 
-!!! info "Not in MVP scope"
-    A reference TruffleHog connector is not part of the MVP. The
-    Reference section below documents the intended integration per
-    the secrets capability surface; follow the connector-lifecycle
-    skills (`generate-connector`, `validate-implementation`) to
-    produce the module and validation report when needed.
+## Dependencies
 
-## Prerequisites
-
-TruffleHog is a self-contained CLI; the connector does not authenticate to a TruffleHog service.
-
-- **Install the binary** on every CI/CD runner (or container image) that performs scans. Releases: <https://github.com/trufflesecurity/trufflehog/releases>. Pin a specific release tag in the runner's tooling manifest so the detector inventory is reproducible.
-- **Provide source-kind credentials.** TruffleHog needs to read the upstream artefact. For `git` against private remotes, mount an SSH deploy key or supply a GitHub PAT via `--token`. For `s3`, supply AWS credentials via the runner's standard environment variables. Store these in Databricks Secrets and inject into the runner's environment; do not commit to repository configuration.
-- **Provision a Databricks Volume** in Unity Catalog as the landing zone for TruffleHog JSON artefacts. The CI/CD step writes its `--json` output to this volume; the connector reads from there. The volume is the inverted-control point that allows the artefact-collection pattern to coexist with Lakeflow-style ingestion in the same bundle.
-- **Configure CI/CD step output.** Each runner step writes `trufflehog ... --json` line-delimited JSON to a unique object key (e.g. `trufflehog/<repository_id>/<commit_sha>.jsonl`) in the volume. The key shape encodes the dedup label `(repository_id, commit_sha)`.
+- **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md).
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** TruffleHog findings are keyed by `(repository_id, commit_sha, secret_type, file_path)`; `repository_id` must resolve to a row in `silver.repositories` for downstream rollups to attribute findings to a repository (and through `silver.app_repo`, to a business application).
 
 ## Reference
 
@@ -79,7 +75,7 @@ TruffleHog emits one JSON object per line. The fields below are the subset consu
 
 ### Enumerations
 
-**Severity is conventional, not source-derived.** TruffleHog emits no severity field. Per the secrets capability surface, every TruffleHog finding is mapped to `severity=high` by default in `config/severity/trufflehog.yml`. Per-deployment overrides are permitted for low-entropy detector classes (e.g. `GenericApiKey` → `medium`).
+**Severity is conventional, not source-derived.** TruffleHog emits no severity field. Per the secrets capability surface, every TruffleHog finding is mapped to `severity=high` by default in `src/connectors/trufflehog/severity.yml`. Per-deployment overrides are permitted for low-entropy detector classes (e.g. `GenericApiKey` → `medium`).
 
 **No status vocabulary.** TruffleHog does not expose an open / resolved lifecycle. `REQ-TRF-STS` does not apply; the canonical `status` field is set to `open` on first emit and not transitioned by this connector.
 
@@ -100,7 +96,7 @@ The `unknown` category matters: it covers secrets on isolated networks or agains
 
 **CLI-artefact ingestion deviates from the standard preference order.** The category preference (Lakeflow Connect > Databricks SDK > dlt) does not apply because TruffleHog is a binary that runs on CI/CD runners, not a server with an API. The connector reads `--json` artefacts from a Databricks Volume; this is the documented exception alongside Semgrep Docker.
 
-**No severity field; all findings mapped to `high` by convention.** TruffleHog emits no severity. The reference implementation maps every finding to `severity=high` on the premise that a committed secret is a critical exposure regardless of detector. The default is in `config/severity/trufflehog.yml` and is overridable per deployment.
+**No severity field; all findings mapped to `high` by convention.** TruffleHog emits no severity. The reference implementation maps every finding to `severity=high` on the premise that a committed secret is a critical exposure regardless of detector. The default is in `src/connectors/trufflehog/severity.yml` and is overridable per deployment.
 
 **`Raw` and `RawV2` must not enter the Silver layer.** The connector drops `Raw` and `RawV2` before Bronze-to-Silver, keeping only `Redacted`. This is mandatory, not configurable. For deployments needing raw values for automated remediation, the reference implementation provides an optional Unity Catalog column-level access policy on the Bronze `Raw`/`RawV2` columns restricted to the `secrets_raw_reader` group.
 
@@ -127,18 +123,18 @@ The `unknown` category matters: it covers secrets on isolated networks or agains
 | `REQ-ING-PAG` | — | N/A |
 | `REQ-ING-RL` | — | N/A |
 | `REQ-ING-HWM` | — | N/A |
-| `REQ-TRF-MAP` | `tests/connectors/trufflehog/test_transform.py::test_record_to_silver_projects_every_consumed_field` | PASS |
-| `REQ-TRF-SEV` | `tests/connectors/trufflehog/test_transform.py::test_severity_is_hard_coded_high` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/trufflehog/test_transform.py::test_record_to_silver_projects_every_consumed_field` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/trufflehog/test_transform.py::test_severity_is_hard_coded_high` | PASS |
 | `REQ-TRF-STS` | — | N/A |
-| `REQ-TRF-TS` | `tests/connectors/trufflehog/test_transform.py::test_source_timestamp_is_preserved_from_git_leaf` | PASS |
-| `REQ-DQ` | `tests/connectors/trufflehog/test_transform.py::test_missing_git_metadata_produces_well_formed_row` | PASS |
-| `REQ-DEDUP` | `tests/connectors/trufflehog/test_transform.py::test_dedup_key_is_four_tuple_per_secrets_reference` | PASS |
+| `REQ-TRF-TS` | `src/connectors/trufflehog/test_transform.py::test_source_timestamp_is_preserved_from_git_leaf` | PASS |
+| `REQ-DQ` | `src/connectors/trufflehog/test_transform.py::test_missing_git_metadata_produces_well_formed_row` | PASS |
+| `REQ-DEDUP` | `src/connectors/trufflehog/test_transform.py::test_dedup_key_is_four_tuple_per_secrets_reference` | PASS |
 
-Collected 26 requirement-bound tests via `pytest tests/connectors/trufflehog/ -v --tb=short` (2026-04-25, 0.31 s wall-clock); 26 passed, 0 failed, 4 skipped as documentation markers for the N/A rows. Five requirements are marked N/A: `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` because the CLI-artefact ingestion path has no API auth, pagination, or upstream rate limit (quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix"); `REQ-ING-HWM` because TruffleHog is full-reload only per the secrets capability surface and the commit SHA lives in the artefact key rather than as a record-level HWM column; `REQ-TRF-STS` because secret-detection sources expose no lifecycle vocabulary to normalise (references/secrets.md § Quirks).
+Collected 26 requirement-bound tests via `pytest src/connectors/trufflehog/tests/ -v --tb=short` (2026-04-25, 0.31 s wall-clock); 26 passed, 0 failed, 4 skipped as documentation markers for the N/A rows. Five requirements are marked N/A: `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` because the CLI-artefact ingestion path has no API auth, pagination, or upstream rate limit (quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix"); `REQ-ING-HWM` because TruffleHog is full-reload only per the secrets capability surface and the commit SHA lives in the artefact key rather than as a record-level HWM column; `REQ-TRF-STS` because secret-detection sources expose no lifecycle vocabulary to normalise (references/secrets.md § Quirks).
 
 ### Tests
 
-Tests live under [`tests/connectors/trufflehog/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/trufflehog). The report table above is the per-REQ outcome.
+Tests live under [`src/connectors/trufflehog/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/trufflehog). The report table above is the per-REQ outcome.
 
 ## Generation log
 
@@ -147,5 +143,5 @@ This connector page is produced by the connector-lifecycle skills. The Generatio
 | Stage              | Skill                              | Inputs                                                                              | Outputs                                                                            | Run on     | Skills repo ref                          |
 |--------------------|------------------------------------|-------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (secrets)         | name=TruffleHog; url=https://github.com/trufflesecurity/trufflehog; category=secrets | mkdocs/docs/connectors/secrets/trufflehog.md §1–§3                                 | 2026-04-25 | 5b7fa80 (retrofit-9-connectors)          |
-| Module generation  | `generate-connector` (secrets)     | page hash=5fc403d47499                                                              | src/connectors/trufflehog/, tests/connectors/trufflehog/, config/severity/trufflehog.yml, config/status/trufflehog.yml, resources/trufflehog-job.yml | 2026-04-25 | 61e9510 (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (secrets)     | page hash=5fc403d47499                                                              | src/connectors/trufflehog/, src/connectors/trufflehog/tests/, src/connectors/trufflehog/severity.yml, src/connectors/trufflehog/status.yml, src/connectors/trufflehog/resources/job.yml | 2026-04-25 | 61e9510 (retrofit-9-connectors)          |
 | Validation         | `validate-implementation` (secrets)| module path=src/connectors/trufflehog/                                              | mkdocs/docs/connectors/secrets/trufflehog.md §5                                    | 2026-04-25 | 12f656a (retrofit-9-connectors)          |

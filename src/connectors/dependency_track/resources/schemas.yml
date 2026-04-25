@@ -1,0 +1,5 @@
+resources:
+  schemas:
+    bronze_dependency_track:
+      catalog_name: ${var.catalog}
+      name: bronze_dependency_track

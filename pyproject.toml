@@ -26,3 +26,13 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+exclude = ["*.tests", "*.tests.*", "*.fixtures", "*.fixtures.*"]
+
+[tool.pytest.ini_options]
+testpaths = ["src"]
+addopts = "-ra -q --strict-markers"
+markers = [
+    "e2e: end-to-end evidence tests (require Delta Lake local session)",
+    "integration: tests that hit recorded API fixtures",
+    "requirement: tag linking a test to a REQ-* identifier in the appsec-docs catalog",
+]

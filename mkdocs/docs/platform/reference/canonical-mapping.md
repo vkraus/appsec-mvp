@@ -67,9 +67,9 @@ Dependency-Track produces package-vulnerability findings; GitHub and GitLab expo
 
 ## Severity and Status Normalization Requirements
 
-The implementation **SHALL** harmonize every source's native severity scale to the canonical four-level model (`critical`, `high`, `medium`, `low`) through a per-source lookup table at [`config/severity/{source}.yml`](https://github.com/vkraus/appsec-mvp/tree/main/config/severity). Each lookup **SHALL** cover every documented source value. Undocumented source values fall through to a configurable default (`medium` unless the connector's `config.yml` overrides it) and **SHALL** trigger a data-quality warning. A null or missing source severity is mapped to `medium` and similarly flagged.
+The implementation **SHALL** harmonize every source's native severity scale to the canonical four-level model (`critical`, `high`, `medium`, `low`) through a per-source lookup table co-located with the connector at [`src/connectors/{source}/severity.yml`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors). Each lookup **SHALL** cover every documented source value. Undocumented source values fall through to a configurable default (`medium` unless the connector's `config.yml` overrides it) and **SHALL** trigger a data-quality warning. A null or missing source severity is mapped to `medium` and similarly flagged.
 
-The implementation **SHALL** translate every source's native lifecycle state to the canonical five-state model (`open`, `confirmed`, `resolved`, `false_positive`, `wontfix`) through an analogous per-source lookup at [`config/status/{source}.yml`](https://github.com/vkraus/appsec-mvp/tree/main/config/status).
+The implementation **SHALL** translate every source's native lifecycle state to the canonical five-state model (`open`, `confirmed`, `resolved`, `false_positive`, `wontfix`) through an analogous per-source lookup at [`src/connectors/{source}/status.yml`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors).
 
 Both severity and status lookup tables **SHALL** be maintained as configuration files rather than code so that vocabulary updates do not require a pipeline redeploy.
 

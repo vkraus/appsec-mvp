@@ -19,7 +19,7 @@ does NOT participate in. See
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pyspark.sql import DataFrame
 from pyspark.sql.types import (
@@ -30,7 +30,6 @@ from pyspark.sql.types import (
     StructType,
     TimestampType,
 )
-
 
 # Replay-window dedup key — encoded literally per references/waf.md.
 # Cross-tool overlap is NOT emitted (no dedup_links rows for WAF).
@@ -72,7 +71,7 @@ silver_waf_events = StructType([
 def _epoch_ms_to_utc(ms: int | float) -> datetime:
     if ms is None:
         raise ValueError("aws_waf timestamp is required")
-    return datetime.fromtimestamp(float(ms) / 1000.0, tz=timezone.utc)
+    return datetime.fromtimestamp(float(ms) / 1000.0, tz=UTC)
 
 
 # Default severity for undocumented action values (REQ-TRF-SEV).

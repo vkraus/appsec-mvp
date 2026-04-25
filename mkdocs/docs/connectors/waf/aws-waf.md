@@ -1,6 +1,13 @@
 # AWS WAF
 
-## Overview
+!!! info "Placeholder — not implemented in MVP"
+    A reference AWS WAF connector is not part of the MVP. This page is a
+    scaffolding placeholder framing the intended runbook structure; the
+    Reference section below documents the integration per the category
+    capability surface. Follow the [WAF skills](skills.md) to generate the
+    connector when needed.
+
+## What this connector ingests
 
 AWS WAF is the reference runtime-security source, representing the third detection tier (distinct from static and dynamic testing). Each record is **event-shaped, not finding-shaped**: a single request observed at the edge with a WAF action attached, not a triaged vulnerability. Records populate `silver.waf_events`, linked to applications through the WebACL's associated resource ARN (ALB, CloudFront distribution, API Gateway stage) joined against `silver.deployments` at transform time.
 
@@ -8,13 +15,10 @@ The WAF reference profile prefers **log-stream consumption** (CloudWatch Logs / 
 
 **Category:** WAF (runtime, edge event stream) · **Integration pattern:** log-stream autoloader (preferred) / SDK boto3 (fallback)
 
-## Prerequisites
+## Dependencies
 
-!!! info "Not implemented in MVP"
-    A reference AWS WAF connector is not part of the MVP. The
-    Reference section below documents the intended integration per
-    the category capability surface; follow the WAF skills
-    to generate a connector when needed.
+- **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md).
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** WAF events resolve to applications through the associated resource ARN, then to repositories via `silver.app_repo`. The chain requires an SCM connector to populate `silver.repositories` upstream.
 
 ## Reference
 
@@ -86,7 +90,7 @@ The Silver scope key for `silver.waf_events` is `(application_id, rule_id, times
 
 ### Enumerations
 
-**Action.** Documented values are `ALLOW`, `BLOCK`, `COUNT`, `CAPTCHA`, `CHALLENGE` (consistent across both surfaces; the SDK renders them upper-case, log records render `action` upper-case as well). The reference profile ingests every value, including `ALLOW`, into Bronze; whether `ALLOW` rows project into Silver is a per-deployment policy switch.
+**Action.** `ALLOW`, `BLOCK`, `COUNT`, `CAPTCHA`, `CHALLENGE`. No severity field; the canonical severity is derived: `BLOCK` on a managed-rule match→`high`; `COUNT` on a managed-rule match→`medium`; `CAPTCHA`/`CHALLENGE`→`low`; `ALLOW` is not ingested by default. The derivation table is in `src/connectors/aws_waf/severity.yml`.
 
 **Severity is derived, not sourced.** WAF events carry no severity field. The canonical severity is computed from `(action, terminatingRuleType / rule-group category)` per a per-source lookup table at `config/severity/aws-waf.yml`. The reference derivation:
 
@@ -122,22 +126,22 @@ The lookup MUST cover every documented action; undocumented values fall through 
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `tests/connectors/aws_waf/test_ingest.py::test_ingest_contract_rejects_missing_aws_credential_ref` | PASS |
+| `REQ-ING-AUTH` | `src/connectors/aws_waf/test_ingest.py::test_ingest_contract_rejects_missing_aws_credential_ref` | PASS |
 | `REQ-ING-PAG` | — | N/A |
 | `REQ-ING-RL` | — | N/A |
-| `REQ-ING-HWM` | `tests/connectors/aws_waf/test_ingest.py::test_event_timestamp_hwm_round_trip` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/aws_waf/test_transform.py::test_normalise_event_projects_log_record_onto_silver_shape` | PASS |
-| `REQ-TRF-SEV` | `tests/connectors/aws_waf/test_transform.py::test_severity_lookup_covers_every_documented_action_value` | PASS |
+| `REQ-ING-HWM` | `src/connectors/aws_waf/test_ingest.py::test_event_timestamp_hwm_round_trip` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/aws_waf/test_transform.py::test_normalise_event_projects_log_record_onto_silver_shape` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/aws_waf/test_transform.py::test_severity_lookup_covers_every_documented_action_value` | PASS |
 | `REQ-TRF-STS` | — | N/A |
-| `REQ-TRF-TS` | `tests/connectors/aws_waf/test_transform.py::test_epoch_ms_timestamp_normalises_to_utc_datetime` | PASS |
-| `REQ-DQ` | `tests/connectors/aws_waf/test_transform.py::test_unmatched_webacl_leaves_application_id_null` | PASS |
+| `REQ-TRF-TS` | `src/connectors/aws_waf/test_transform.py::test_epoch_ms_timestamp_normalises_to_utc_datetime` | PASS |
+| `REQ-DQ` | `src/connectors/aws_waf/test_transform.py::test_unmatched_webacl_leaves_application_id_null` | PASS |
 | `REQ-DEDUP` | — | N/A |
 
-Collected 6 requirement-bound applicable REQs via `pytest tests/connectors/aws_waf/ -v --tb=short` (2026-04-25, 0.41 s wall-clock); 25 passed, 0 failed, 5 skipped; 6 applicable REQs PASS, 4 marked N/A. N/A rationale: `REQ-ING-PAG` and `REQ-ING-RL` — log-stream mode has no API pagination or rate limit (SDK fallback is single-page `GetSampledRequests` with boto3-native throttling); `REQ-TRF-STS` — WAF events are an append-only edge-event stream with no lifecycle state; `REQ-DEDUP` — no cross-tool overlap in MVP scope, and the within-source replay-window dedup on `(timestamp, rule_id, source_ip, request_id)` is asserted under `REQ-DQ` instead.
+Collected 6 requirement-bound applicable REQs via `pytest src/connectors/aws_waf/tests/ -v --tb=short` (2026-04-25, 0.41 s wall-clock); 25 passed, 0 failed, 5 skipped; 6 applicable REQs PASS, 4 marked N/A. N/A rationale: `REQ-ING-PAG` and `REQ-ING-RL` — log-stream mode has no API pagination or rate limit (SDK fallback is single-page `GetSampledRequests` with boto3-native throttling); `REQ-TRF-STS` — WAF events are an append-only edge-event stream with no lifecycle state; `REQ-DEDUP` — no cross-tool overlap in MVP scope, and the within-source replay-window dedup on `(timestamp, rule_id, source_ip, request_id)` is asserted under `REQ-DQ` instead.
 
 ### Tests
 
-Tests live under [`tests/connectors/aws_waf/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/aws_waf). The report table above is the per-REQ outcome.
+Tests live under [`src/connectors/aws_waf/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/aws_waf). The report table above is the per-REQ outcome.
 
 ## Generation log
 
@@ -146,5 +150,5 @@ This connector page is produced by the connector-lifecycle skills. The Generatio
 | Stage              | Skill                              | Inputs                                                                                              | Outputs                                                                            | Run on     | Skills repo ref                          |
 |--------------------|------------------------------------|-----------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (waf)             | name=AWS WAF; url=https://docs.aws.amazon.com/waf/latest/APIReference/Welcome.html; category=waf    | mkdocs/docs/connectors/waf/aws-waf.md §1–§3                                        | 2026-04-25 | b7c1b7c (retrofit-9-connectors)          |
-| Module generation  | `generate-connector` (waf)         | page hash=af12c04263dc                                                                              | src/connectors/aws_waf/, tests/connectors/aws_waf/, config/severity/aws_waf.yml, config/status/aws_waf.yml, resources/aws_waf-job.yml | 2026-04-25 | d7a2b5b (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (waf)         | page hash=af12c04263dc                                                                              | src/connectors/aws_waf/, src/connectors/aws_waf/tests/, src/connectors/aws_waf/severity.yml, src/connectors/aws_waf/status.yml, src/connectors/aws_waf/resources/job.yml | 2026-04-25 | d7a2b5b (retrofit-9-connectors)          |
 | Validation         | `validate-implementation` (waf)    | module path=src/connectors/aws_waf/                                                                 | mkdocs/docs/connectors/waf/aws-waf.md §5                                           | 2026-04-25 | b0d6c1b (retrofit-9-connectors)          |

@@ -1,0 +1,41 @@
+resources:
+  jobs:
+    dependency-track-connector:
+      name: dependency-track-connector
+      parameters:
+        - name: source_name
+          default: "dependency_track"
+        - name: target_catalog
+          default: "${var.catalog}"
+        - name: hwm_reset
+          default: "false"
+      schedule:
+        # Hourly cadence: Dependency-Track re-evaluates SBOMs against fresh
+        # advisory feeds continuously, but new findings land on an
+        # SBOM-import cadence (typically per CI/CD pipeline run). An
+        # hourly pull keeps ingest volume low while catching drift.
+        quartz_cron_expression: "0 0 * * * ?"
+        timezone_id: "UTC"
+      tasks:
+        - task_key: ingest
+          notebook_task:
+            notebook_path: ../ingest.py
+          job_cluster_key: shared
+          max_retries: 3
+          min_retry_interval_millis: 2000
+          retry_on_timeout: true
+        - task_key: transform
+          depends_on:
+            - task_key: ingest
+          notebook_task:
+            notebook_path: ../transform.py
+          job_cluster_key: shared
+          max_retries: 3
+          min_retry_interval_millis: 2000
+          retry_on_timeout: true
+      job_clusters:
+        - job_cluster_key: shared
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            num_workers: 1

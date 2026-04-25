@@ -2,6 +2,12 @@
 
 CMDB connectors ingest the authoritative application inventory and team-ownership graph.
 
+!!! note "SCM-first dependency"
+    Connectors in this category depend on at least one SCM connector being
+    installed first; their findings reference `silver.repositories.repository_id`
+    populated by SCM. Walk the [SCM category](../scm/index.md) before installing
+    the CMDB connector.
+
 ## Capability surface
 
 CMDB sources provide the authoritative application inventory and team-ownership graph. Their data model is relational: an application record references its owning team, associated repositories, and dependent services through foreign-key attributes or a separate relationship table. The specification requires that related CMDB tables be ingested as separate Bronze tables and joined in Silver rather than resolved at ingestion via relationship APIs; this keeps the ingestion entry point stateless and relationship logic testable without API mocks.

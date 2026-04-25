@@ -38,5 +38,5 @@ bronze_table: ${catalog}.bronze_aws_waf.events
 silver_table: ${catalog}.silver.waf_events
 
 # Declarative lookups
-severity_map: config/severity/aws_waf.yml   # action-keyed (no source severity field)
-status_map:   config/status/aws_waf.yml     # N/A placeholder (append-only stream)
+severity_map: src/connectors/aws_waf/severity.yml   # action-keyed (no source severity field)
+status_map:   src/connectors/aws_waf/status.yml     # N/A placeholder (append-only stream)

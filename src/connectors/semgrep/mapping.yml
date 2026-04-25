@@ -5,7 +5,7 @@
 # documented but unimplemented (see the connector page Reference section).
 #
 # Dedup key for SAST (per skills/generate-connector/references/sast.md and
-# src/common/silver.py::dedup_findings): (repository_id, file_path, rule_id,
+# src/platform/silver.py::dedup_findings): (repository_id, file_path, rule_id,
 # start_line). The dedup transform consumes the Silver columns directly;
 # this mapping only has to project the tuple faithfully.
 source_key: semgrep

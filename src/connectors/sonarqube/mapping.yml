@@ -16,7 +16,7 @@ fields:
   rule_id_native:     rule                                      # repository:ruleKey (e.g. java:S2259)
   file_path:          component                                 # full value; transform strips project prefix
   start_line:         line                                      # nullable for file-level issues
-  cwe_id:             null                                      # derived via src/common/cwe.py side table
+  cwe_id:             null                                      # derived via src/platform/cwe.py side table
   detected_at:        creationDate                              # UTC ISO 8601
   resolved_at:        updateDate                                # set on RESOLVED/CLOSED transition
   url:                null                                      # no per-finding permalink in /api/issues/search
