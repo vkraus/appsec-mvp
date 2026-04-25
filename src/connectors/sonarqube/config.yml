@@ -1,0 +1,13 @@
+source: sonarqube
+category: sast
+# severity_map / status_map are aspirational pointers — these YAMLs do
+# not yet exist on disk. No code currently loads this connector's
+# config.yml; when the lookups are introduced, drop them at the paths
+# below to keep the convention with other connectors.
+severity_map: src/connectors/sonarqube/severity.yml
+status_map:   src/connectors/sonarqube/status.yml
+bucket_secret_scope: mvp-connectors
+bronze_table: ${catalog}.bronze_sonarqube.findings_raw
+base_url_secret: sonarqube_url
+auth_secret: sonarqube_token
+hwm_column: updated_at

@@ -1,0 +1,7 @@
+# SonarQube issue status to canonical status.
+# Scaffolding.
+OPEN: open
+CONFIRMED: open
+REOPENED: open
+RESOLVED: closed
+CLOSED: closed

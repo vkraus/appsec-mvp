@@ -8,7 +8,7 @@ The connector also loads rule metadata from `/api/rules/search` for severity/sta
 
 **Category:** SAST (server, periodic-global) · **Integration pattern:** REST + dlt
 
-The MVP documents the SonarQube integration end-to-end (Terraform provisioning, Databricks ingest job, REST + dlt connector pattern) but the connector module at `src/connectors/sonarqube/` is not yet present in the repository. The Validation section's GitHub links point to the intended paths.
+The MVP documents the SonarQube integration end-to-end (Terraform provisioning, Databricks ingest job, REST + dlt connector pattern). The connector module at `src/connectors/sonarqube/` is present as a structural skeleton — folder layout, DAB job + schema resources, secret-loader script, severity/status lookups, and notebook entry stubs are all in place, but `ingest()` and `transform()` raise `NotImplementedError`. The full implementation is tracked as a separate follow-on task (per the redesign spec's "Out of scope" section).
 
 ## Prerequisites
 

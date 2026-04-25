@@ -1,0 +1,8 @@
+# SonarQube severity to canonical severity.
+# Scaffolding — verify against actual SonarQube severities when the
+# connector is implemented.
+BLOCKER: critical
+CRITICAL: high
+MAJOR: medium
+MINOR: low
+INFO: info
