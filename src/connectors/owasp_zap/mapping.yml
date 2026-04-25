@@ -1,13 +1,32 @@
-# ZAP baseline JSON → silver.findings.
+# ZAP alerts JSON → silver.findings (DAST finding shape).
+#
+# Per references/dast.md: target_silver_table = silver.findings with
+# category="dast"; dedup key is (target, alert_id, uri_path); the
+# transform MUST join against silver.deployments to resolve target
+# into application_id (unmatched targets are emitted unchanged for
+# inventory-gap analysis).
 source_key: owasp_zap
+target_silver_table: silver.findings
+dedup_key:
+  - target
+  - alert_id
+  - uri_path
 fields:
-  finding_id:        pluginid + "@" + site[0].alerts[*].url
+  finding_id:        pluginid + "@" + uri
   tool_source:       "owasp_zap"
   category:          "dast"
-  severity_canonical: lookup(risk, severity_map)
-  status_canonical:   "open"
+  severity:
+    source_path: risk
+    lookup: config/severity/owasp_zap.yml
+  status:
+    source_path: null           # ZAP has no server-side status; all land open
+    lookup: config/status/owasp_zap.yml
+    default: open
   cwe_id:             cweid
   rule_id_native:     pluginid
-  file_path:          null
+  alert_id:           pluginid  # scanner-internal rule identifier
+  target:             site      # scanned deployment host / base URL
+  uri_path:           uri       # per-path disambiguator
+  file_path:          null      # DAST shape: no file_path; URL-based finding
   start_line:         null
   url:                uri

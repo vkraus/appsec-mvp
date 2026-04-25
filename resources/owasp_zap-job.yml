@@ -1,0 +1,40 @@
+resources:
+  jobs:
+    owasp-zap-connector:
+      name: owasp-zap-connector
+      parameters:
+        - name: source_name
+          default: "owasp_zap"
+        - name: target_catalog
+          default: "${var.catalog}"
+        - name: hwm_reset
+          default: "false"
+      schedule:
+        # Every 15 minutes: CI/CD-step artefacts under cicd/zap/ land with
+        # low latency; on-demand scan-and-read cycles are driven separately
+        # by the long-lived ZAP daemon and read back on the same cadence.
+        quartz_cron_expression: "0 */15 * * * ?"
+        timezone_id: "UTC"
+      tasks:
+        - task_key: ingest
+          notebook_task:
+            notebook_path: ../src/connectors/owasp_zap/ingest.py
+          job_cluster_key: shared
+          max_retries: 3
+          min_retry_interval_millis: 2000
+          retry_on_timeout: true
+        - task_key: transform
+          depends_on:
+            - task_key: ingest
+          notebook_task:
+            notebook_path: ../src/connectors/owasp_zap/transform.py
+          job_cluster_key: shared
+          max_retries: 3
+          min_retry_interval_millis: 2000
+          retry_on_timeout: true
+      job_clusters:
+        - job_cluster_key: shared
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            num_workers: 1
