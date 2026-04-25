@@ -1,6 +1,6 @@
 ---
 name: analyze-source
-description: Use when analyzing a data source (REST, GraphQL, SDK, or CLI) for the AppSec connector framework — for example SAST tools (SonarQube, Semgrep), SCA tools (Dependency-Track), secret scanners (TruffleHog), DAST scanners (OWASP ZAP), WAF (AWS WAF), SCM platforms (GitHub, GitLab), or CMDB systems (ServiceNow). Produces a per-connector documentation page following the framework's six-section template.
+description: Use when analyzing a data source (REST, GraphQL, SDK, or CLI) for the AppSec connector framework — for example SAST tools (SonarQube, Semgrep), SCA tools (Dependency-Track), secret scanners (TruffleHog), DAST scanners (OWASP ZAP), WAF (AWS WAF), SCM platforms (GitHub, GitLab), or CMDB systems (ServiceNow). Use when a per-connector documentation page is needed.
 ---
 
 # analyze-source
@@ -24,23 +24,23 @@ A single Markdown page emitted at `mkdocs/docs/connectors/<category>/<source-slu
 
 1. **Overview** — what this connector does, its role in the platform, and which Silver table(s) it populates. For sources outside MVP scope, include the `!!! info "Not in MVP scope"` admonition.
 2. **Prerequisites** — how to set up the external service and extract credentials (API keys, OAuth apps, PATs).
-3. **Reference** — the seven API facts (see Procedure step 7).
+3. **Reference** — the seven API facts (see the bullet list under Procedure).
 4. **Setup** — configuration, bundle deployment, first-run commands. Stub with `!!! info "Not implemented in MVP"` if out-of-scope.
 5. **Validation** — always stubbed on first emit with `!!! info "Pending validation"`; `validate-implementation` populates this later.
 6. **Provenance** — a Markdown table with three rows. Row 1 is filled by this skill (see Provenance row template below). Rows 2 and 3 are placeholders marked `(pending)` for `generate-connector` and `validate-implementation` to fill in.
 
 ## Procedure
 
-1. Fetch the source's API documentation via WebFetch from the input URL. Cache the fetched content for citations.
-2. Identify the authentication mechanism the source supports; cross-check against the category's auth norm in `references/<category>.md`. If the source supports multiple auth modes, select the one matching the category convention.
-3. Enumerate the endpoints required to populate the Silver tables assigned to the source's category. Cross-reference the Silver Table Ownership table at `mkdocs/docs/platform/reference/catalog.md` and the canonical schemas at `mkdocs/docs/platform/reference/canonical-mapping.md`.
-4. Select the incremental strategy per the preference order in `references/<category>.md` (typical order: webhook > native HWM column > full reload; some categories override).
-5. Extract a consumed-field schema excerpt — only fields the connector actually reads — matching the canonical Silver fields from `mkdocs/docs/platform/reference/canonical-mapping.md` (entities or findings schema, whichever applies to the category).
-6. Produce severity and status lookup proposals per the canonical enumeration models at `mkdocs/docs/platform/reference/canonical-mapping.md`. For categories where severity or status do not apply (CMDB, secrets-status), record the N/A explicitly.
-7. Document quirks: deviations from category norms, format surprises, per-source handling policies. Cross-check `references/<category>.md` for category quirks the source may inherit.
-8. Stub the Provenance section with the row for this skill (date, inputs, outputs, skill repo ref via `git rev-parse --short HEAD`); leave rows for `generate-connector` and `validate-implementation` marked `(pending)`.
-9. Read `references/<category>.md` for category-specific facts that influence the Reference section's seven API facts — applicable REQ-IDs, default severity, HWM preference, dedup key shape, target Silver tables, auth norms, ingestion-tooling preference, quirks.
-10. Assemble the six-section Markdown page and emit to the output path.
+1. Read `references/<category>.md` for category-specific facts that influence the Reference section's seven API facts — applicable REQ-IDs, default severity, HWM preference, dedup key shape, target Silver tables, auth norms, ingestion-tooling preference, quirks.
+2. Fetch the source's API documentation via WebFetch from the input URL. Cache the fetched content for citations.
+3. Identify the authentication mechanism the source supports; cross-check against the category's auth norm in `references/<category>.md`. If the source supports multiple auth modes, select the one matching the category convention.
+4. Enumerate the endpoints required to populate the Silver tables assigned to the source's category. Cross-reference the Silver Table Ownership table at `mkdocs/docs/platform/reference/catalog.md` and the canonical schemas at `mkdocs/docs/platform/reference/canonical-mapping.md`.
+5. Select the incremental strategy per the preference order in `references/<category>.md` (typical order: webhook > native HWM column > full reload; some categories override).
+6. Extract a consumed-field schema excerpt — only fields the connector actually reads — matching the canonical Silver fields from `mkdocs/docs/platform/reference/canonical-mapping.md` (entities or findings schema, whichever applies to the category).
+7. Produce severity and status lookup proposals per the canonical enumeration models at `mkdocs/docs/platform/reference/canonical-mapping.md`. For categories where severity or status do not apply (CMDB, secrets-status), record the N/A explicitly.
+8. Document quirks: deviations from category norms, format surprises, per-source handling policies. Cross-check `references/<category>.md` for category quirks the source may inherit.
+9. Assemble the six-section Markdown page and emit to the output path.
+10. Stub the Provenance section with the row for this skill (date, inputs, outputs, skill repo ref via `git rev-parse --short HEAD`); leave rows for `generate-connector` and `validate-implementation` marked `(pending)`.
 
 The seven API facts captured under Reference are:
 

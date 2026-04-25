@@ -35,7 +35,7 @@ Not applicable. CMDB ingests entities (applications, teams, ownership), not find
 
 ## Target Silver tables
 
-`silver.applications`, `silver.teams`, `silver.app_repo_mapping`, `silver.ownership` per the Silver Entity Mapping requirements at `mkdocs/docs/platform/reference/canonical-mapping.md#silver-entity-mapping-requirements`. The Reference section's Resource schema excerpt should map source fields to these canonical entity columns.
+`silver.applications`, `silver.teams`, `silver.app_repo_mapping` per the Silver Entity Mapping requirements at `mkdocs/docs/platform/reference/canonical-mapping.md#silver-entity-mapping-requirements`. The Reference section's Resource schema excerpt should map source fields to these canonical entity columns.
 
 ## Authentication norms
 

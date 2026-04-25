@@ -43,7 +43,7 @@ For the finding role: the dedup key follows the finding shape — code-level fin
 
 ## Target Silver tables
 
-Entity role: `silver.repository`, `silver.pull_request`, `silver.branch_policy` per `mkdocs/docs/platform/reference/canonical-mapping.md#silver-entity-mapping-requirements`.
+Entity role: `silver.repositories`, `silver.pull_requests`, `silver.branch_policies` per `mkdocs/docs/platform/reference/canonical-mapping.md#silver-entity-mapping-requirements`.
 
 Finding role: `silver.findings` discriminated by `category` per `mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements` (the GitHub / GitLab platform table).
 

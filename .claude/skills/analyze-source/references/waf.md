@@ -41,7 +41,7 @@ For AWS deployments the reference pattern is **Firehose to S3** or **CloudWatch 
 
 ## Target Silver tables
 
-`silver.waf_event` per the WAF capability surface. Application scoping is derived at transform time from the WebACL's associated resource ARNs (ALB, CloudFront distribution, API Gateway stage) joined against `silver.deployments`. The Reference section MUST disclose this transform-time join.
+`silver.waf_events` per the WAF capability surface. Application scoping is derived at transform time from the WebACL's associated resource ARNs (ALB, CloudFront distribution, API Gateway stage) joined against `silver.deployments`. The Reference section MUST disclose this transform-time join.
 
 ## Authentication norms
 
@@ -53,7 +53,7 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. For 
 
 ## Quirks
 
-- **Event-shaped, not finding-shaped.** Each record describes a single request observed at the edge, not a triaged vulnerability. The Silver target is `silver.waf_event`, not `silver.findings`. The Reference section's Quirks fact MUST disclose this so generate-connector emits the right schema.
+- **Event-shaped, not finding-shaped.** Each record describes a single request observed at the edge, not a triaged vulnerability. The Silver target is `silver.waf_events`, not `silver.findings`. The Reference section's Quirks fact MUST disclose this so generate-connector emits the right schema.
 - **Severity is derived.** Severity comes from action + rule-group category, not from a source field. The lookup table is action-keyed, not severity-keyed.
 - **Sampling weight.** Where the source returns statistical samples (sampled SDK calls), each record carries a sampling weight that MUST be preserved into Bronze for downstream extrapolation.
 - **Application linkage via ARN.** Application scoping uses the WebACL's associated resource ARNs (ALB, CloudFront distribution, API Gateway stage) joined against `silver.deployments` at transform time. The Reference section MUST capture the ARN field name in the Resource schema excerpt.
