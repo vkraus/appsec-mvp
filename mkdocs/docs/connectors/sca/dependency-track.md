@@ -139,7 +139,7 @@ bash src/connectors/dependency_track/scripts/load-secrets.sh
 The Dependency-Track ingestion is a notebook job declared in `src/connectors/dependency_track/resources/job.yml` as `dependency-track-connector`. Trigger an on demand run:
 
 ```bash
-databricks bundle run dependency_track_ingest --target dev
+databricks bundle run dependency-track-connector --target dev
 ```
 
 Wait approximately 3 minutes for a project with around 100 findings. Job status is visible under **Workflows → Jobs** in the Databricks UI.

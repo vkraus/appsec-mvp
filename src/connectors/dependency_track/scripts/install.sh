@@ -6,6 +6,6 @@ set -euo pipefail
 echo "Step 1/3: Loading secrets..."
 bash src/connectors/dependency_track/scripts/load-secrets.sh
 echo "Step 2/3: Triggering pipeline..."
-databricks bundle run dependency_track_ingest --target dev
+databricks bundle run dependency-track-connector --target dev
 echo "Step 3/3: Run verification SQL — see runbook"
 echo "✓ Dependency-Track connector install complete."

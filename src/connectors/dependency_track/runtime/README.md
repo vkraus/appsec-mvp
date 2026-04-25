@@ -30,7 +30,7 @@ Skip this module if you prefer to validate those preconditions out of band (e.g.
 
 ```bash
 # 1. Load the API key into the Databricks secret scope. The default scope
-#    is `mvp-connectors`; the default key is `dependency_track_apikey`.
+#    is `mvp-connectors`; the default key is `dependency_track_api_key`.
 export DT_APIKEY="<paste-team-api-key>"
 ./src/connectors/dependency_track/scripts/load-secrets.sh
 
@@ -47,7 +47,7 @@ A minimal `terraform.tfvars`:
 catalog               = "appsec_dev"
 dependency_track_host = "dt.example.com"
 # dependency_track_apikey_secret_scope and dependency_track_apikey_secret_key
-# fall through to defaults (mvp-connectors / dependency_track_apikey).
+# fall through to defaults (mvp-connectors / dependency_track_api_key).
 ```
 
 ## Inputs supplied by the user
@@ -64,7 +64,7 @@ dependency_track_host = "dt.example.com"
 | Variable | Description | Default |
 |---|---|---|
 | `dependency_track_apikey_secret_scope` | Databricks secret scope holding the API key. | `mvp-connectors` |
-| `dependency_track_apikey_secret_key` | Secret key under the scope holding the API key. | `dependency_track_apikey` |
+| `dependency_track_apikey_secret_key` | Secret key under the scope holding the API key. | `dependency_track_api_key` |
 
 ## Outputs
 

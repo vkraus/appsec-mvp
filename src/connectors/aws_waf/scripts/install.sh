@@ -8,6 +8,6 @@ set -euo pipefail
 echo "Step 1/3: Loading secrets..."
 bash src/connectors/aws_waf/scripts/load-secrets.sh
 echo "Step 2/3: Triggering pipeline..."
-databricks bundle run aws_waf_ingest --target dev
+databricks bundle run aws-waf-connector --target dev
 echo "Step 3/3: Run verification SQL — see runbook"
 echo "✓ AWS WAF connector install complete."

@@ -171,10 +171,10 @@ The lookup MUST cover every documented action; undocumented values fall through 
 
 ## Run the job
 
-The AWS WAF ingestion is a notebook job named `aws_waf_ingest` (declared in `src/connectors/aws_waf/resources/job.yml`) that runs every 15 minutes once enabled. Trigger an on-demand run:
+The AWS WAF ingestion is a notebook job named `aws-waf-connector` (declared in `src/connectors/aws_waf/resources/job.yml`) that runs every 15 minutes once enabled. Trigger an on-demand run:
 
 ```bash
-databricks bundle run aws_waf_ingest --target dev
+databricks bundle run aws-waf-connector --target dev
 ```
 
 Wait time depends on traffic volume. For a smoke test, generate a few blockable requests against the WebACL-fronted distribution:
