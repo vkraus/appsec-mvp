@@ -90,31 +90,47 @@ resource "aws_iam_role_policy" "github_actions" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect   = "Allow"
-        Action   = ["ecr:GetAuthorizationToken"]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:CompleteLayerUpload",
-          "ecr:InitiateLayerUpload",
-          "ecr:PutImage",
-          "ecr:UploadLayerPart",
-          "ecr:BatchGetImage",
-          "ecr:GetDownloadUrlForLayer"
-        ]
-        Resource = aws_ecr_repository.juiceshop.arn
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["eks:DescribeCluster"]
-        Resource = data.aws_eks_cluster.this.arn
-      }
-    ]
+    Statement = concat(
+      [
+        {
+          Effect   = "Allow"
+          Action   = ["ecr:GetAuthorizationToken"]
+          Resource = "*"
+        },
+        {
+          Effect = "Allow"
+          Action = [
+            "ecr:BatchCheckLayerAvailability",
+            "ecr:CompleteLayerUpload",
+            "ecr:InitiateLayerUpload",
+            "ecr:PutImage",
+            "ecr:UploadLayerPart",
+            "ecr:BatchGetImage",
+            "ecr:GetDownloadUrlForLayer"
+          ]
+          Resource = aws_ecr_repository.juiceshop.arn
+        },
+        {
+          Effect   = "Allow"
+          Action   = ["eks:DescribeCluster"]
+          Resource = data.aws_eks_cluster.this.arn
+        }
+      ],
+      var.artifact_bucket == "" ? [] : [
+        {
+          Effect = "Allow"
+          Action = [
+            "s3:PutObject",
+            "s3:GetObject",
+            "s3:ListBucket"
+          ]
+          Resource = [
+            "arn:aws:s3:::${var.artifact_bucket}",
+            "arn:aws:s3:::${var.artifact_bucket}/cicd/*"
+          ]
+        }
+      ]
+    )
   })
 }
 
@@ -272,6 +288,7 @@ locals {
     JUICESHOP_NAMESPACE    = kubernetes_namespace.juiceshop.metadata[0].name
     JUICESHOP_INGRESS_HOST = try(data.kubernetes_service.juiceshop.status[0].load_balancer[0].ingress[0].hostname, "pending")
     SONARQUBE_URL          = var.sonarqube_url
+    ZAP_URL                = var.zap_url
     ARTIFACT_BUCKET        = var.artifact_bucket
   }
   juiceshop_vars_to_create = {

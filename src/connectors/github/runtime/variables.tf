@@ -27,7 +27,7 @@ variable "project_prefix" {
 }
 
 variable "eks_cluster_name" {
-  description = "Operator-supplied EKS cluster name. The Juice Shop namespace and LoadBalancer Service are created in this cluster, and the GitHub Actions IAM role is granted cluster-admin via an EKS access entry. The operator must provide a working kubeconfig context that the kubernetes provider can consume."
+  description = "Operator-supplied EKS cluster name. The Juice Shop namespace and LoadBalancer Service are created in this cluster, and the GitHub Actions IAM role is granted cluster-admin via an EKS access entry. The operator must provide a working kubeconfig context that the kubernetes provider can consume. Must be in `var.aws_region` — the kubernetes provider's auth flow resolves the cluster endpoint via the AWS provider's region."
   type        = string
 }
 

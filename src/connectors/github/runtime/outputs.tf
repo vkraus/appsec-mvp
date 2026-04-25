@@ -26,6 +26,11 @@ output "github_actions_role_arn" {
   value       = aws_iam_role.github_actions.arn
 }
 
+output "github_actions_role_name" {
+  description = "Name of the IAM role assumed by GitHub Actions (for attaching additional policies)."
+  value       = aws_iam_role.github_actions.name
+}
+
 output "juiceshop_namespace" {
   description = "Kubernetes namespace where Juice Shop runs."
   value       = kubernetes_namespace.juiceshop.metadata[0].name

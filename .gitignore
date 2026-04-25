@@ -20,6 +20,9 @@ mkdocs/site/
 infra/terraform/*.tfvars
 infra/terraform/.terraform/
 infra/terraform/terraform.tfstate*
+src/connectors/*/runtime/.terraform/
+src/connectors/*/runtime/terraform.tfstate*
+src/connectors/*/runtime/.terraform.lock.hcl
 
 # IDE / OS
 .vscode/
