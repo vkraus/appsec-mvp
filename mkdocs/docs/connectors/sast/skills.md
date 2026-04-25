@@ -107,7 +107,7 @@ A connector module at `src/connectors/{source}/` containing:
 - `transform.py` — implements `transform(bronze_df) -> silver_df` per the normalization rules in `platform/reference/canonical-mapping`.
 - `mapping.yml` — declarative Bronze-to-Silver column expressions referencing `src/connectors/{source}/severity.yml` and `src/connectors/{source}/status.yml`.
 - `src/connectors/{source}/severity.yml` and `src/connectors/{source}/status.yml` — per-source lookups covering every source value documented in the connector page.
-- `resources/{source}-job.yml` — canonical two-task Lakeflow job bundle fragment.
+- `src/connectors/{source}/resources/job.yml` — canonical two-task Lakeflow job bundle fragment.
 - `src/connectors/{source}/tests/test_ingest.py` and `test_transform.py` — pytest suite covering every REQ-ID from `platform/reference/catalog` applicable to the connector's category.
 - `src/connectors/{source}/tests/fixtures/` — JSON fixtures named `{endpoint}_{scenario}.json`.
 
@@ -125,13 +125,13 @@ A connector module at `src/connectors/{source}/` containing:
 5. Emit `mapping.yml` with canonical-field → `{source_path, cast, lookup?}` blocks for every canonical Silver field defined in `platform/reference/canonical-mapping` (entities or findings schema, whichever applies).
 6. Emit `src/connectors/{source}/severity.yml` and `src/connectors/{source}/status.yml` with every source value covered. For undocumented values, insert the configurable default and a comment flagging the DQ warning path.
 7. Emit `transform.py` applying mapping plus normalization rules from `platform/reference/canonical-mapping`.
-8. Emit the bundle fragment at `resources/{source}-job.yml` using the canonical two-task shape documented in `platform/reference/catalog`, substituting the source name.
+8. Emit the bundle fragment at `src/connectors/{source}/resources/job.yml` using the canonical two-task shape documented in `platform/reference/catalog`, substituting the source name.
 9. Emit the test suite: one test function per REQ-ID applicable to the connector category, each marked with `@pytest.mark.requirement("REQ-...")`. Fixtures follow the `{endpoint}_{scenario}.json` naming convention.
 10. Record the invocation — inputs, generated file paths, git commit hash — so that `validate-implementation` can reference it.
 
 ## Invariants
 
-- No file is written outside `src/connectors/{source}/`, `src/connectors/{source}/tests/`, or `resources/{source}-job.yml`. The connector generation is self-contained.
+- No file is written outside `src/connectors/{source}/`, `src/connectors/{source}/tests/`, or `src/connectors/{source}/resources/job.yml`. The connector generation is self-contained.
 - Every REQ-ID applicable to the category (from `platform/reference/catalog`) has at least one bound test function.
 - All imports from `src/common/` reference only functions that already exist in that module; new shared helpers are not introduced by this skill.
 ````

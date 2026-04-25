@@ -6,10 +6,15 @@ The platform repository keeps connector modules, analytics computations, and con
 
 ```
 repo/
-├── databricks.yml                  # bundle root: targets, jobs, pipelines
-├── resources/                      # per-job and per-pipeline bundle fragments
+├── databricks.yml                  # bundle root: targets, variables, include glob
 ├── conftest.py                     # global pytest configuration
 ├── src/
+│   ├── platform/                   # framework primitives (HTTP, pagination, HWM,
+│   │   │                           # severity/status normalization, dedup)
+│   │   ├── resources/              # platform.yml (catalog + silver schema),
+│   │   │                           # bootstrap-job.yml (one-off silver_tables.sql)
+│   │   ├── sql/                    # silver_tables.sql
+│   │   └── tests/                  # platform-level framework tests
 │   ├── connectors/
 │   │   └── github/                 # one module per source
 │   │       ├── ingest.py           # implements ingest(run_id, state) -> batch
@@ -18,14 +23,22 @@ repo/
 │   │       ├── config.yml          # endpoints, pagination, HWM column
 │   │       ├── severity.yml        # native-severity → canonical-severity lookup
 │   │       ├── status.yml          # native-status → canonical-status lookup
+│   │       ├── resources/          # per-connector DAB fragments
+│   │       │   ├── schemas.yml     # bronze_<source>, silver_<source> UC schemas
+│   │       │   ├── job.yml         # two-task ingest → transform job
+│   │       │   ├── volumes.yml     # (scanners only) external volumes for artifacts
+│   │       │   ├── connection.yml  # (Lakeflow connectors only) UC connection
+│   │       │   └── pipeline.yml    # (Lakeflow connectors only) ingestion pipeline
 │   │       └── tests/              # co-located tests + fixtures for this connector
 │   │           ├── test_ingest.py
 │   │           ├── test_transform.py
 │   │           └── fixtures/       # per-endpoint JSON fixtures
-│   └── platform/                   # framework primitives (HTTP, pagination, HWM,
-│       │                           # severity/status normalization, dedup)
-│       └── tests/                  # platform-level framework tests
+│   └── analytics/                  # gold-layer scaffolding (future work)
+│       ├── resources/              # schemas.yml (gold), job.yml
+│       └── sql/
 ```
+
+`databricks.yml` includes `src/**/resources/*.yml`, so any new component that follows the same `<component>/resources/*.yml` shape is picked up automatically; there is no top-level `resources/` directory.
 
 ## Per-connector module layout
 

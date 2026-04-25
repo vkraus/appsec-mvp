@@ -12,7 +12,7 @@ Medallion layout across three layers:
 - **Silver** — canonical entity and finding tables, severity and status normalized.
 - **Gold** — aggregations, evidence views, and dashboards consumed by [Analytics](../analytics/).
 
-All tables live in Unity Catalog under a three-tier namespace (`<catalog>.bronze.*`, `<catalog>.silver.*`, `<catalog>.gold.*`) provisioned by the DAB bootstrap job at [`resources/bootstrap.yml`](https://github.com/vkraus/appsec-mvp/tree/main/resources).
+All tables live in Unity Catalog under a three-tier namespace (`<catalog>.bronze.*`, `<catalog>.silver.*`, `<catalog>.gold.*`) provisioned by the DAB bootstrap job at [`src/platform/resources/bootstrap-job.yml`](https://github.com/vkraus/appsec-mvp/tree/main/src/platform/resources/bootstrap-job.yml).
 
 ## Top-level layout
 
@@ -34,12 +34,11 @@ appsec-mvp/
 ├── config/
 │   ├── severity/         # Per-source severity lookup YAML
 │   └── status/           # Per-source status lookup YAML
-├── resources/            # DAB job bundle fragments (one per source)
 ├── tests/
 │   ├── common/           # Tests for shared framework library
 │   └── connectors/       # Tests for per-source connectors
 ├── sql/                  # Silver and Gold SQL
-├── databricks.yml        # DAB root
+├── databricks.yml        # DAB root (includes src/**/resources/*.yml)
 └── pyproject.toml        # Python package definition
 ```
 
@@ -72,7 +71,8 @@ Corresponding side-car files outside the connector module:
 
 | File | Purpose |
 |---|---|
-| `resources/{source}-job.yml` | DAB job bundle fragment (two-task ingest → transform). |
+| `src/connectors/{source}/resources/job.yml` | DAB job bundle fragment (two-task ingest → transform). |
+| `src/connectors/{source}/resources/schemas.yml` | Per-connector Bronze (and Silver, where applicable) UC schemas. |
 | `src/connectors/{source}/tests/` | Connector tests with `@pytest.mark.requirement("REQ-...")` markers. |
 
 ## Ingestion category decision
@@ -97,7 +97,7 @@ flowchart LR
 
 ## Orchestration
 
-Each connector ships a DAB job fragment at `resources/{source}-job.yml` declaring a two-task pipeline (ingest → transform). The DAB root [`databricks.yml`](https://github.com/vkraus/appsec-mvp/blob/main/databricks.yml) assembles the fragments into a complete bundle. Deployment: `databricks bundle deploy`.
+Each connector ships a DAB job fragment at `src/connectors/{source}/resources/job.yml` declaring a two-task pipeline (ingest → transform). The DAB root [`databricks.yml`](https://github.com/vkraus/appsec-mvp/blob/main/databricks.yml) globs `src/**/resources/*.yml` so per-component fragments are picked up automatically. Deployment: `databricks bundle deploy`.
 
 ## Setup path
 

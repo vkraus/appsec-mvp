@@ -4,7 +4,7 @@ Every connector instantiates the same Lakeflow Job shape: a two-task DAG where a
 
 ## Bundle fragment
 
-`resources/connector-job.yml`:
+`src/connectors/<source>/resources/job.yml`:
 
 ```yaml
 variables:
@@ -25,7 +25,7 @@ resources:
       tasks:
         - task_key: ingest
           notebook_task:
-            notebook_path: ../src/connectors/${var.source}/ingest
+            notebook_path: ../ingest_entry.py
             base_parameters:
               target_catalog: ${var.target_catalog}
               reset_hwm: ${var.reset_hwm}
@@ -36,7 +36,7 @@ resources:
           depends_on:
             - task_key: ingest
           notebook_task:
-            notebook_path: ../src/connectors/${var.source}/transform
+            notebook_path: ../transform_entry.py
             base_parameters:
               target_catalog: ${var.target_catalog}
           job_cluster_key: transform_cluster
