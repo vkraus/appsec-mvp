@@ -1,0 +1,35 @@
+# operational.yml — operator data layer for the dependency_track connector
+# Read by provision-source (source_runtime:) and generate-connector (databricks_runtime:)
+# Schema: see .claude/skills/{provision-source,generate-connector}/references/sca.md
+
+source_runtime:
+  runtime_provisioner: "terraform-references-only"
+  tenant_host_var_name: "dependency_track_host"
+  tenant_host_format: "FQDN no protocol"
+  apikey_secret_scope_var_name: "dependency_track_apikey_secret_scope"
+  apikey_secret_scope_default: "mvp-connectors"
+  apikey_secret_key_var_name: "dependency_track_apikey_secret_key"
+  apikey_secret_key_default: "dependency_track_api_key"
+  bronze_schema_name: "bronze_dependency_track"
+  catalog_var_name: "catalog"
+  terraform_required_version: ">= 1.7"
+
+databricks_runtime:
+  secret_scope: "mvp-connectors"
+  bronze_schema: "bronze_dependency_track"
+  bronze_tables:
+    - "findings"
+    - "findings_envelope"
+  envelope_table: "findings_envelope"
+  cron_schedule: "0 0 * * * ?"
+  uc_catalog_var: "catalog"
+  job_name: "dependency-track-connector"
+  default_target: "dev"
+  default_catalog: "appsec_dev"
+  secret_env_vars:
+    - env_var: "DT_APIKEY"
+      secret_key: "dependency_track_api_key"
+  tool_source_label: "dependency_track"
+  entry_wrappers: false
+  extra_install_env_vars:
+    - "DT_HOST"

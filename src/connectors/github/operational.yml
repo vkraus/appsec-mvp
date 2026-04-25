@@ -1,0 +1,71 @@
+# operational.yml — operator data layer for the github connector
+# Read by provision-source (source_runtime:) and generate-connector (databricks_runtime:)
+# Schema: see .claude/skills/{provision-source,generate-connector}/references/scm.md
+# Auto-derived from a086f9d historical state during regenerate-4-originals successor work.
+
+source_runtime:
+  # SCM sub-shape B: full provisioning (terraform-aws-github).
+  # Inferred from a086f9d:src/connectors/github/runtime/variables.tf — AWS + GitHub
+  # variables are present (aws_region, eks_cluster_name, github_org, github_pat).
+  runtime_provisioner: terraform-aws-github
+  terraform_required_version: ">= 1.7"
+
+  # Common SCM fields (a086f9d reflects these only indirectly — github full-
+  # provisioning does not declare a catalog/host variable in runtime/variables.tf,
+  # so values come from scripts/load-secrets.sh + resources/schemas.yml).
+  tenant_host: github.com
+  token_secret_scope: mvp-connectors
+  token_secret_key: github_pat  # config.yml `auth.token_secret: github_pat`
+  bronze_schema_name: bronze_github
+  catalog_var_name: catalog
+
+  # GitHub-org input. variables.tf declares `variable "github_org"` with no default.
+  target_namespace_id: "<your-github-org>"  # placeholder; operator replaces at deploy time with their GitHub org/user
+
+  # Full-provisioning fields (terraform-aws-github).
+  aws_region: us-east-1  # operator-confirmed default for github runtime ECR + EKS provisioning
+  eks_cluster_name_var_name: eks_cluster_name
+  project_prefix_default: appsec-mvp
+  juice_shop_namespace_default: juiceshop  # variable "juiceshop_namespace" default
+  ecr_repo_name: ${project_prefix}/juiceshop  # aws_ecr_repository.juiceshop.name
+  oidc_audience: sts.amazonaws.com  # aws_iam_openid_connect_provider.github.client_id_list
+  juice_shop_overlay_files:
+    - .sonarcloud.properties
+    - deploy/juiceshop.yaml
+  seed_repo_names_data_sources:
+    - BenchmarkJava
+    - BenchmarkPython
+    - juice-shop
+  optional_cross_scanner_vars:
+    - sonarqube_url
+    - sonarqube_project_token
+    - zap_url
+    - artifact_bucket
+
+databricks_runtime:
+  secret_scope: mvp-connectors
+  bronze_schema: bronze_github
+  silver_schema: silver_github  # resources/schemas.yml declares both bronze_github and silver_github
+
+  # Bronze tables. Verified via scripts/install.sh "FROM ${CATALOG}.bronze_github.repositories".
+  # ingest_entry.py extra includes "token", "org", "catalog" — single-table SCM ingest landing.
+  bronze_tables:
+    - repositories
+
+  cron_schedule: "0 0 */3 * * ?"  # resources/job.yml quartz_cron_expression — every 3 hours
+  uc_catalog_var: ${var.catalog}
+  job_name: github-connector
+  default_target: dev
+  default_catalog: appsec_dev
+
+  # scripts/load-secrets.sh writes two secrets: github_token from GITHUB_PAT, github_org from GITHUB_ORG.
+  secret_env_vars:
+    - env_var: GITHUB_PAT
+      secret_key: github_token
+    - env_var: GITHUB_ORG
+      secret_key: github_org
+
+  extra_install_env_vars: []  # scripts/install.sh has no `:?` checks beyond load-secrets env vars
+  tool_source_label: github  # scripts/install.sh verify-step `WHERE source='github'` / `tool_source='github'`
+  entry_wrappers: true  # a086f9d ships ingest_entry.py + transform_entry.py; resources/job.yml notebook_path: ../ingest_entry.py
+  webhook_endpoint_url: "<your-databricks-webhook-endpoint-url>"  # placeholder; operator replaces at deploy time after Databricks endpoint exists

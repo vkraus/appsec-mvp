@@ -1,0 +1,33 @@
+# operational.yml — operator data layer for the gitlab connector
+# Read by provision-source (source_runtime:) and generate-connector (databricks_runtime:)
+# Schema: see .claude/skills/{provision-source,generate-connector}/references/scm.md
+
+source_runtime:
+  runtime_provisioner: "terraform-references-only"
+  tenant_host: "gitlab.com"
+  target_namespace_id: "<your-gitlab-group-id>"  # placeholder; operator replaces at deploy time with their numeric GitLab group ID
+  token_secret_scope: "mvp-connectors"
+  token_secret_key: "gitlab_token"
+  bronze_schema_name: "bronze_gitlab"
+  catalog_var_name: "catalog"
+  terraform_required_version: ">= 1.7"
+
+databricks_runtime:
+  secret_scope: "mvp-connectors"
+  bronze_schema: "bronze_gitlab"
+  bronze_tables:
+    - "projects"
+  cron_schedule: "0 */15 * * * ?"
+  uc_catalog_var: "catalog"
+  job_name: "gitlab-connector"
+  default_target: "dev"
+  default_catalog: "appsec_dev"
+  secret_env_vars:
+    - env_var: "GITLAB_BASE_URL"
+      secret_key: "gitlab_base_url"
+    - env_var: "GITLAB_TOKEN"
+      secret_key: "gitlab_token"
+  extra_install_env_vars:
+    - "GITLAB_GROUP_ID"
+  tool_source_label: "gitlab"
+  entry_wrappers: false  # gitlab follower currently does not emit *_entry.py (template gap per scm.md "Judgment call"; on re-emit should be true)

@@ -1,0 +1,51 @@
+# operational.yml — operator data layer for the aws_waf connector
+# Read by provision-source (source_runtime:) and generate-connector (databricks_runtime:)
+# Schema: see .claude/skills/{provision-source,generate-connector}/references/waf.md
+
+source_runtime:
+  runtime_provisioner: "terraform-aws-bucket-policy"
+  catalog_var_name: "catalog"
+  bronze_schema_name: "bronze_aws_waf"
+  aws_region_var_name: "aws_region"
+  aws_region_default: "us-east-1"
+  aws_account_id_var_name: "aws_waf_account_id"
+  log_bucket_arn_var_name: "aws_waf_log_bucket_arn"
+  firehose_service_principal: "firehose.amazonaws.com"
+  firehose_actions:
+    - "s3:PutObject"
+    - "s3:PutObjectAcl"
+  bucket_policy_sid: "AllowFirehoseWrite"
+  secret_keys_external:
+    - "waf_log_bucket"
+    - "aws_waf_iam_role_arn"
+  sample_artefact_path: "runtime/files/sample.json"
+  terraform_required_version: ">= 1.5"
+
+databricks_runtime:
+  secret_scope: "mvp-connectors"
+  bronze_schema: "bronze_aws_waf"
+  bronze_tables:
+    - "events"
+    - "event_envelope"
+  envelope_table: "event_envelope"
+  cron_schedule: "0 */15 * * * ?"
+  uc_catalog_var: "catalog"
+  job_name: "aws-waf-connector"
+  default_target: "dev"
+  default_catalog: "appsec_dev"
+  secret_env_vars:
+    - env_var: "WAF_LOG_BUCKET"
+      secret_key: "waf_log_bucket"
+    - env_var: "AWS_WAF_IAM_ROLE_ARN"
+      secret_key: "aws_waf_iam_role_arn"
+  extra_install_env_vars:
+    - "AWS_WAF_ACCOUNT_ID"
+    - "AWS_WAF_LOG_BUCKET_ARN"
+    - "AWS_ACCESS_KEY_ID"
+    - "AWS_SECRET_ACCESS_KEY"
+  tool_source_label: "aws_waf"
+  entry_wrappers: false
+  ingestion_mode: "log_stream"
+  log_stream_prefix: "waf/firehose/"
+  firehose_account_id_env: "AWS_WAF_ACCOUNT_ID"
+  webacl_log_bucket_arn_env: "AWS_WAF_LOG_BUCKET_ARN"

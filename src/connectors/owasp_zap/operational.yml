@@ -1,0 +1,80 @@
+# operational.yml — operator data layer for the owasp_zap connector
+# Read by provision-source (source_runtime:) and generate-connector (databricks_runtime:)
+# Schema: see .claude/skills/{provision-source,generate-connector}/references/dast.md
+# Auto-derived from a086f9d historical state during regenerate-4-originals successor work.
+#
+# DAST is HYBRID: a086f9d encodes BOTH a CI/CD-step data path (cicd_prefix) and an
+# on-demand daemon source path (kubernetes_deployment.zap). source_runtime: reflects
+# the daemon-provisioning shape (terraform-aws-eks-daemon) per a086f9d main.tf.
+# databricks_runtime: covers both data paths via secret_env_vars + cicd_prefix.
+
+source_runtime:
+  # Daemon sub-shape: a086f9d:src/connectors/owasp_zap/runtime/main.tf contains
+  # kubernetes_deployment.zap + random_password.zap_api_key + LoadBalancer Service.
+  runtime_provisioner: terraform-aws-eks-daemon
+  terraform_required_version: ">= 1.7"
+
+  aws_region_var_name: aws_region
+  eks_cluster_name_var_name: eks_cluster_name
+  project_prefix_default: appsec-mvp  # variable "project_prefix" default
+  namespace_default: zap  # variable "namespace_name" default
+  daemon_image_default: owasp/zap2docker-stable:2.14.0  # variable "zap_image" default
+  service_port_default: 8080  # variable "service_port" default
+  container_port: 8080  # kubernetes_deployment.zap container port { container_port = 8080 }
+
+  daemon_command:
+    - zap.sh
+    - -daemon
+    - -host
+    - 0.0.0.0
+    - -port
+    - "8080"
+    - -config
+    - api.key=$(ZAP_API_KEY)
+    - -config
+    - api.addrs.addr.name=.*
+    - -config
+    - api.addrs.addr.regex=true
+
+  api_key_length: 40  # random_password.zap_api_key.length
+  api_key_secret_name: zap-api-key  # kubernetes_secret.zap_api_key.metadata.name
+  api_key_env_var_name: ZAP_API_KEY  # kubernetes_secret.zap_api_key.data key
+
+databricks_runtime:
+  secret_scope: mvp-connectors  # scripts/load-secrets.sh `SCOPE="mvp-connectors"` + config.yml `bucket_secret_scope: mvp-connectors`
+  bronze_schema: bronze_owasp_zap  # resources/schemas.yml `name: bronze_owasp_zap`
+
+  # Single bronze table. config.yml `bronze_table: ${catalog}.bronze_owasp_zap.findings`.
+  bronze_tables:
+    - findings
+
+  cron_schedule: "0 */15 * * * ?"  # resources/job.yml — every 15 min
+  uc_catalog_var: ${var.catalog}
+  job_name: owasp-zap-connector  # resources/job.yml jobs.owasp-zap-connector
+  default_target: dev
+  default_catalog: appsec_dev
+
+  # scripts/load-secrets.sh writes (ZAP_URL→zap_url, ZAP_API_KEY→zap_api_key) — daemon path.
+  secret_env_vars:
+    - env_var: ZAP_URL
+      secret_key: zap_url
+    - env_var: ZAP_API_KEY
+      secret_key: zap_api_key
+
+  tool_source_label: owasp_zap  # scripts/install.sh verify-step `WHERE tool_source='owasp_zap'`
+  entry_wrappers: false  # resources/job.yml notebook_path: ../ingest.py (no entry wrappers in a086f9d)
+
+  # Volumes config — resources/volumes.yml.
+  bronze_volume: zap_artifacts
+  bronze_volume_storage_location: s3://${var.artifact_bucket}/zap/
+
+  # Hybrid: CI/CD-step path AND server (daemon) path both live in this connector.
+  cicd_prefix: cicd/zap/  # config.yml `cicd_prefix: cicd/zap/`
+  scan_orchestration_mode: scan-and-read  # config.yml `scan_orchestration_mode: scan-and-read`
+
+  # Daemon-path secret-scope key references — same secret keys ingest.py reads at runtime.
+  daemon_secrets:
+    zap_api_url_secret: zap_url  # config.yml `zap_api_url_secret: zap_url`
+    zap_api_key_secret: zap_api_key  # config.yml `zap_api_key_secret: zap_api_key`
+
+  hwm_kind: artefact_prefix  # config.yml `hwm_kind: artefact_prefix` — CI/CD-step path is preferred

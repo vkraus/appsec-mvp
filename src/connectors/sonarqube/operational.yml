@@ -1,0 +1,48 @@
+# operational.yml — operator data layer for the sonarqube connector
+# Read by provision-source (source_runtime:) and generate-connector (databricks_runtime:)
+# Schema: see .claude/skills/{provision-source,generate-connector}/references/sast.md
+
+source_runtime:
+  runtime_provisioner: "terraform-aws-eks-helm"
+  aws_region_var_name: "aws_region"
+  eks_cluster_name_var_name: "eks_cluster_name"
+  project_prefix_default: "appsec-mvp"
+  namespace_default: "sonarqube"
+  terraform_required_version: ">= 1.7"
+  helm_chart_repository: "https://SonarSource.github.io/helm-chart-sonarqube"
+  helm_chart_name: "sonarqube"
+  helm_chart_version_default: "10.6.1+2742"
+  service_port: 9000
+  helm_timeout_seconds: 900
+  admin_password_var_name: "sonarqube_admin_password"
+  rds_engine_version_default: "15"
+  rds_instance_class_default: "db.t3.small"
+  rds_allocated_storage_default: 20
+  rds_db_name_default: "sonar"
+  rds_username_default: "sonar"
+  rds_parameter_group_family_default: "postgres15"
+  rds_optional: true
+  analysis_token_length: 40
+
+databricks_runtime:
+  deployment_style: "server"
+  secret_scope: "mvp-connectors"
+  bronze_schema: "bronze_sonarqube"
+  bronze_tables:
+    - "issues"
+    - "findings_raw"
+  cron_schedule: "0 */30 * * * ?"
+  uc_catalog_var: "catalog"
+  job_name: "sonarqube-connector"
+  default_target: "dev"
+  default_catalog: "appsec_dev"
+  secret_env_vars:
+    - env_var: "SONARQUBE_URL"
+      secret_key: "sonarqube_url"
+    - env_var: "SONARQUBE_TOKEN"
+      secret_key: "sonarqube_token"
+  tool_source_label: "sonarqube"
+  entry_wrappers: true
+  extra_install_env_vars:
+    - "SONARQUBE_HOST"
+    - "SONARQUBE_ORG"

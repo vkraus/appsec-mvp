@@ -1,0 +1,88 @@
+# operational.yml — operator data layer for the servicenow connector
+# Read by provision-source (source_runtime:) and generate-connector (databricks_runtime:)
+# Schema: see .claude/skills/{provision-source,generate-connector}/references/cmdb.md
+# Auto-derived from a086f9d historical state during regenerate-4-originals successor work.
+#
+# Sub-shape: terraform-saas-seed — provider hashicorp/http only, no AWS/K8s.
+# a086f9d:src/connectors/servicenow/runtime/versions.tf pins http ~> 3.4 only.
+
+source_runtime:
+  runtime_provisioner: terraform-saas-seed  # constant for CMDB
+  terraform_required_version: ">= 1.7"  # versions.tf required_version
+
+  # variables.tf first three variables — sensitive on the third.
+  instance_url_var_name: instance_url
+  admin_username_var_name: admin_username
+  admin_password_var_name: admin_password
+
+  # variables.tf defaults.
+  seed_repo_names_default:
+    - BenchmarkJava
+    - BenchmarkPython
+    - juice-shop
+  github_org_default: appsec-mvp-demo
+  project_prefix_default: appsec-mvp
+
+  # main.tf locals.business_apps. Repo indices `[0,1]` for Frontend, `[2]` for Backend.
+  business_apps:
+    - name: AppSec Demo Frontend
+      criticality: "2 - high"
+      repo_indices: [0, 1]
+    - name: AppSec Demo Backend
+      criticality: "1 - critical"
+      repo_indices: [2]
+
+  # main.tf local-exec curl URL patterns target these tables.
+  table_endpoints:
+    - cmdb_ci_business_app
+    - cmdb_ci_appl
+    - cmdb_rel_ci
+
+  relationship_type: "Depends on::Used by"  # main.tf terraform_data.app_ci body
+  apply_prerequisites:
+    - bash
+    - curl
+    - jq
+
+databricks_runtime:
+  secret_scope: mvp-connectors  # scripts/load-secrets.sh `SCOPE="mvp-connectors"`
+  bronze_schema: bronze_servicenow  # resources/schemas.yml + resources/pipeline.yml `target: bronze_servicenow`
+  silver_schema: silver_servicenow  # resources/schemas.yml second entry
+
+  # resources/pipeline.yml ingestion_definition.objects[].table.destination_table.
+  bronze_tables:
+    - business_applications
+    - app_cis
+
+  envelope_table: business_applications  # sql/business_applications_envelope.sql overlays this table
+
+  cron_schedule: "0 0 * * * ?"  # resources/pipeline.yml + resources/job.yml — hourly
+  uc_catalog_var: ${var.catalog}
+
+  lakeflow_pipeline_name: servicenow_ingest  # resources/pipeline.yml pipelines.servicenow_ingest
+  lakeflow_connection_name: servicenow  # resources/connection.yml connections.servicenow
+
+  # resources/pipeline.yml ingestion_definition.objects[].
+  lakeflow_source_objects:
+    - source_schema: default
+      source_table: cmdb_ci_business_app
+      destination_table: business_applications
+    - source_schema: default
+      source_table: cmdb_rel_ci
+      destination_table: app_cis
+
+  default_target: dev
+  default_catalog: appsec_dev
+
+  # scripts/load-secrets.sh writes three secrets.
+  secret_env_vars:
+    - env_var: SERVICENOW_URL
+      secret_key: servicenow_url
+    - env_var: SERVICENOW_USERNAME
+      secret_key: servicenow_username
+    - env_var: SERVICENOW_PASSWORD
+      secret_key: servicenow_password
+
+  # resources/connection.yml uses ${var.servicenow_host} / ${var.servicenow_username} / ${var.servicenow_password}
+  # — DAB variables resolved at deploy time (BUNDLE_VAR_*), not secret-scope reads.
+  dab_connection_var_passthrough: true

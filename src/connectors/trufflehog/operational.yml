@@ -1,0 +1,42 @@
+# operational.yml — operator data layer for the trufflehog connector
+# Read by provision-source (source_runtime:) and generate-connector (databricks_runtime:)
+# Schema: see .claude/skills/{provision-source,generate-connector}/references/secrets.md
+
+source_runtime:
+  runtime_provisioner: "terraform-uc-volume"
+  catalog_var_name: "catalog"
+  bronze_schema_name: "bronze_trufflehog"
+  volume_name: "artefacts"
+  volume_type: "EXTERNAL"
+  volume_path_var_name: "trufflehog_artifact_volume_path"
+  bucket_provider_examples:
+    - "S3"
+    - "ADLS"
+    - "GCS"
+  volume_secret_scope_var_name: "trufflehog_artifact_volume_secret_scope"
+  volume_secret_scope_default: "mvp-connectors"
+  volume_secret_key_var_name: "trufflehog_artifact_volume_secret_key"
+  volume_secret_key_default: "trufflehog_aws_credentials"
+  secret_blob_format: "JSON {access_key_id, secret_access_key}"
+  sample_artefact_path: "runtime/files/sample.json"
+  terraform_required_version: ">= 1.7"
+
+databricks_runtime:
+  secret_scope: "mvp-connectors"
+  bronze_schema: "bronze_trufflehog"
+  bronze_tables:
+    - "findings"
+  envelope_table: "findings"
+  cron_schedule: "0 0 * * * ?"
+  uc_catalog_var: "catalog"
+  job_name: "trufflehog-connector"
+  default_target: "dev"
+  default_catalog: "appsec_dev"
+  secret_env_vars:
+    - env_var: "TRUFFLEHOG_ARTIFACT_BUCKET"
+      secret_key: "trufflehog_artifact_bucket"
+  optional_aws_credentials_secret: true
+  tool_source_label: "trufflehog"
+  entry_wrappers: false
+  cli_artefact_prefixes:
+    - "trufflehog/"

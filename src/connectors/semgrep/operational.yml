@@ -1,0 +1,80 @@
+# operational.yml — operator data layer for the semgrep connector
+# Read by provision-source (source_runtime:) and generate-connector (databricks_runtime:)
+# Schema: see .claude/skills/{provision-source,generate-connector}/references/sast.md
+# Auto-derived from a086f9d historical state during regenerate-4-originals successor work.
+#
+# Sub-shape: CLI-artefact (terraform-aws-eks-cronjob) per the spec — semgrep runs as
+# an EKS CronJob that scans repos and writes JSON to S3; the connector ingests via
+# Auto Loader on a UC Volume. a086f9d already encodes this shape (no server fields).
+
+source_runtime:
+  runtime_provisioner: terraform-aws-eks-cronjob  # main.tf contains kubernetes_cron_job_v1.semgrep + IRSA
+  terraform_required_version: ">= 1.7"
+
+  # Common CronJob fields.
+  aws_region_var_name: aws_region
+  eks_cluster_name_var_name: eks_cluster_name
+  project_prefix_default: appsec-mvp  # variable "project_prefix" default
+  namespace_default: semgrep  # variable "namespace_name" default
+
+  # CLI-artefact sub-shape fields.
+  eks_oidc_provider_arn_var_name: eks_cluster_oidc_provider_arn
+  artifact_bucket_var_name: artifact_bucket
+  cron_schedule_default: "0 */6 * * *"  # variable "cron_schedule" default — every 6 hours
+  scanner_image_default: returntocorp/semgrep:latest  # variable "semgrep_image" default
+  repo_urls_default:
+    - owasp/juice-shop  # variable "repo_urls" default
+
+  scan_script_path: files/semgrep-scan.sh  # main.tf kubernetes_config_map.semgrep_script reads file("${path.module}/files/semgrep-scan.sh")
+
+  irsa_s3_actions:
+    - s3:PutObject
+    - s3:GetObject
+    - s3:ListBucket
+
+  irsa_service_account_name: semgrep  # main.tf kubernetes_service_account.semgrep metadata.name
+
+  # main.tf kubernetes_secret.semgrep_env data keys.
+  env_secret_keys:
+    - ARTIFACT_BUCKET
+    - SEMGREP_REPO_LIST
+    - AWS_REGION
+    - GH_PAT
+
+  clone_token_var_name: github_pat_for_clone  # runtime/variables.tf — sensitive, no default
+
+databricks_runtime:
+  deployment_style: cli_artefact  # config.yml `prefixes:` and HWM `commit_sha`; semgrep has no API
+  secret_scope: mvp-connectors  # scripts/load-secrets.sh `SCOPE="mvp-connectors"`
+  bronze_schema: bronze_semgrep  # resources/schemas.yml `name: bronze_semgrep`
+
+  # config.yml `bronze_table: ${catalog}.bronze_semgrep.findings`.
+  bronze_tables:
+    - findings
+
+  cron_schedule: "0 */15 * * * ?"  # resources/job.yml — every 15 min
+  uc_catalog_var: ${var.catalog}
+  job_name: semgrep-connector
+  default_target: dev
+  default_catalog: appsec_dev
+
+  # scripts/load-secrets.sh writes (ARTIFACT_BUCKET→semgrep_artifact_bucket, SEMGREP_PREFIX→semgrep_artifact_prefix).
+  secret_env_vars:
+    - env_var: ARTIFACT_BUCKET
+      secret_key: semgrep_artifact_bucket
+    - env_var: SEMGREP_PREFIX
+      secret_key: semgrep_artifact_prefix
+
+  tool_source_label: semgrep
+  entry_wrappers: false  # resources/job.yml notebook_path: ../ingest.py (Auto Loader on Volume; no widget+secret-fetch wrapper needed)
+
+  # CLI-artefact-only fields (volumes + prefixes).
+  bronze_volume: semgrep_artifacts  # resources/volumes.yml volumes.semgrep_artifacts.name
+  bronze_volume_storage_location: s3://${var.artifact_bucket}/semgrep/
+
+  # config.yml `prefixes:` — two prefixes share one bronze table, distinguished by trigger_context.
+  cli_artefact_prefixes:
+    - periodic/semgrep/
+    - cicd/semgrep/
+
+  extra_install_env_vars: []  # scripts/install.sh has no `:?` checks beyond load-secrets env vars
