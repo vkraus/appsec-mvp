@@ -17,6 +17,7 @@ def test_silver_findings_has_canonical_fields():
     assert fields["severity_canonical"] == StringType()
     assert fields["status_canonical"] == StringType()
     assert fields["cwe_id"] == StringType()  # nullable
+    assert fields["cve_id"] == StringType()  # nullable; CVE identifier distinct from CWE class
     assert fields["rule_id_native"] == StringType()
     assert fields["repository_id"] == StringType()  # nullable for dast
     assert fields["file_path"] == StringType()  # nullable for dast

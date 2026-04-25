@@ -45,12 +45,12 @@ def test_dedup_sast_groups_by_cwe_tuple(spark):
     ts = datetime(2026, 4, 20, tzinfo=UTC)
     rows = [
         # Same (repo, file, line, cwe) across two tools → one group
-        ("sq-1", "sonarqube", "sast", "high", "open", "CWE-89", "S2077",
+        ("sq-1", "sonarqube", "sast", "high", "open", "CWE-89", None, "S2077",
          "periodic", "org/app", "app/db.py", 42, None, ts, ts),
-        ("sg-1", "semgrep", "sast", "critical", "open", "CWE-89", "python.sqli",
+        ("sg-1", "semgrep", "sast", "critical", "open", "CWE-89", None, "python.sqli",
          "periodic", "org/app", "app/db.py", 42, None, ts, ts),
         # Different file → different group
-        ("sq-2", "sonarqube", "sast", "medium", "open", "CWE-79", "S2076",
+        ("sq-2", "sonarqube", "sast", "medium", "open", "CWE-79", None, "S2076",
          "periodic", "org/app", "app/other.py", 7, None, ts, ts),
     ]
     df = spark.createDataFrame(rows, silver_findings)
@@ -67,11 +67,11 @@ def test_dedup_sast_without_cwe_falls_back_to_native_rule(spark):
     ts = datetime(2026, 4, 20, tzinfo=UTC)
     # Two sonarqube findings with no CWE on same location but different native rule
     rows = [
-        ("a", "sonarqube", "sast", "high", "open", None, "S100",
+        ("a", "sonarqube", "sast", "high", "open", None, None, "S100",
          "periodic", "org/app", "f.py", 1, None, ts, ts),
-        ("b", "sonarqube", "sast", "high", "open", None, "S100",
+        ("b", "sonarqube", "sast", "high", "open", None, None, "S100",
          "periodic", "org/app", "f.py", 1, None, ts, ts),
-        ("c", "sonarqube", "sast", "high", "open", None, "S200",
+        ("c", "sonarqube", "sast", "high", "open", None, None, "S200",
          "periodic", "org/app", "f.py", 1, None, ts, ts),
     ]
     df = spark.createDataFrame(rows, silver_findings)
@@ -83,9 +83,9 @@ def test_dedup_sast_without_cwe_falls_back_to_native_rule(spark):
 def test_dedup_dast_groups_by_url_rule(spark):
     ts = datetime(2026, 4, 20, tzinfo=UTC)
     rows = [
-        ("z-1", "zap", "dast", "high", "open", None, "40018",
+        ("z-1", "zap", "dast", "high", "open", None, None, "40018",
          "on_demand", None, None, None, "https://app.test/login", ts, ts),
-        ("z-2", "zap", "dast", "high", "open", None, "40018",
+        ("z-2", "zap", "dast", "high", "open", None, None, "40018",
          "on_demand", None, None, None, "https://app.test/login", ts, ts),
     ]
     df = spark.createDataFrame(rows, silver_findings)
