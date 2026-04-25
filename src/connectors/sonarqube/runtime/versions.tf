@@ -1,6 +1,9 @@
 terraform {
   required_version = ">= 1.7"
   required_providers {
-    databricks = { source = "databricks/databricks", version = "~> 1.50" }
+    aws        = { source = "hashicorp/aws", version = "~> 5.0" }
+    kubernetes = { source = "hashicorp/kubernetes", version = "~> 2.30" }
+    helm       = { source = "hashicorp/helm", version = "~> 2.13" }
+    random     = { source = "hashicorp/random", version = "~> 3.6" }
   }
 }

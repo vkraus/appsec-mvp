@@ -1,56 +1,75 @@
-# SonarQube connector — runtime module
+# SonarQube connector — source-system runtime (optional)
 
-Terraform module that wires the SonarQube connector into a Databricks workspace.
+This Terraform module deploys the **SonarQube server** that the SonarQube connector ingests from. It runs SonarQube on the operator-supplied EKS cluster and either creates a dedicated RDS Postgres database for SonarQube's backing store or uses an operator-supplied one.
 
-The SonarQube server itself (SonarCloud SaaS or self-hosted SonarQube CE) is operator-provisioned out-of-band, so this module contains no `resource` blocks. It exists for structural parity — it pins providers, declares operator inputs, and exports the canonical Bronze schema name and SonarQube host so downstream bundle resources can resolve them from terraform state.
+**It is optional.** The SonarQube connector itself only needs a SonarQube URL + analysis token — operators with their own SonarQube instance skip this module entirely.
 
-## Prerequisites
+## When to apply
 
-- A SonarCloud account (<https://sonarcloud.io>) or a self-hosted SonarQube Community Edition instance reachable from the Databricks workspace.
-- A SonarCloud organization, or — for self-hosted SonarQube — the literal value `default`. SonarCloud's organization key is visible at <https://sonarcloud.io/account/organizations>.
-- A SonarQube user token with `Browse projects` and `Execute analysis` permissions on every project to be ingested. An admin token works too. Generate at **My Account → Security → Generate Tokens** in the SonarQube UI; choose token type `User Token` (broader scope than `Project Analysis Token`, required for cross-project enumeration via `/api/projects/search`). Recommended expiry: 90 days, with rotation procedure documented in the parent operations runbook.
-- The Unity Catalog catalog (e.g. `appsec_dev`) and the bundle-managed `bronze_sonarqube` schema declared in `src/connectors/sonarqube/resources/schemas.yml`. Apply `databricks bundle deploy` once before the first connector run.
+Apply this module if you want appsec-mvp to provision SonarQube end-to-end (Helm release on EKS + Postgres). Skip it if you have your own SonarQube tenant; in that case feed your `SONARQUBE_URL` and project analysis token directly into the connector's secrets.
 
-## Setup
+## What it creates
 
-1. Export the token into your shell:
+- A SonarQube Helm release in the `sonarqube` Kubernetes namespace on your EKS cluster, exposed via a LoadBalancer Service on port 9000.
+- A `sonarqube-db` Kubernetes Secret holding the JDBC connection string Sonar reads at boot.
+- (Optional, when `rds_endpoint` is empty) A dedicated RDS Postgres instance (`db.t3.small`, 20 GiB, Postgres 15, encrypted at rest, no PITR backups, `skip_final_snapshot = true`), a custom DB parameter group (family `postgres15`, tunable), a DB subnet group, a security group allowing port 5432 from the supplied VPC CIDR, and a random 32-char password.
+- A 40-char random opaque value emitted as `sonarqube_project_token` for use as the project analysis token (the Helm chart does not support declarative token creation, so the operator registers it with SonarQube post-install).
 
-   ```bash
-   export SONARQUBE_TOKEN="<your-user-token>"
-   ```
+## Operator-supplied inputs
 
-2. Load the token into Databricks Secrets:
+### Required
 
-   ```bash
-   bash ../scripts/load-secrets.sh
-   ```
+| Variable | Description |
+|---|---|
+| `aws_region` | AWS region for EKS + (optional) RDS. Must match the region of `eks_cluster_name`. |
+| `aws_access_key_id`, `aws_secret_access_key` | AWS credentials (sensitive). |
+| `eks_cluster_name` | EKS cluster where SonarQube is installed. Must be in `var.aws_region`. |
+| `sonarqube_admin_password` | Initial value applied to both the SonarQube admin web-UI password (`account.adminPassword`) and the JMX-style monitoring passcode (sensitive). |
 
-3. Apply the terraform module:
+### Optional
 
-   ```bash
-   terraform init
-   terraform apply \
-     -var "catalog=appsec_dev" \
-     -var "sonarqube_organization=<your-org-key>"
-   ```
+| Variable | Description | Default |
+|---|---|---|
+| `project_prefix` | Tag/name prefix for AWS resources (RDS identifier, security group, subnet group). | `appsec-mvp` |
+| `sonarqube_namespace` | Kubernetes namespace for the Helm release. | `sonarqube` |
+| `sonarqube_chart_version` | SonarQube Helm chart version. | `10.6.1+2742` |
+| `rds_endpoint` | Pre-existing Postgres endpoint (host:port). Empty string → this module creates RDS. | `""` |
+| `rds_db_name` | Postgres database name. | `sonar` |
+| `rds_username` | Postgres username (master username when this module creates RDS). | `sonar` |
+| `rds_password` | Required when `rds_endpoint` is non-empty (sensitive). When empty, a random password is generated for the RDS this module creates. | `""` |
+| `rds_instance_class`, `rds_allocated_storage`, `rds_engine_version`, `rds_parameter_group_family` | Tunables for the RDS instance this module creates. Unused when `rds_endpoint` is supplied. | `db.t3.small`, `20`, `15`, `postgres15` |
+| `vpc_id`, `vpc_subnet_ids`, `vpc_cidr_block` | **Required when `rds_endpoint` is empty** (this module creates its own RDS). Unused when `rds_endpoint` is supplied. | `""`, `[]`, `""` |
 
-   Override `sonarqube_host` for self-hosted SonarQube (`-var "sonarqube_host=sonarqube.example.com"`); override `sonarqube_token_secret_scope` / `sonarqube_token_secret_key` only if your org uses a non-default Databricks secret layout.
+## Apply
+
+```bash
+cd src/connectors/sonarqube/runtime
+terraform init
+terraform apply -var-file=terraform.tfvars
+```
+
+Operators write their own `terraform.tfvars`. The legacy `infra/terraform/terraform.tfvars.example` can serve as a starting reference.
 
 ## Outputs
 
-- `bronze_schema_full_name` — fully-qualified Bronze schema name (`catalog.bronze_sonarqube`); downstream bundle jobs reference this as the ingestion target.
-- `sonarqube_host` — echoes the SonarQube tenant host for downstream bundle resolution.
+`sonarqube_url` (Kubernetes service URL — feed this into the SonarQube connector's `SONARQUBE_URL` secret), `sonarqube_namespace`, `sonarqube_project_token` (sensitive — register with SonarQube post-install), `rds_endpoint`, `rds_db_name`, `rds_username`, `rds_password` (sensitive).
 
-## Troubleshooting
+## Teardown
 
-| Symptom | Fix |
-|---|---|
-| `databricks_secret not found` at pipeline runtime | Operator did not run `load-secrets.sh`; re-run after exporting `$SONARQUBE_TOKEN`. |
-| `401 Unauthorized` from SonarQube API at runtime | Token expired, revoked, or has insufficient permissions; rotate the user token (ensure `Browse projects` + `Execute analysis` on all target projects) and re-run `load-secrets.sh`. |
-| `403 Forbidden` on `/api/projects/search` | Token has project-analysis scope only; regenerate as a user token instead. |
-| Empty `bronze_sonarqube` schema after pipeline run | `sonarqube_organization` may be wrong; verify via `curl -H "Authorization: Bearer $SONARQUBE_TOKEN" https://$SONARQUBE_HOST/api/organizations/search?member=true`. |
-| `Schema bronze_sonarqube does not exist` | Bundle has not been deployed yet; run `databricks bundle deploy --target dev` before the first ingest job. |
+> **Warning:** RDS is created with `skip_final_snapshot = true` and `deletion_protection = false`, and the instance has `backup_retention_period = 0` so no automated PITR backups exist. Running `terraform destroy` will permanently lose all SonarQube data. Take a manual snapshot first if you need it.
 
-## Validation evidence
+```bash
+cd src/connectors/sonarqube/runtime
+terraform destroy
+```
 
-(populated in production-shape-c after live deploy)
+Caveats:
+- The Helm release destroy can hang on PV cleanup if the Sonar PVC has data; if it stalls, `kubectl delete pvc -n sonarqube --all` first, then re-run.
+- RDS deletion uses `skip_final_snapshot = true` (demo defaults — change in `main.tf` if you want a snapshot before drop).
+- The RDS security group depends on no resources outside this module, so destroy is order-safe.
+
+## Independence
+
+This module references only operator-supplied inputs and the AWS / Kubernetes / Helm provider APIs. It does not depend on any other connector's runtime — per the redesign's no-inter-connector-dependency rule. Cross-runtime references that previously came from `aws-foundation` outputs (`eks_cluster_name`, `vpc_id`, `vpc_subnet_ids`, `vpc_cidr_block`) become operator-supplied variables.
+
+This module is intended to be used as a **root** module, not a child module. It declares its own `aws`, `kubernetes`, and `helm` provider blocks; using it via `module "..."` from a parent module will collide with the parent's providers.
