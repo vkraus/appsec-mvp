@@ -13,8 +13,6 @@ view that reads the Lakeflow-managed ingestion columns; see
 """
 from __future__ import annotations
 
-from typing import Optional
-
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
@@ -32,7 +30,7 @@ def with_envelope(
     *,
     source_system: str,
     batch_id: str,
-    hwm_value: Optional[str],
+    hwm_value: str | None,
 ) -> DataFrame:
     """Return ``df`` prefixed with the bronze envelope columns.
 

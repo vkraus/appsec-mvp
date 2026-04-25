@@ -1,8 +1,11 @@
-# SonarQube severity to canonical severity.
-# Scaffolding — verify against actual SonarQube severities when the
-# connector is implemented.
+# SonarQube issue severity -> canonical (BLOCKER/CRITICAL/MAJOR/MINOR/INFO).
+# Per mkdocs/docs/connectors/sast/sonarqube.md, "Enumerations > Issue severity".
+# INFO maps directly to low (defined value, not unmapped), to avoid the
+# fallback data-quality warning on high-volume informational findings.
+# Undocumented values fall through to the configured default (medium) via
+# src/platform/silver.normalize_severity.
 BLOCKER: critical
 CRITICAL: high
 MAJOR: medium
 MINOR: low
-INFO: info
+INFO: low

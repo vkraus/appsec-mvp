@@ -22,7 +22,7 @@ Secret connectors populate the Silver `finding` table with secrets dedup key `(r
 
 ## Skills
 
-Three category-specialized skills cover the connector lifecycle for Secrets sources: `analyze-source-secrets`, `generate-connector-secrets`, `validate-implementation-secrets`. See [Skills](skills.md) for the current unspecialized baselines.
+Three skills cover the connector lifecycle for Secrets sources, with category-specific facts at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## Connectors in this category
 

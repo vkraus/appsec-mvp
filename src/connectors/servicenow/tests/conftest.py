@@ -17,7 +17,7 @@ def _utc_from_internal(self, ts: int):  # type: ignore[override]
     if ts is None:
         return None
     return _dt.datetime.fromtimestamp(
-        ts // 1000000, tz=_dt.timezone.utc
+        ts // 1000000, tz=_dt.UTC
     ).replace(microsecond=ts % 1000000)
 
 

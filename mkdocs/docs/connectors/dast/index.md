@@ -29,7 +29,7 @@ DAST sources populate the Silver `finding` table scoped by `(application_id, tar
 
 ## Skills
 
-Three category-specialized skills cover the connector lifecycle for DAST sources: `analyze-source-dast`, `generate-connector-dast`, `validate-implementation-dast`. See [Skills](skills.md) for the current unspecialized baselines.
+Three skills cover the connector lifecycle for DAST sources, with category-specific facts at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## Connectors in this category
 

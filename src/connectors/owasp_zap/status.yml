@@ -1,0 +1,13 @@
+# OWASP ZAP status lookup.
+#
+# ZAP alerts have no server-side lifecycle state — each scan is a
+# complete snapshot of findings observed at scan time. All ingested
+# ZAP findings land as `open`; the Bronze-to-Silver dedup
+# reconstructs continuity across scans using the DAST dedup key
+# (target, alert_id, uri_path).
+#
+# The `confidence` field ("False Positive", "Low", "Medium", "High",
+# "Confirmed") is preserved verbatim in Bronze for audit but does
+# NOT drive status: False Positive records are retained and excluded
+# from the gold active-threat view downstream.
+open: open

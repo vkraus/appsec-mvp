@@ -252,3 +252,13 @@ Collected 10 requirement-bound tests via `pytest src/connectors/github/tests/ -v
 ### Tests
 
 Tests live under [`src/connectors/github/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/github/tests). The report table above is the per-REQ outcome of running the bound tests in that directory.
+
+## Generation log
+
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work; the Reference and Validation sections preserve the original implementation-grounded prose, and the Generation log table records the actual skill runs that produced the reconciled artefacts.
+
+| Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (scm)             | name=GitHub; url=https://docs.github.com/en/rest; category=scm        | mkdocs/docs/connectors/scm/github.md §1–§3                                         | 2026-04-25 | 7ab1cb8 (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (scm)         | page hash=ff7421072eb3                                           | src/connectors/github/, src/connectors/github/tests/, src/connectors/github/severity.yml, src/connectors/github/status.yml, src/connectors/github/resources/job.yml | 2026-04-25 | 5e5d96f (retrofit-9-connectors)  |
+| Validation         | `validate-implementation` (scm)    | module path=src/connectors/github/                                    | mkdocs/docs/connectors/scm/github.md §5                                            | 2026-04-25 | aadd4ef (retrofit-9-connectors)  |

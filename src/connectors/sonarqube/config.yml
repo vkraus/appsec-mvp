@@ -1,13 +1,25 @@
 source: sonarqube
 category: sast
-# severity_map / status_map point at the YAML lookup tables on disk.
-# No code currently loads this connector's config.yml; the pointers
-# follow the convention so that when the loader lands, the paths are
-# already stable.
-severity_map: src/connectors/sonarqube/severity.yml
-status_map:   src/connectors/sonarqube/status.yml
+# Authentication and base URL — the actual values are resolved from the
+# Databricks secret scope (mvp-connectors). The base_url here is the
+# placeholder host used in unit tests; the real value comes from
+# sonarqube_url via load-secrets.sh.
+base_url: https://sonarqube.internal
+auth:
+  type: bearer
+  token_secret: sonarqube_token
 bucket_secret_scope: mvp-connectors
-bronze_table: ${catalog}.bronze_sonarqube.findings_raw
 base_url_secret: sonarqube_url
 auth_secret: sonarqube_token
-hwm_column: updated_at
+pagination:
+  strategy: offset
+  page_size: 500
+hwm:
+  strategy: updated_at
+  column: updateDate
+hwm_column: updateDate
+# Bronze / Silver targets
+bronze_table: ${catalog}.bronze_sonarqube.findings_raw
+# Declarative lookups
+severity_map: src/connectors/sonarqube/severity.yml
+status_map:   src/connectors/sonarqube/status.yml

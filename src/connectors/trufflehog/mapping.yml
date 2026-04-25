@@ -1,0 +1,48 @@
+# TruffleHog JSON → silver.findings field mapping.
+#
+# Source schema documented in mkdocs/docs/connectors/secrets/trufflehog.md
+# § "Resource schema excerpt". Consumed fields come from the `git` source
+# kind (SourceMetadata.Data.Git.*). Other source kinds (Filesystem, Github,
+# S3) populate a parallel leaf under SourceMetadata.Data and dispatch on
+# SourceType — handled by transform.py.
+#
+# Invariants per references/secrets.md:
+#   - severity is a hard-coded literal `high` (NOT a lookup on a source
+#     field). The file config/severity/trufflehog.yml exists only for
+#     per-deployment detector-class overrides.
+#   - status has no source vocabulary. Literal `open` is stamped on every
+#     row; transform.py MUST NOT include status-transition logic.
+#   - `Raw` and `RawV2` MUST NOT enter Silver — `Redacted` is kept instead.
+source_key: trufflehog
+fields:
+  finding_id:         SourceMetadata.Data.Git.repository + "@" + SourceMetadata.Data.Git.commit + ":" + SourceMetadata.Data.Git.file + "#" + DetectorName
+  tool_source:        "trufflehog"
+  category:           "secrets"
+  severity_canonical:
+    literal: high
+  status_canonical:
+    literal: open
+  cwe_id:             null
+  rule_id_native:     DetectorName
+  secret_type:        DetectorName
+  file_path:          SourceMetadata.Data.Git.file
+  start_line:         SourceMetadata.Data.Git.line
+  commit_sha:         SourceMetadata.Data.Git.commit
+  repository:         SourceMetadata.Data.Git.repository
+  redacted:           Redacted
+  # validity_status derivation per the connector page § "Enumerations":
+  #   Verified=true                                    -> active
+  #   Verified=false, empty VerificationError          -> inactive
+  #   Verified=false, non-empty VerificationError      -> unknown
+  #   verification not attempted (--no-verification)   -> unknown
+  validity_status:    derive_from(Verified, VerificationError)
+  url:                null
+# Fields explicitly dropped at Bronze→Silver:
+#   - Raw
+#   - RawV2
+# These MUST NOT enter Silver. Keep `Redacted` only. Deployment-time
+# enforcement via a Unity Catalog column-level access policy on Bronze
+# is optional and out of scope here.
+dropped_fields:
+  - Raw
+  - RawV2

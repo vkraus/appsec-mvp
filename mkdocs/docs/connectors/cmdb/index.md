@@ -22,7 +22,7 @@ CMDB sources populate the Silver `application`, `team`, and `ownership` tables. 
 
 ## Skills
 
-Three category-specialized skills cover the connector lifecycle for CMDB sources: `analyze-source-cmdb`, `generate-connector-cmdb`, `validate-implementation-cmdb`. See [Skills](skills.md) for the current unspecialized baselines.
+Three skills cover the connector lifecycle for CMDB sources, with category-specific facts at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## Connectors in this category
 

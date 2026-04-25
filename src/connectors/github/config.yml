@@ -1,12 +1,21 @@
 source: github
 category: scm
 base_url: https://api.github.com
+# REST (v3) and GraphQL (v4) are both used: GraphQL for org-wide repo
+# enumeration, REST for per-repo commits / pulls / protection / alerts.
 auth:
   type: bearer
-  token_secret: gh_pat
+  token_secret: github_pat
 pagination:
+  # REST uses link-header (keyset); GraphQL uses endCursor (cursor). The
+  # connector switches strategy per endpoint; page_size applies to both.
   strategy: cursor
   page_size: 100
 hwm:
+  # `updated_at` polling is the fallback when webhook delivery is not
+  # operational. Webhook events (push, pull_request, code_scanning_alert,
+  # secret_scanning_alert, dependabot_alert) are the preferred incremental
+  # hook; config/webhook_fallback_window_hours bounds replay on missed
+  # deliveries per the SCM connector-reference quirk.
   strategy: updated_at
   column: updated_at

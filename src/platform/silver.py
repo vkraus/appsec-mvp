@@ -7,10 +7,10 @@ rule_id_native) for intra-tool fallback.
 
 DAST dedup tuple: (url, rule_id_native)."""
 
-from pyspark.sql import DataFrame, functions as F
+from pyspark.sql import DataFrame
+from pyspark.sql import functions as F
 
 from src.platform.config import SeverityMap, StatusMap
-
 
 _SEVERITY_RANK = {
     "critical": 4,

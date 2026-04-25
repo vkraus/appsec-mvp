@@ -1,14 +1,35 @@
-# Semgrep JSON → silver.findings field mapping.
-# See https://semgrep.dev/docs/cli-reference#json-output for source schema.
+# Semgrep JSON -> silver.findings declarative mapping.
+#
+# Reference: https://semgrep.dev/docs/cli-reference#json-output
+# The CLI JSON shape is the authoritative input; Cloud Platform mode is
+# documented but unimplemented (see the connector page Reference section).
+#
+# Dedup key for SAST (per skills/generate-connector/references/sast.md and
+# src/platform/silver.py::dedup_findings): (repository_id, file_path, rule_id,
+# start_line). The dedup transform consumes the Silver columns directly;
+# this mapping only has to project the tuple faithfully.
 source_key: semgrep
+severity:
+  source_path: extra.severity
+  lookup: config/severity/semgrep.yml
+status:
+  source_path: extra.metadata.state
+  lookup: config/status/semgrep.yml
+  default: open
 fields:
-  finding_id:        check_id + "@" + path + ":" + start.line
-  tool_source:       "semgrep"
-  category:          "sast"
-  severity_canonical: lookup(severity, severity_map)
+  # Stable source-side identifier for cross-run linkage. CLI mode has no
+  # integer id equivalent to Cloud Platform's `id`; the triple below is
+  # the documented stable form per the per-connector page.
+  source_finding_id:  check_id + "@" + path + ":" + start.line
+  finding_id:         check_id + "@" + path + ":" + start.line
+  tool_source:        "semgrep"
+  category:           "sast"
+  severity_canonical: lookup(extra.severity, severity_map)
   status_canonical:   lookup(extra.metadata.state, status_map, default="open")
   cwe_id:             extra.metadata.cwe[0]
   rule_id_native:     check_id
+  repository_id:      metadata.repository_id
   file_path:          path
   start_line:         start.line
+  trigger_context:    trigger_context
   url:                null

@@ -1,0 +1,26 @@
+{
+  "DetectorName": "SlackWebhook",
+  "DetectorType": 14,
+  "DecoderName": "PLAIN",
+  "Verified": false,
+  "VerificationError": "",
+  "Raw": "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+  "RawV2": "",
+  "Redacted": "https://hooks.slack.com/services/T00000000/B00000000/********",
+  "ExtraData": {},
+  "SourceID": 1,
+  "SourceType": 16,
+  "SourceName": "trufflehog - git",
+  "SourceMetadata": {
+    "Data": {
+      "Git": {
+        "commit": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1",
+        "file": "docs/webhook.md",
+        "line": 42,
+        "email": "dev@example.com",
+        "timestamp": "2026-04-21T11:30:00Z",
+        "repository": "https://github.com/acme/payments-api"
+      }
+    }
+  }
+}

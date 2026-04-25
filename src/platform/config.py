@@ -5,8 +5,7 @@ from pathlib import Path
 from typing import Literal, TypeVar
 
 import yaml
-from pydantic import BaseModel, RootModel, ConfigDict
-
+from pydantic import BaseModel, ConfigDict, RootModel
 
 T = TypeVar("T", bound=BaseModel)
 

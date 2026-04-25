@@ -205,3 +205,13 @@ Collected 7 requirement-bound tests via `pytest src/connectors/servicenow/tests/
 ### Tests
 
 Tests live under [`src/connectors/servicenow/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/servicenow/tests). The report table above is the per-REQ outcome of running the bound tests in that directory.
+
+## Generation log
+
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work; the Reference and Validation sections preserve the original implementation-grounded prose, and the Generation log table records the actual skill runs that produced the reconciled artefacts.
+
+| Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (cmdb)            | name=ServiceNow; url=https://docs.servicenow.com/bundle/utah-application-development/page/integrate/inbound-rest/concept/c_TableAPI.html; category=cmdb | mkdocs/docs/connectors/cmdb/servicenow.md §1–§3                                    | 2026-04-25 | b3af2e0 (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (cmdb)        | page hash=41debf8ae0c7                                                | src/connectors/servicenow/, src/connectors/servicenow/tests/, src/connectors/servicenow/severity.yml, src/connectors/servicenow/status.yml, src/connectors/servicenow/resources/job.yml | 2026-04-25 | 8174e57 (retrofit-9-connectors)  |
+| Validation         | `validate-implementation` (cmdb)   | module path=src/connectors/servicenow/                                | mkdocs/docs/connectors/cmdb/servicenow.md §5                                       | 2026-04-25 | 2f071b1 (retrofit-9-connectors)          |

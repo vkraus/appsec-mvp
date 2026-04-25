@@ -1,0 +1,12 @@
+source: gitlab
+category: scm
+base_url: https://gitlab.com
+auth:
+  type: bearer
+  token_secret: gitlab_token
+pagination:
+  strategy: keyset
+  page_size: 100
+hwm:
+  strategy: updated_at
+  column: updated_at

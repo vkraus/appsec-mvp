@@ -8,7 +8,6 @@ from pyspark.sql.types import StringType, StructField, StructType
 
 from src.platform.schemas import silver_repositories
 
-
 _RAW_REPO_SCHEMA = StructType([
     StructField("full_name", StringType(), nullable=True),
     StructField("default_branch", StringType(), nullable=True),

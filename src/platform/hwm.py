@@ -6,7 +6,7 @@ Production backs the store with a Delta table (schema: key, subkey,
 value, updated_at). Tests use a JSON file at the same interface."""
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -33,7 +33,7 @@ class HwmStore:
 
 
 class UpdatedAtHwm:
-    _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
     def __init__(self, key: str, store: HwmStore):
         self.key = key

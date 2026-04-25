@@ -282,3 +282,13 @@ Collected 10 requirement-bound tests via `pytest src/connectors/sonarqube/tests/
 ### Tests
 
 Tests live under [`src/connectors/sonarqube/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/sonarqube/tests). The report table above is the per-REQ outcome of running the bound tests in that directory.
+
+## Generation log
+
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work. The SonarQube Web API docs render as a JavaScript SPA that WebFetch could not parse during the analyze-source run; the existing implementation-grounded prose was preserved verbatim and validated against widely-published SonarQube API conventions. The Generation log table records the actual skill runs that produced the reconciled artefacts.
+
+| Stage              | Skill                              | Inputs                                                                                  | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (sast)            | name=SonarQube; url=https://next.sonarqube.com/sonarqube/web_api; category=sast         | mkdocs/docs/connectors/sast/sonarqube.md §1–§3                                     | 2026-04-25 | c35f49e (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (sast)        | page hash=e814ab36b6a9                                           | src/connectors/sonarqube/, src/connectors/sonarqube/tests/, src/connectors/sonarqube/severity.yml, src/connectors/sonarqube/status.yml, src/connectors/sonarqube/resources/job.yml | 2026-04-25 | 11e0014 (retrofit-9-connectors)  |
+| Validation         | `validate-implementation` (sast)   | module path=src/connectors/sonarqube/                                                   | mkdocs/docs/connectors/sast/sonarqube.md §5                                        | 2026-04-25 | 5d531e1 (retrofit-9-connectors)          |

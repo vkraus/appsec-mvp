@@ -1,0 +1,25 @@
+{
+  "timestamp": 1713600000000,
+  "webaclId": "arn:aws:wafv2:us-east-1:111122223333:global/webacl/checkout-frontdoor/abc123",
+  "terminatingRuleId": "AWSManagedRulesCommonRuleSet_XSS",
+  "terminatingRuleType": "MANAGED_RULE_GROUP",
+  "action": "BLOCK",
+  "httpRequest": {
+    "clientIp": "203.0.113.17",
+    "country": "US",
+    "uri": "/api/checkout",
+    "httpMethod": "POST",
+    "requestId": "req-0000000000000001",
+    "headers": [
+      {"name": "Host", "value": "shop.example.com"},
+      {"name": "User-Agent", "value": "curl/8.4.0"}
+    ]
+  },
+  "ruleGroupList": [
+    {"ruleGroupId": "AWS#AWSManagedRulesCommonRuleSet", "terminatingRule": {"ruleId": "CrossSiteScripting_BODY"}}
+  ],
+  "labels": [
+    {"name": "awswaf:managed:aws:core-rule-set:CrossSiteScripting_BODY"}
+  ],
+  "responseCodeSent": 403
+}

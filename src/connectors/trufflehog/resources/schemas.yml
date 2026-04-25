@@ -1,0 +1,5 @@
+resources:
+  schemas:
+    bronze_trufflehog:
+      catalog_name: ${var.catalog}
+      name: bronze_trufflehog

@@ -1,0 +1,11 @@
+# N/A — WAF events are append-only; no status lifecycle.
+#
+# Per references/waf.md, the every-connector-has-both-files contract
+# requires this file to exist even when status normalisation does not
+# apply. REQ-TRF-STS is N/A for the aws_waf source; transform.py leaves
+# the Silver `status_canonical` column null, and no status-transition
+# code is emitted.
+#
+# Do not populate with placeholder mappings — doing so would imply a
+# lifecycle that the source does not model.
+{}

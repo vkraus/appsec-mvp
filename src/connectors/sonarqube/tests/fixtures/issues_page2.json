@@ -1,0 +1,17 @@
+{
+  "paging": {"pageIndex": 2, "pageSize": 2, "total": 3},
+  "issues": [
+    {
+      "key": "AYx1aaaaaaaaaaaaaaa3",
+      "rule": "java:S1118",
+      "severity": "MINOR",
+      "status": "CONFIRMED",
+      "project": "seed-python-a",
+      "component": "seed-python-a:src/main/java/com/example/Utils.java",
+      "line": 8,
+      "type": "CODE_SMELL",
+      "creationDate": "2026-04-19T09:00:00+0000",
+      "updateDate": "2026-04-21T09:00:00+0000"
+    }
+  ]
+}

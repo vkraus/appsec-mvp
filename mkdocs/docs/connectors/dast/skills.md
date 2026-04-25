@@ -1,180 +1,210 @@
 # DAST skills
 
-Three skills operationalize the connector lifecycle for DAST sources.
+Three skills cover the connector lifecycle for DAST sources. Each carries a DAST-specific reference; the procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
 
-!!! info "Specialization pending"
-    These skills will be specialized for DAST sources (renamed to
-    `analyze-source-dast`, `generate-connector-dast`,
-    `validate-implementation-dast`) in a follow-up work item. Until then,
-    the category-generic versions below apply.
+## analyze-source — DAST reference
 
-## `analyze-source`
+Facts the analyze-source skill needs to write a complete Reference section for a DAST source.
 
-Source: [`.claude/skills/analyze-source.md`](https://github.com/vkraus/appsec-mvp/blob/main/.claude/skills/analyze-source.md)
+### Applicable REQ-IDs
 
-````markdown
----
-name: analyze-source
-description: Use when analyzing a new data source system (REST API, GraphQL, SDK, or CLI) to produce a per-connector page for the docs site. Inputs are source name, homepage URL, API documentation URL, and AppSec category.
----
+From `mkdocs/docs/platform/reference/catalog.md`. DAST sources emit findings against deployed targets.
 
-# analyze-source
+- Apply for server-based DAST (the OWASP ZAP shape in the traceability matrix): `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-TRF-TS`, `REQ-DQ`, `REQ-DEDUP`.
+- For server-based DAST, `REQ-ING-AUTH`, `REQ-ING-PAG`, and `REQ-ING-RL` may be N/A — the catalog notes "the CLI-artefact ingestion path used by OWASP ZAP has no API auth, pagination, or rate limit" because the connector reads scan reports rather than driving the live API for finding retrieval. The ZAP traceability row marks these three as N/A.
+- For CI/CD-step DAST CLI artefacts, the same N/A pattern applies.
 
-Produce a per-connector documentation page for a data source to be integrated into the AppSec data platform framework. The output follows the five-section connector page template used across `mkdocs/docs/connectors/<category>/`.
+### Default severity
 
-## Inputs
+`medium`. DAST severity vocabularies are shorter than SAST (typically four levels, for example `Informational`, `Low`, `Medium`, `High`). Per-source lookup tables at `src/connectors/{source}/severity.yml` map each value to the canonical four-level model. Undocumented values fall through to `medium` and trigger a data-quality warning.
 
-- Source system name and homepage URL.
-- Official API documentation (accessed via WebFetch).
-- AppSec category (one of: `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf`).
-- Optional: live API credentials for fixture generation.
+### Incremental strategy
 
-## Output
+Scan-report-based, NOT record-level `updated_at`. Per the DAST capability surface, the incremental strategy is one ingestion per scan completion, with full reload within a scan's scope:
 
-Emit the Markdown page to stdout, ready for inclusion at `mkdocs/docs/connectors/<category>/<source-slug>.md` where `<category>` is one of `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf` (matching the AppSec category input).
+- **Server-based tools** (ZAP daemon / API): the **scan ID** is the high-water mark; the connector orchestrates scans per deployment and reads alerts back after scan completion.
+- **CI/CD-step tools** (`zap-baseline.py`): the **artefact file** (object-storage prefix or pipeline artefact) is the high-water mark.
 
-The page has five top-level sections:
+Findings from prior scans remain queryable for audit. The Reference section's Incremental hook fact MUST disclose this scan-scoped HWM model — it is the single biggest deviation from SAST / SCA.
 
-1. **Overview** — what this connector does; its role in the platform (which Silver table(s) it populates; any distinguishing capability). For sources not in the MVP, include an admonition:
-   ```
-   !!! info "Not in MVP scope"
-       This connector is documented for future implementation.
-   ```
-2. **Prerequisites** — how to set up the external service and extract credentials (API keys, OAuth apps, PATs).
-3. **Reference** — the seven API facts:
-   - API surface (REST / GraphQL / SDK / CLI; endpoints consumed; authentication mechanisms)
-   - Pagination and rate limits (strategy and quotas)
-   - Incremental hook (selected per the category rules at `platform/reference/canonical-mapping`; preference order: webhook > native HWM column > full reload)
-   - Resource schema excerpt (only fields consumed by connectors; Markdown table with columns Field / Type / Meaning)
-   - Enumerations (severity and status mappings in terms of the canonical models from `platform/reference/canonical-mapping`)
-   - Quirks (deviations from category norms, format surprises, per-source handling policies)
-4. **Setup** — configuration, bundle deployment, first-run commands. If the source is not in the MVP, stub this section:
-   ```
-   !!! info "Not implemented in MVP"
-       Setup instructions will be added when this connector is implemented.
-   ```
-5. **Validation** — implementation report and test outcomes. Always stub on first emit; `validate-implementation` fills this in after the test suite runs:
-   ```
-   !!! info "Pending validation"
-       Run `validate-implementation` after implementing the connector to populate this section.
-   ```
+### Deduplication key
 
-## Steps
+`(target, alert_id, uri_path)` per the DAST capability surface, also reflected in the Silver finding scope `(application_id, target, alert_id)` at `mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements`.
 
-1. Fetch the source's API documentation via WebFetch.
-2. Identify the authentication mechanism supported by the source; select the one matching the category's convention documented at `platform/reference/canonical-mapping`.
-3. Enumerate endpoints required to populate the Silver tables assigned to the source's category (cross-reference the Silver Table Ownership table at `platform/reference/catalog`).
-4. Select the incremental strategy per the preference order in `platform/reference/canonical-mapping` for this category.
-5. Extract consumed-field table entries matching canonical Silver fields from `platform/reference/canonical-mapping` (entities or findings schema, whichever applies to the source's category).
-6. Produce severity and status lookup proposals per the canonical enumeration models at `platform/reference/canonical-mapping`.
-7. Document quirks (deviations from category norms; format surprises).
-8. Assemble the five-section Markdown page and emit to stdout.
+- `target` identifies the scanned deployment (host, base URL).
+- `alert_id` is the scanner-internal rule identifier.
+- `uri_path` disambiguates multiple hits of the same rule across paths of the same target.
 
-## Invariants
+The Reference section's Resource schema excerpt MUST extract these three fields.
 
-- The output must link every official documentation URL used as an inline hyperlink or a References list at the bottom of the page.
-- The severity and status lookups must cover every documented source value; undocumented values default to the configured fallback with a data-quality warning noted inline.
-- No fabricated fields: every claim about the source's API must be traceable to the fetched documentation.
-- The page slug and category directory must match the AppSec category input exactly; do not invent a new category.
-````
+### Target Silver tables
 
-## `generate-connector`
+`silver.findings` discriminated by `category="dast"`. Application linkage requires resolving `target` against `silver.deployments`; unmatched URLs are emitted for inventory-gap analysis. The Reference section MUST document this resolution requirement so generate-connector wires the Bronze-to-Silver join correctly.
 
-Source: [`.claude/skills/generate-connector.md`](https://github.com/vkraus/appsec-mvp/blob/main/.claude/skills/generate-connector.md)
+### Authentication norms
 
-````markdown
----
-name: generate-connector
-description: Use after analyze-source has produced a per-connector page. Generates a connector module conforming to the framework's project structure, connector contract, and canonical mapping requirements. Inputs are the source name, per-connector page, and category.
----
+Style-dependent per the DAST capability surface:
 
-# generate-connector
+- **Server-based**: API key (for example, the ZAP API key supplied via `X-ZAP-API-Key` header, configured at daemon startup).
+- **CI/CD-step**: no native authentication on the output files; access is governed by the object-storage bucket's IAM policy.
 
-Generate a connector module implementing the framework contract for a specific source, given the per-connector page produced by `analyze-source`.
+The Reference section MUST disclose the auth path matching the deployment style.
 
-## Inputs
+### Ingestion-tooling preference
 
-- Source name (determines the module path `src/connectors/{source}/`).
-- Per-connector page (structured form from `analyze-source`).
-- Framework contracts: canonical Silver schemas (entities and findings) and normalization rules from `platform/reference/canonical-mapping`; connector contract from `platform/reference/catalog`.
+Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. DAST scan-report ingestion is typically artefact-driven (autoloader-style on the object-storage prefix) rather than API-driven; the artefact-collection pattern is the documented exception to the preference order.
 
-## Output
+### Quirks
 
-A connector module at `src/connectors/{source}/` containing:
+- **Target vs file.** DAST findings reference a URL rather than a repository file. Application linkage requires resolving `target` against `silver.deployments` at transform time, not at ingestion. The Reference section's Quirks fact MUST disclose this.
+- **Inventory-gap analysis.** Unmatched targets (URLs with no matching deployment record) are emitted for inventory-gap analysis rather than dropped — this is a deliberate completeness signal, not a DQ failure.
+- **Scan-scoped findings.** Each scan re-emits the full finding set within its scope; the connector MUST treat scans as the unit of incremental work, not individual findings. Mid-scan record updates are not exposed.
+- **No record-level `updated_at`.** This is the key DAST quirk versus SAST / SCA. The Reference section's Incremental hook fact records this absence and the scan-ID / artefact-file HWM in its place.
+- **Scan orchestration vs report collection.** Server-based DAST connectors may need to drive scans (start, poll, read) rather than purely consume them; the Reference section MUST disclose which mode the connector operates in.
 
-- `config.yml` — base URL, endpoints, pagination, HWM column, target Bronze table, credential reference.
-- `ingest.py` — implements `ingest(run_id, state) -> batch` per the connector contract in `platform/reference/catalog`.
-- `transform.py` — implements `transform(bronze_df) -> silver_df` per the normalization rules in `platform/reference/canonical-mapping`.
-- `mapping.yml` — declarative Bronze-to-Silver column expressions referencing `src/connectors/{source}/severity.yml` and `src/connectors/{source}/status.yml`.
-- `src/connectors/{source}/severity.yml` and `src/connectors/{source}/status.yml` — per-source lookups covering every source value documented in the connector page.
-- `src/connectors/{source}/resources/job.yml` — canonical two-task Lakeflow job bundle fragment.
-- `src/connectors/{source}/tests/test_ingest.py` and `test_transform.py` — pytest suite covering every REQ-ID from `platform/reference/catalog` applicable to the connector's category.
-- `src/connectors/{source}/tests/fixtures/` — JSON fixtures named `{endpoint}_{scenario}.json`.
+*Rendered from `.claude/skills/analyze-source/references/dast.md`. Source-of-truth lives in the skill file.*
 
-## Preconditions
+## generate-connector — DAST reference
 
-- The per-connector page exists at `mkdocs/docs/connectors/<category>/<source-slug>.md` and has been reviewed for completeness.
-- The framework's shared utilities (auth helpers, pagination handlers, normalization helpers under `src/platform/`) are present.
+Facts the generate-connector skill needs to emit a DAST connector module. DAST sources emit findings against deployed targets; the HWM is scan-scoped, not record-level.
 
-## Steps
+### Applicable REQ-IDs
 
-1. Read the per-connector page and extract: authentication mechanism, pagination style, HWM column, resource endpoints and fields, severity map, status map, quirks.
-2. Emit `config.yml` with the extracted parameters.
-3. Select a connector category (LakeFlow Connect / SDK / REST-with-dlt-tool) per the preference order in `platform/reference/catalog` (Lakeflow Connect → SDK → dlt).
-4. Emit `ingest.py` against the chosen category. LakeFlow Connect connectors leave the file empty and declare the ingestion resource in the bundle fragment. SDK connectors use the source's SDK. REST-with-dlt-tool connectors compose dlt components.
-5. Emit `mapping.yml` with canonical-field → `{source_path, cast, lookup?}` blocks for every canonical Silver field defined in `platform/reference/canonical-mapping` (entities or findings schema, whichever applies).
-6. Emit `src/connectors/{source}/severity.yml` and `src/connectors/{source}/status.yml` with every source value covered. For undocumented values, insert the configurable default and a comment flagging the DQ warning path.
-7. Emit `transform.py` applying mapping plus normalization rules from `platform/reference/canonical-mapping`.
-8. Emit the bundle fragment at `src/connectors/{source}/resources/job.yml` using the canonical two-task shape documented in `platform/reference/catalog`, substituting the source name.
-9. Emit the test suite: one test function per REQ-ID applicable to the connector category, each marked with `@pytest.mark.requirement("REQ-...")`. Fixtures follow the `{endpoint}_{scenario}.json` naming convention.
-10. Record the invocation — inputs, generated file paths, git commit hash — so that `validate-implementation` can reference it.
+From `mkdocs/docs/platform/reference/catalog.md`. Bind one test function per REQ-ID below.
 
-## Invariants
+- Bind: `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-TRF-TS`, `REQ-DQ`, `REQ-DEDUP`.
+- For server-based DAST consuming scan reports rather than the live API, `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` are N/A — the catalog notes "the CLI-artefact ingestion path used by OWASP ZAP has no API auth, pagination, or rate limit." The ZAP traceability row marks these three N/A. Do NOT bind them in this case.
+- For CI/CD-step DAST CLI artefacts, the same N/A pattern applies.
 
-- No file is written outside `src/connectors/{source}/`, `src/connectors/{source}/tests/`, or `src/connectors/{source}/resources/job.yml`. The connector generation is self-contained.
-- Every REQ-ID applicable to the category (from `platform/reference/catalog`) has at least one bound test function.
-- All imports from `src/platform/` reference only functions that already exist in that module; new shared helpers are not introduced by this skill.
-````
+### Default severity
 
-## `validate-implementation`
+`medium`. Generate `src/connectors/{source}/severity.yml` covering the documented vocabulary (typically four levels: `Informational`, `Low`, `Medium`, `High`) mapped to the canonical four-level model (`critical`, `high`, `medium`, `low`). Configurable default for unmatched values is `medium` with a data-quality warning.
 
-Source: [`.claude/skills/validate-implementation.md`](https://github.com/vkraus/appsec-mvp/blob/main/.claude/skills/validate-implementation.md)
+The `mapping.yml` `severity` field references the lookup file by path:
 
-````markdown
----
-name: validate-implementation
-description: Use after generate-connector to run the test suite against a generated connector and populate the Validation section of the connector's page at mkdocs/docs/connectors/<category>/<source>.md. Inputs are the source name, category, and connector module path.
----
+```yaml
+severity:
+  source_path: <native-severity-field>
+  lookup: src/connectors/{source}/severity.yml
+```
 
-# validate-implementation
+### Incremental strategy
 
-Run the test suite for a generated connector and populate the **Validation** section of its page at `mkdocs/docs/connectors/<category>/<source>.md`.
+Scan-id-based, NOT record-level `updated_at`. Encode in `config.yml` under a `hwm_kind: scan_id` knob (or `hwm_kind: artefact_prefix` for CLI variants):
 
-## Inputs
+- **Server-based** (ZAP daemon / API): the scan ID is the high-water mark. The connector orchestrates scans per deployment and reads alerts back after scan completion. Encode the scan-orchestration mode (`scan-and-read` vs `read-only`) explicitly in `config.yml`.
+- **CI/CD-step** (e.g. `zap-baseline.py`): the artefact file (object-storage prefix or pipeline artefact) is the high-water mark. Encode the prefix and report format (JSON / SARIF) in `config.yml`.
 
-- Source name (for path resolution).
-- AppSec category (one of: `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf`).
-- Connector module path at `src/connectors/{source}/`.
-- Test suite path at `src/connectors/{source}/tests/`.
-- Applicable REQ-IDs for the connector's category (looked up from `platform/reference/catalog`).
+The `src/platform/` HWM helpers expose a `scan_id` mode in addition to the column-based default; use it.
 
-## Output
+### Deduplication key
 
-- A Markdown table summarizing test outcomes per REQ-ID (pass / fail / missing), ready to replace the stub in the **Validation** section of `mkdocs/docs/connectors/<category>/<source>.md`.
-- Optional: a fix list for failing REQ-IDs with pointers to the failing test files.
+`(target, alert_id, uri_path)` per the DAST capability surface, also reflected in the Silver finding scope `(application_id, target, alert_id)` at `mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements`. Encode this tuple literally in `transform.py`:
 
-## Steps
+```python
+dedup_key = (row["target"], row["alert_id"], row["uri_path"])
+```
 
-1. Run `pytest src/connectors/{source}/tests/ -v --tb=short` with coverage collection enabled.
-2. Collect every test function carrying a `@pytest.mark.requirement("REQ-...")` marker and its outcome (passed / failed / skipped).
-3. For each REQ-ID in the category's applicable set (from `platform/reference/catalog`), record: is there a bound test? did it pass? what is the line coverage of the production code invoked by that test?
-4. Emit the Markdown table with one row per REQ-ID, using the symbols `PASS`, `FAIL`, or `—` (no bound test).
-5. Emit the fix list as plain text: for each failing REQ-ID, the failing test file path and a one-line summary of the failure.
-6. Replace the stub admonition in the **Validation** section of `mkdocs/docs/connectors/<category>/<source>.md` with the completed Markdown table and fix list (if any).
+- `target` — the scanned deployment (host, base URL).
+- `alert_id` — the scanner-internal rule identifier.
+- `uri_path` — disambiguates multiple hits of the same rule across paths of the same target.
 
-## Invariants
+### Target Silver tables
 
-- No production code is modified by this skill. It is purely observational.
-- Test timeouts are treated as failures, not skips.
-- The Validation table always has exactly the REQ-IDs in the category's applicable set as rows, in the order they appear in `platform/reference/catalog`.
-````
+`silver.findings` discriminated by `category="dast"` per `mkdocs/docs/platform/reference/silver-table-ownership.md`. The `mapping.yml` finding block MUST set `category: "dast"` literally.
+
+`transform.py` MUST emit a join against `silver.deployments` to resolve `target` (URL, host, port, path-prefix) into `application_id`. Unmatched targets are emitted unchanged for inventory-gap analysis (this is a deliberate completeness signal — do NOT drop rows; do NOT raise a DQ failure on the unmatched path). Code shape:
+
+```python
+silver_df = bronze_df.join(
+    spark.table("silver.deployments"),
+    on=match_target_expr,
+    how="left",
+)
+```
+
+The exact match expression depends on the source's `target` shape; the connector page documents it. Generate the join, do not stub it.
+
+### Authentication norms
+
+Style-dependent:
+
+- **Server-based**: API key (e.g. `X-ZAP-API-Key` header for ZAP). `ingest.py` reads it via the helper in `src/platform/`; `config.yml` references the secret-scope key name.
+- **CI/CD-step / CLI-artefact**: no native auth on output files; access governed by object-storage IAM. `ingest.py` uses the autoloader / cloud-storage helpers; no auth code emitted.
+
+### Ingestion-tooling preference
+
+Standard order: Lakeflow Connect → Databricks SDK → dlt.
+
+- **DAST scan-report ingestion is typically artefact-driven** — autoloader-style on the object-storage prefix is the canonical pattern. This is the documented exception to the preference order; justify in a top-of-file comment in `ingest.py`.
+- Server-based DAST consuming a live API uses the SDK or dlt path.
+
+### Quirks
+
+- **Target vs file.** DAST findings reference a URL, not a repository file. The transform-time join against `silver.deployments` is mandatory; do NOT attempt application linkage at ingest. The generator MUST wire the join (see Target Silver tables above).
+- **Inventory-gap analysis.** Unmatched targets are emitted unchanged — this is intentional. Do NOT generate filter logic that drops them.
+- **Scan-scoped findings.** Each scan re-emits the full finding set within its scope. The connector treats scans as the unit of incremental work — record-level updates within a scan are not exposed by the source, so the transform MUST NOT attempt them.
+- **No record-level `updated_at`.** This is the headline DAST quirk. The HWM is `scan_id` (or artefact filename) — encode it explicitly; do not fall back to a column-based HWM.
+- **Scan orchestration vs report collection.** Server-based DAST connectors may need to drive scans (start, poll, read) rather than purely consume them. Encode the chosen mode in `config.yml`; emit the orchestration helpers from `src/platform/` in `ingest.py` only when the source is in scan-and-read mode.
+
+*Rendered from `.claude/skills/generate-connector/references/dast.md`. Source-of-truth lives in the skill file.*
+
+## validate-implementation — DAST reference
+
+Facts the validate-implementation skill needs to populate the Validation table for a DAST connector. DAST sources emit findings against deployed targets; the HWM is scan-scoped, not record-level. The CLI-artefact ingestion path is the documented N/A profile for the auth / pagination / rate-limit REQ-IDs.
+
+### Applicable REQ-IDs
+
+From `mkdocs/docs/platform/reference/catalog.md` § "Requirement catalog". The OWASP ZAP column of the traceability matrix is the authoritative per-source row for this category — `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` read `N/A`; the rest read `PASS`.
+
+Apply (the test suite MUST have a `@pytest.mark.requirement("REQ-...")`-bound test for each):
+
+- `REQ-ING-HWM`
+- `REQ-TRF-MAP`
+- `REQ-TRF-SEV`
+- `REQ-TRF-STS`
+- `REQ-TRF-TS`
+- `REQ-DQ`
+- `REQ-DEDUP`
+
+Mark `N/A`:
+
+- `REQ-ING-AUTH` — N/A: quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix": "the CLI-artifact ingestion path used by OWASP ZAP has no API auth, pagination, or rate limit."
+- `REQ-ING-PAG` — N/A: same rationale.
+- `REQ-ING-RL` — N/A: same rationale.
+
+For server-based DAST consuming a live API (rather than scan-report artefacts), the same N/A profile applies because the connector's incremental work is scan-scoped — there is no API pagination across findings within a scan, and rate limits do not bind on scan-report reads. If a deployment exercises a paginated live-API surface, bind tests for the affected REQ-IDs and mark them `PASS`; otherwise retain the catalog's N/A profile.
+
+### Default severity
+
+`medium` configurable default per `mkdocs/docs/connectors/dast/index.md` § "Capability surface". The test suite asserts severity normalization in `test_severity_normalization`, bound to `REQ-TRF-SEV`, covering the documented vocabulary (typically `Informational`, `Low`, `Medium`, `High`) and asserting that undocumented values fall through with a data-quality warning per the catalog requirement text.
+
+### Incremental strategy
+
+Scan-id-based, NOT record-level `updated_at`, per `mkdocs/docs/connectors/dast/index.md` § "Capability surface". The connector encodes `hwm_kind: scan_id` (server-based) or `hwm_kind: artefact_prefix` (CI/CD CLI). The test suite asserts HWM-resume behaviour under `REQ-ING-HWM` against the chosen mode — record-level resume is NOT exercised because the source does not expose it.
+
+### Deduplication key
+
+`(target, alert_id, uri_path)` per `mkdocs/docs/connectors/dast/index.md` § "Canonical mapping contribution" (Silver finding scope `(application_id, target, alert_id)`). The test suite asserts `dedup_links` linkage in `test_dedup_links`, bound to `REQ-DEDUP`, against this exact tuple.
+
+### Target Silver tables
+
+`silver.findings` discriminated by `category="dast"` per `mkdocs/docs/platform/reference/silver-table-ownership.md`. The `REQ-TRF-MAP` test additionally verifies the join against `silver.deployments` to resolve `target` into `application_id`; unmatched targets are NOT dropped (the test asserts they pass through unchanged for inventory-gap analysis, per `mkdocs/docs/connectors/dast/index.md` § "Capability surface": "Unmatched URLs are emitted for inventory-gap analysis.").
+
+### Authentication norms
+
+Style-dependent per `mkdocs/docs/connectors/dast/index.md` § "Capability surface": server-based uses an API key (e.g. `X-ZAP-API-Key` header); CI/CD-step / CLI-artefact has no native auth (object-storage IAM governs access). The test suite omits `REQ-ING-AUTH` for CLI-artefact connectors per the catalog's documented N/A profile.
+
+### Ingestion-tooling preference
+
+Standard order: Lakeflow Connect → Databricks SDK → dlt. DAST scan-report ingestion is typically artefact-driven (autoloader-style on the object-storage prefix) — this is the documented exception. The validation suite verifies the deviation through the absence of the auth / pagination / RL tests rather than asserting a tool-choice fact directly.
+
+### Quirks
+
+- **Target vs file.** `REQ-TRF-MAP` asserts the transform-time join against `silver.deployments`. Application linkage at ingest is forbidden; the test fails if an `application_id` is resolved before transform.
+- **Inventory-gap analysis.** The `REQ-TRF-MAP` (or a dedicated `REQ-DQ`) test asserts that unmatched targets are emitted unchanged. Filter logic that drops them is a `FAIL`.
+- **Scan-scoped findings.** Each scan re-emits the full finding set within its scope. `REQ-DEDUP` asserts that re-emission across scans collapses through the dedup key without double-counting.
+- **No record-level `updated_at`.** This is the headline DAST quirk. `REQ-ING-HWM` exercises `scan_id` (or `artefact_prefix`) advancement, NOT a column-based HWM.
+- **Scan orchestration vs report collection.** Server-based scan-and-read mode exercises `REQ-ING-HWM` against scan-id advancement plus the orchestration helpers; report-only mode binds the same REQ-ID against the artefact-prefix HWM.
+
+*Rendered from `.claude/skills/validate-implementation/references/dast.md`. Source-of-truth lives in the skill file.*

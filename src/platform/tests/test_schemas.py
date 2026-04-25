@@ -1,11 +1,11 @@
-from pyspark.sql.types import StringType, TimestampType, IntegerType
+from pyspark.sql.types import IntegerType, StringType, TimestampType
 
 from src.platform.schemas import (
-    silver_applications,
-    silver_repositories,
-    silver_findings,
     silver_app_repo_mapping,
+    silver_applications,
     silver_finding_location,
+    silver_findings,
+    silver_repositories,
 )
 
 

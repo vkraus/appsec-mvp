@@ -14,7 +14,6 @@ from pyspark.sql.types import (
     TimestampType,
 )
 
-
 silver_applications = StructType([
     StructField("application_id", StringType(), nullable=False),
     StructField("name", StringType(), nullable=False),

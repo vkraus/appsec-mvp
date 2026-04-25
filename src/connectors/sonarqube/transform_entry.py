@@ -2,7 +2,6 @@
 # Driven by src/connectors/sonarqube/resources/job.yml.
 
 # COMMAND ----------
-from src.connectors.sonarqube.transform import transform
 
 # Skeleton: full job orchestration lands when the connector is implemented.
 print("sonarqube transform_entry — scaffolding")

@@ -98,6 +98,9 @@ is per-environment: `appsec_dev`, `appsec_staging`, `appsec_prod`.
   consumed by all connectors.
 - [REQ catalog](reference/catalog.md) — normative requirement identifiers
   with traceability matrix.
+- [Connector skills](reference/connector-skills.md) — the three skills
+  (`analyze-source`, `generate-connector`, `validate-implementation`) that
+  drive the connector lifecycle.
 - [Source capability matrix](reference/source-capability-matrix.md) —
   per-source protocol, pagination, HWM, severity.
 - [Source characteristics](reference/source-characteristics.md) — per-source

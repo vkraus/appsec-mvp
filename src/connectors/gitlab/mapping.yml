@@ -1,0 +1,83 @@
+# GitLab Bronze -> Silver field mapping.
+#
+# Two top-level blocks per the SCM reference's dual-role guidance: entities
+# always, findings only when the deployment runs on Ultimate and the
+# connector is configured with ``finding_path: vulnerabilities_api``.
+#
+# See https://docs.gitlab.com/ee/api/ for source-side schemas and
+# mkdocs/docs/connectors/scm/gitlab.md for consumed-field excerpts.
+
+source_key: gitlab
+
+entities:
+
+  repositories:
+    # GET /api/v4/projects -> silver.repositories
+    repository_id:   id                        # stable integer id; natural key
+    full_name:       path_with_namespace       # group/subgroup/project
+    default_branch:  default_branch
+    updated_at:      last_activity_at          # freshest; falls back to updated_at
+
+  commits:
+    # GET /api/v4/projects/{id}/repository/commits -> silver.commits
+    commit_sha:      id                        # full SHA-1
+    short_sha:       short_id
+    title:           title
+    authored_at:     authored_date
+    committed_at:    committer_date
+    author_name:     author_name
+    author_email:    author_email
+
+  pull_requests:
+    # GET /api/v4/projects/{id}/merge_requests -> silver.pull_requests
+    # GitLab calls these "merge requests"; the silver schema uniformises on pull_requests.
+    number:          iid
+    state:           state                     # opened | closed | merged
+    merged_at:       merged_at
+    created_at:      created_at
+    updated_at:      updated_at                # HWM column for merge-request incremental
+    head_sha:        sha
+    source_branch:   source_branch
+    target_branch:   target_branch
+    author_username: author.username
+    source:          "gitlab"
+
+  branch_policies:
+    # GET /api/v4/projects/{id}/protected_branches -> silver.branch_policies
+    branch_name:      name
+    allowed_to_push:  push_access_levels       # reduced to highest access_level
+    allowed_to_merge: merge_access_levels      # reduced to highest access_level
+
+findings:
+  # GET /api/v4/projects/{id}/vulnerabilities -> silver.findings (Ultimate only).
+  # Report_type discriminates finding shape; transform.py branches on it to
+  # emit the correct dedup-key tuple per the SCM reference.
+  source_key: gitlab
+  fields:
+    finding_id:         'concat("gitlab-vuln-", id)'
+    tool_source:        'literal("gitlab")'
+    category:           'lookup(report_type, report_type_map)'
+    report_type:        report_type
+    severity_canonical: 'lookup(severity, severity_map, default=low)'
+    status_canonical:   'lookup(state, status_map, default=open)'
+    cwe_id:             cve                    # falls back to identifiers[*].external_id where external_type == "cve"
+    rule_id_native:     name
+    file_path:          location.file
+    start_line:         location.start_line
+    package_name:       location.dependency.package.name
+    url:                null
+    first_seen_at:      created_at
+    last_seen_at:       updated_at
+    trigger_context:    'literal("periodic")'
+  severity_map: config/severity/gitlab.yml
+  status_map:   config/status/gitlab.yml
+  report_type_map:
+    sast:                 sast
+    secret_detection:     secret
+    dependency_scanning:  sca
+    dast:                 dast
+    container_scanning:   container
+  dedup_keys:
+    sast:     [repository_id, file_path, start_line, rule_id_native]
+    secret:   [repository_id, file_path, start_line, rule_id_native]
+    sca:      [repository_id, package_name, cwe_id]

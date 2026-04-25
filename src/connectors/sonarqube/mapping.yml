@@ -1,3 +1,31 @@
-# Bronze-to-silver column expressions for SonarQube.
-# Scaffolding — full mapping defined when the connector is implemented.
-columns: {}
+# SonarQube /api/issues/search -> silver.findings mapping.
+# See mkdocs/docs/connectors/sast/sonarqube.md, section "Mapping example" and
+# "Resource schema excerpt" for the source schema. Hotspots from
+# /api/hotspots/search land in a separate bronze table and project into the
+# same silver.findings with a 'hotspot:' rule_id prefix; see the hotspots
+# block below.
+source_key: sonarqube
+fields:
+  finding_id:         generated                                # framework-assigned
+  source_finding_id:  key                                       # stable GUID across status changes
+  tool_source:        "sonarqube"
+  category:           "sast"
+  repository_id:      component                                 # project portion; transform splits on first colon
+  severity_canonical: lookup(severity, config/severity/sonarqube.yml)
+  status_canonical:   lookup(status+resolution, config/status/sonarqube.yml, default="open")
+  rule_id_native:     rule                                      # repository:ruleKey (e.g. java:S2259)
+  file_path:          component                                 # full value; transform strips project prefix
+  start_line:         line                                      # nullable for file-level issues
+  cwe_id:             null                                      # derived via src/platform/cwe.py side table
+  detected_at:        creationDate                              # UTC ISO 8601
+  resolved_at:        updateDate                                # set on RESOLVED/CLOSED transition
+  url:                null                                      # no per-finding permalink in /api/issues/search
+hotspots:
+  # /api/hotspots/search block; severity derived from vulnerabilityProbability
+  # via config/severity/sonarqube-hotspots.yml. rule_id prefixed 'hotspot:'
+  # to preserve namespace disjointness with issues.
+  source_finding_id:  key
+  severity_canonical: lookup(vulnerabilityProbability, config/severity/sonarqube-hotspots.yml)
+  status_canonical:   lookup(status+resolution, config/status/sonarqube.yml, default="open")
+  rule_id_native:     "hotspot:" + rule
+  cwe_id:             cwe[0]

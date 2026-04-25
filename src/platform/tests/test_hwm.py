@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
-from src.platform.hwm import HwmStore, UpdatedAtHwm, CommitShaHwm, ScanIdHwm
+from src.platform.hwm import CommitShaHwm, HwmStore, ScanIdHwm, UpdatedAtHwm
 
 
 @pytest.fixture
@@ -14,12 +14,12 @@ def store(tmp_path):
 
 def test_updated_at_hwm_reads_empty_as_epoch(store):
     strat = UpdatedAtHwm(key="sonarqube.issues", store=store)
-    assert strat.read() == datetime(1970, 1, 1, tzinfo=timezone.utc)
+    assert strat.read() == datetime(1970, 1, 1, tzinfo=UTC)
 
 
 def test_updated_at_hwm_round_trips(store):
     strat = UpdatedAtHwm(key="sonarqube.issues", store=store)
-    ts = datetime(2026, 4, 20, 10, 0, tzinfo=timezone.utc)
+    ts = datetime(2026, 4, 20, 10, 0, tzinfo=UTC)
     strat.write(ts)
     assert strat.read() == ts
 

@@ -1,0 +1,18 @@
+{
+  "timestamp": 1713600003750,
+  "webaclId": "arn:aws:wafv2:us-east-1:111122223333:global/webacl/checkout-frontdoor/abc123",
+  "terminatingRuleId": "CustomRule_Experimental",
+  "terminatingRuleType": "REGULAR",
+  "action": "QUARANTINE",
+  "httpRequest": {
+    "clientIp": "203.0.113.200",
+    "country": "FR",
+    "uri": "/api/cart",
+    "httpMethod": "GET",
+    "requestId": "req-0000000000000004",
+    "headers": []
+  },
+  "ruleGroupList": [],
+  "labels": [],
+  "responseCodeSent": 451
+}

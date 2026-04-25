@@ -1,13 +1,17 @@
 source: owasp_zap
 category: dast
-# severity_map / status_map are aspirational pointers — these YAMLs do
-# not yet exist on disk. No code currently loads this connector's
-# config.yml; when the lookups are introduced, drop them at the paths
-# below to keep the convention with other connectors.
 severity_map: src/connectors/owasp_zap/severity.yml
 status_map:   src/connectors/owasp_zap/status.yml
 bucket_secret_scope: mvp-connectors
 bronze_table: ${catalog}.bronze_owasp_zap.findings
+# DAST HWM shape — DO NOT fall back to column-based updated_at.
+# The CI/CD-step artefact path keys on the object-storage prefix
+# (hwm_kind: artefact_prefix). The on-demand server path keys on
+# the numeric scanId per target (hwm_kind: scan_id).
+hwm_kind: artefact_prefix
 cicd_prefix: cicd/zap/
+# Scan orchestration mode for the server-based path: scan-and-read
+# drives scans itself; read-only only pulls alerts already produced.
+scan_orchestration_mode: scan-and-read
 zap_api_url_secret: zap_url
 zap_api_key_secret: zap_api_key

@@ -1,0 +1,20 @@
+{
+  "timestamp": 1713600001234,
+  "webaclId": "arn:aws:wafv2:us-east-1:111122223333:global/webacl/checkout-frontdoor/abc123",
+  "terminatingRuleId": "RateLimit_PerIP",
+  "terminatingRuleType": "RATE_BASED",
+  "action": "COUNT",
+  "httpRequest": {
+    "clientIp": "198.51.100.42",
+    "country": "DE",
+    "uri": "/api/search",
+    "httpMethod": "GET",
+    "requestId": "req-0000000000000002",
+    "headers": [
+      {"name": "Host", "value": "shop.example.com"}
+    ]
+  },
+  "ruleGroupList": [],
+  "labels": [],
+  "responseCodeSent": 200
+}

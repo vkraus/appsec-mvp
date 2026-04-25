@@ -1,0 +1,41 @@
+source: dependency_track
+category: sca
+# Server-based SCA: paginated REST API with an update-timestamp HWM column.
+# See mkdocs/docs/connectors/sca/dependency-track.md § "Incremental hook":
+# the project-level maximum of `attribution.attributedOn` is the high-water
+# mark; `lastInheritedRiskScoreUpdate` on project records is a secondary
+# freshness indicator used to skip projects with no fresh findings.
+base_url: https://dependency-track.example.internal
+auth:
+  type: bearer
+  # The Dependency-Track API accepts its team API key as the `X-Api-Key`
+  # header. The generic "bearer" scheme is used at the config level; the
+  # header name is swapped in `ingest.py` (the native SDK path would
+  # resolve this transparently, but dlt's REST source accepts a custom
+  # header). The key is read from the Databricks secret scope.
+  token_secret: dependency_track_api_key
+pagination:
+  # 1-indexed `pageNumber` plus `pageSize`; `X-Total-Count` carries total.
+  strategy: offset
+  page_size: 100
+hwm:
+  strategy: updated_at
+  column: attributedOn
+bronze_table: ${catalog}.bronze_dependency_track.findings
+severity_map: src/connectors/dependency_track/severity.yml
+status_map:   src/connectors/dependency_track/status.yml
+# Active projects only on incremental runs; operators widen the classifier
+# filter via `classifier_filter` for FRAMEWORK / LIBRARY projects.
+classifier_filter:
+  - APPLICATION
+  - CONTAINER
+endpoints:
+  projects: /api/v1/project
+  components_by_project: /api/v1/component/project/{uuid}
+  findings_by_project: /api/v1/finding/project/{uuid}
+  vulnerability_detail: /api/v1/vulnerability/{source}/{vulnId}
+# Project-to-repository linking strategy. "property" uses the
+# `repository_id` project custom property set by the CI/CD pipeline at
+# SBOM import (preferred); "name_convention" falls back to parsing
+# `owner/repo` or `repo@version` from the project name.
+repo_link_strategy: property

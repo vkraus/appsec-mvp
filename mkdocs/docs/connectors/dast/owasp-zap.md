@@ -174,3 +174,13 @@ Collected 7 requirement-bound tests via `pytest src/connectors/owasp_zap/tests/ 
 ### Tests
 
 Tests live under [`src/connectors/owasp_zap/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/owasp_zap/tests). The report table above is the per-REQ outcome of running the bound tests in that directory.
+
+## Generation log
+
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work; the Reference and Validation sections preserve the original implementation-grounded prose, and the Generation log table records the actual skill runs that produced the reconciled artefacts.
+
+| Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (dast)            | name=OWASP ZAP; url=https://www.zaproxy.org/docs/api/; category=dast  | mkdocs/docs/connectors/dast/owasp-zap.md §1–§3                                     | 2026-04-25 | 662ee6a (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (dast)        | page hash=ed67875c66f7                                           | src/connectors/owasp_zap/, src/connectors/owasp_zap/tests/, src/connectors/owasp_zap/severity.yml, src/connectors/owasp_zap/status.yml, src/connectors/owasp_zap/resources/job.yml | 2026-04-25 | 24c745f (retrofit-9-connectors)  |
+| Validation         | `validate-implementation` (dast)   | module path=src/connectors/owasp_zap/                                 | mkdocs/docs/connectors/dast/owasp-zap.md §5                                        | 2026-04-25 | ef600a8 (retrofit-9-connectors)          |

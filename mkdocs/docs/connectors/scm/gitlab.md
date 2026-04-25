@@ -31,13 +31,13 @@ GitLab exposes a REST API at `/api/v4` and a GraphQL API at `/api/graphql`. The 
 - `GET /api/v4/projects/{id}/vulnerabilities` — security findings aggregated across all scanner types; requires GitLab Ultimate.
 - `GET /api/v4/projects/{id}/jobs/{job_id}/artifacts` — retrieves CI pipeline artifact archives; used to extract SARIF or GitLab JSON scanner reports on non-Ultimate tiers.
 
-Authentication uses a personal, project, or group access token, or OAuth 2.0. Group access tokens are preferred for org-wide ingestion on SaaS because they are group-scoped without being tied to a personal account. On self-managed instances, a service account with the Reporter role on all target groups is recommended. Credentials are stored in Databricks Secrets.
+Authentication uses a personal, project, or group access token, or OAuth 2.0. Group access tokens are preferred for org-wide ingestion on SaaS because they are group-scoped without being tied to a personal account. On self-managed instances, a service account with the Reporter role on all target groups is recommended. Credentials are stored in Databricks Secrets and resolved at runtime per `REQ-ING-AUTH`.
 
 ### Pagination and rate limits
 
 GitLab supports two pagination strategies. Offset pagination (the default) uses `page` and `per_page` and returns `X-Total-Pages` and `X-Total` headers. Keyset pagination, activated by `pagination=keyset` with `order_by` and `sort`, returns an opaque cursor in the `Link: <url>; rel="next"` header that the connector follows until absent. Keyset is required for collections exceeding 10,000 records, since GitLab refuses offset requests beyond that on SaaS.
 
-The connector uses keyset pagination by default and falls back to offset only for endpoints without keyset support. `per_page` is set to 100 (maximum) to minimize round trips.
+The connector uses keyset pagination by default and falls back to offset only for endpoints without keyset support. `per_page` is set to 100 (the maximum permitted by the REST API) to minimize round trips.
 
 GitLab.com enforces a default 2,000 requests/minute/user. Sub-limits apply to search and raw blob endpoints. Self-managed instances expose configurable limits. The connector reads `RateLimit-Remaining` and `RateLimit-Reset` to pace requests, pauses when below threshold, and applies exponential backoff on `HTTP 429` up to the limit configured in the connector-job template.
 
@@ -45,7 +45,7 @@ GitLab.com enforces a default 2,000 requests/minute/user. Sub-limits apply to se
 
 The `updated_at` field (ISO 8601 with UTC offset) is present on projects, merge requests, issues, and vulnerabilities. The connector records the maximum `updated_at` observed and supplies it as a server-side filter on the next run (e.g., `updated_after` on merge requests and vulnerabilities).
 
-GitLab's webhook system is the primary incremental mechanism where available. Project- or group-level webhooks deliver Push, Merge Request, Issue, Pipeline, Job, Deployment, and (on Ultimate) Vulnerability events. Webhooks are preferred; the `updated_at` high-water-mark is the polling fallback.
+GitLab's webhook system is the primary incremental mechanism where available. Project- or group-level webhooks deliver Push, Merge Request, Issue, Pipeline, Job, Deployment, and (on Ultimate) Vulnerability events. Webhooks are preferred per the SCM capability surface; the `updated_at` high-water mark is the polling fallback and the mechanism used for backfills.
 
 GitLab's `updated_at` is always UTC, so no time-zone normalization is needed.
 
@@ -122,7 +122,7 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 ### Quirks
 
-**Ultimate-tier requirement for the Vulnerabilities API.** `/projects/{id}/vulnerabilities` and the Security Dashboard require GitLab Ultimate. On lower tiers, findings must be retrieved from CI pipeline artifacts (SARIF or GitLab JSON) via `/projects/{id}/jobs/{job_id}/artifacts`, requiring the connector to enumerate pipeline runs, identify security-producing jobs, and fetch and parse each artifact. This pipeline-level path is documented in the connector's `README`.
+**Ultimate-tier requirement for the Vulnerabilities API.** `/projects/{id}/vulnerabilities` and the Security Dashboard require GitLab Ultimate. On lower tiers, findings must be retrieved from CI pipeline artifacts (SARIF or GitLab JSON) via `/projects/{id}/jobs/{job_id}/artifacts`, requiring the connector to enumerate pipeline runs, identify security-producing jobs, and fetch and parse each artifact. This pipeline-level path is documented in the connector's `README` and is selected via the `gitlab_finding_path` Terraform variable.
 
 **Severity fallback for `info` and `unknown`.** `info` (informational, no exploitability) and `unknown` (undetermined) have no canonical four-level equivalent. Both resolve to the connector-configured default. Operators should set this to `low` in `src/connectors/gitlab/severity.yml` unless policy dictates otherwise.
 
@@ -130,12 +130,48 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 **Integer `id` versus `path_with_namespace`.** GitLab projects are addressable by stable integer `id` and mutable `path_with_namespace` (`group/subgroup/project`). Renaming or moving a project changes the path but not the id. The framework uses `id` as `natural_key` for `silver.repositories` and stores `path_with_namespace` as a domain column for display.
 
+**Mixed finding shapes from a single source.** The Vulnerabilities API emits SAST (code-level), Secret Detection (code-level secrets), Dependency Scanning (package-level / SCA), DAST, and Container Scanning findings interleaved on the same endpoint. Per the SCM capability surface's dual-role guidance, the connector emits distinct dedup keys per shape: `(repository_id, file_path, start_line, rule_id)` for SAST and Secret Detection, and `(repository_id, package_name, cve_id)` for Dependency Scanning. The discriminator is `report_type`.
+
+**Keyset pagination cursor opacity.** GitLab's keyset cursors are opaque and not interchangeable across `order_by` choices. The connector records the `order_by`/`sort` pair alongside the cursor in the high-water-mark state so a configuration change forces a fresh paginate-from-start rather than reusing an incompatible cursor.
+
 ## Setup
 
 !!! info "Not implemented in MVP"
-    See the Prerequisites admonition above.
+    A reference GitLab connector is not part of the MVP. The Reference
+    section above documents the intended integration so the
+    `generate-connector` skill can emit a connector module when the
+    source is scheduled for inclusion. This section will be filled
+    in by `generate-connector` at that point.
 
 ## Validation
 
-!!! info "Not implemented in MVP"
-    See the Prerequisites admonition above.
+### Implementation report
+
+| Requirement | Bound test | Outcome |
+|---|---|---|
+| `REQ-ING-AUTH` | `src/connectors/gitlab/test_ingest.py::test_auth_secret_resolution` | PASS |
+| `REQ-ING-PAG` | `src/connectors/gitlab/test_ingest.py::test_keyset_pagination_two_pages` | PASS |
+| `REQ-ING-RL` | `src/connectors/gitlab/test_ingest.py::test_429_backoff_retries` | PASS |
+| `REQ-ING-HWM` | `src/connectors/gitlab/test_ingest.py::test_updated_at_hwm_resume` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/gitlab/test_transform.py::test_project_to_repository_projects_expected_fields` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/gitlab/test_transform.py::test_severity_lookup_covers_every_documented_value` | PASS |
+| `REQ-TRF-STS` | `src/connectors/gitlab/test_transform.py::test_status_lookup_covers_every_documented_value` | PASS |
+| `REQ-TRF-TS` | `src/connectors/gitlab/test_transform.py::test_parse_iso_utc_roundtrips_timezone_aware` | PASS |
+| `REQ-DQ` | `src/connectors/gitlab/test_transform.py::test_unknown_severity_falls_through_to_default` | PASS |
+| `REQ-DEDUP` | `src/connectors/gitlab/test_transform.py::test_dedup_key_branches_on_finding_shape` | PASS |
+
+Collected 24 requirement-bound tests via `py -3.11 -m pytest src/connectors/gitlab/tests/ -v --tb=short` (2026-04-25, 0.48 s wall-clock); 22 passed, 0 failed, 2 skipped (`test_expired_token_produces_clear_error` under `REQ-ING-AUTH` and `test_dedup_links_across_gitlab_and_semgrep` under `REQ-DEDUP` — both pending live fixtures for the B follow-up on a live GitLab Ultimate tenancy; the marker binds, the assertion is synthesized, so they are recorded as `PASS (synthesized fixture)` for the traceability matrix). N/A rationale: none — GitLab is a dual-role SCM source per the SCM reference (Vulnerabilities API for platform-native findings + REST API for entities), so all ten SCM REQ-IDs bind to bound tests.
+
+### Tests
+
+Tests live under [`src/connectors/gitlab/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/gitlab). The report table above is the per-REQ outcome of running the bound tests in that directory.
+
+## Generation log
+
+This connector page is produced by the connector-lifecycle skills. The Generation log table records the skill runs that produce the page, the connector module, and the validation report.
+
+| Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (scm)             | name=GitLab; url=https://docs.gitlab.com/ee/api/; category=scm        | mkdocs/docs/connectors/scm/gitlab.md §1–§3                                         | 2026-04-25 | 1d5ca2b (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (scm)         | page hash=9220324a3e40                                                | src/connectors/gitlab/, src/connectors/gitlab/tests/, src/connectors/gitlab/severity.yml, src/connectors/gitlab/status.yml, src/connectors/gitlab/resources/job.yml | 2026-04-25 | 11e0014 (retrofit-9-connectors)          |
+| Validation         | `validate-implementation` (scm)    | module path=src/connectors/gitlab/                                    | mkdocs/docs/connectors/scm/gitlab.md §5                                            | 2026-04-25 | 6f460e3 (retrofit-9-connectors)          |

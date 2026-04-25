@@ -227,3 +227,13 @@ Collected 10 requirement-bound tests via `pytest src/connectors/semgrep/tests/ -
 ### Tests
 
 Tests live under [`src/connectors/semgrep/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/semgrep/tests). The report table above is the per-REQ outcome of running the bound tests in that directory.
+
+## Generation log
+
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work; the Reference and Validation sections preserve the original implementation-grounded prose, and the Generation log table records the actual skill runs that produced the reconciled artefacts.
+
+| Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (sast)            | name=Semgrep; url=https://semgrep.dev/api/v1/docs; category=sast      | mkdocs/docs/connectors/sast/semgrep.md §1–§3                                       | 2026-04-25 | d47eb26 (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (sast)        | page hash=72c0eb36b9f8                                           | src/connectors/semgrep/, src/connectors/semgrep/tests/, src/connectors/semgrep/severity.yml, src/connectors/semgrep/status.yml, src/connectors/semgrep/resources/job.yml | 2026-04-25 | 15935ca (retrofit-9-connectors)  |
+| Validation         | `validate-implementation` (sast)   | module path=src/connectors/semgrep/                                   | mkdocs/docs/connectors/sast/semgrep.md §5                                          | 2026-04-25 | ef600a8 (retrofit-9-connectors)          |
