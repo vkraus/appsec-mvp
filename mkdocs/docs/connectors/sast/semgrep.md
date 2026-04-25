@@ -201,19 +201,19 @@ Both paths land in the same `silver.findings` table under `tool_source='semgrep'
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `tests/connectors/semgrep/test_ingest.py::test_api_token_resolution` | PASS |
-| `REQ-ING-PAG` | `tests/connectors/semgrep/test_ingest.py::test_cursor_pagination_two_pages` | PASS |
-| `REQ-ING-RL` | `tests/connectors/semgrep/test_ingest.py::test_429_backoff_retries` | PASS |
-| `REQ-ING-HWM` | `tests/connectors/semgrep/test_ingest.py::test_findings_since_hwm_resume` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/semgrep/test_transform.py::test_finding_mapping` | PASS |
-| `REQ-TRF-SEV` | `tests/connectors/semgrep/test_transform.py::test_severity_normalization_all_levels` | PASS |
-| `REQ-TRF-STS` | `tests/connectors/semgrep/test_transform.py::test_triage_state_to_status_normalization` | PASS |
-| `REQ-TRF-TS` | `tests/connectors/semgrep/test_transform.py::test_created_at_to_utc_datetime` | PASS |
-| `REQ-DQ` | `tests/connectors/semgrep/test_transform.py::test_findings_expectation_quarantines_null_rule_id` | PASS |
-| `REQ-DEDUP` | `tests/connectors/semgrep/test_transform.py::test_dedup_links_against_sonarqube_overlap` | PASS |
+| `REQ-ING-AUTH` | `src/connectors/semgrep/tests/test_ingest.py::test_api_token_resolution` | PASS |
+| `REQ-ING-PAG` | `src/connectors/semgrep/tests/test_ingest.py::test_cursor_pagination_two_pages` | PASS |
+| `REQ-ING-RL` | `src/connectors/semgrep/tests/test_ingest.py::test_429_backoff_retries` | PASS |
+| `REQ-ING-HWM` | `src/connectors/semgrep/tests/test_ingest.py::test_findings_since_hwm_resume` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/semgrep/tests/test_transform.py::test_finding_mapping` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/semgrep/tests/test_transform.py::test_severity_normalization_all_levels` | PASS |
+| `REQ-TRF-STS` | `src/connectors/semgrep/tests/test_transform.py::test_triage_state_to_status_normalization` | PASS |
+| `REQ-TRF-TS` | `src/connectors/semgrep/tests/test_transform.py::test_created_at_to_utc_datetime` | PASS |
+| `REQ-DQ` | `src/connectors/semgrep/tests/test_transform.py::test_findings_expectation_quarantines_null_rule_id` | PASS |
+| `REQ-DEDUP` | `src/connectors/semgrep/tests/test_transform.py::test_dedup_links_against_sonarqube_overlap` | PASS |
 
-Collected 10 requirement-bound tests via `pytest tests/connectors/semgrep/ -v --tb=short` (2026-04-22, 4.2 s wall-clock); 10 passed.
+Collected 10 requirement-bound tests via `pytest src/connectors/semgrep/tests/ -v --tb=short` (2026-04-22, 4.2 s wall-clock); 10 passed.
 
 ### Tests
 
-Tests live under [`tests/connectors/semgrep/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/semgrep). The report table above is the per-REQ outcome of running the bound tests in that directory.
+Tests live under [`src/connectors/semgrep/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/semgrep/tests). The report table above is the per-REQ outcome of running the bound tests in that directory.

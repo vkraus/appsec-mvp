@@ -37,7 +37,7 @@ Every connector module under `src/connectors/{source}/` carries the same four ar
 - **`mapping.yml`** — declares bronze-to-silver column expressions and references severity and status lookups.
 - **`config.yml`** — records source-specific parameters: base URL and endpoints, pagination strategy, high-water-mark column, and target bronze table.
 
-A co-located `tests/connectors/{source}/` subfolder carries the fixtures and assertions for the connector.
+A co-located `src/connectors/{source}/tests/` subfolder carries the fixtures and assertions for the connector.
 
 ## Configuration separation
 

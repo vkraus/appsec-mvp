@@ -73,7 +73,7 @@ Corresponding side-car files:
 | `config/severity/{source}.yml` | Native-severity → canonical-severity lookup. |
 | `config/status/{source}.yml` | Native-status → canonical-status lookup. |
 | `resources/{source}-job.yml` | DAB job bundle fragment (two-task ingest → transform). |
-| `tests/connectors/{source}/` | Connector tests with `@pytest.mark.requirement("REQ-...")` markers. |
+| `src/connectors/{source}/tests/` | Connector tests with `@pytest.mark.requirement("REQ-...")` markers. |
 
 ## Ingestion category decision
 

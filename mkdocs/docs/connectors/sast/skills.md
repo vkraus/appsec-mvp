@@ -108,8 +108,8 @@ A connector module at `src/connectors/{source}/` containing:
 - `mapping.yml` — declarative Bronze-to-Silver column expressions referencing `config/severity/{source}.yml` and `config/status/{source}.yml`.
 - `config/severity/{source}.yml` and `config/status/{source}.yml` — per-source lookups covering every source value documented in the connector page.
 - `resources/{source}-job.yml` — canonical two-task Lakeflow job bundle fragment.
-- `tests/connectors/{source}/test_ingest.py` and `test_transform.py` — pytest suite covering every REQ-ID from `platform/reference/catalog` applicable to the connector's category.
-- `tests/connectors/{source}/fixtures/` — JSON fixtures named `{endpoint}_{scenario}.json`.
+- `src/connectors/{source}/tests/test_ingest.py` and `test_transform.py` — pytest suite covering every REQ-ID from `platform/reference/catalog` applicable to the connector's category.
+- `src/connectors/{source}/tests/fixtures/` — JSON fixtures named `{endpoint}_{scenario}.json`.
 
 ## Preconditions
 
@@ -131,7 +131,7 @@ A connector module at `src/connectors/{source}/` containing:
 
 ## Invariants
 
-- No file is written outside `src/connectors/{source}/`, `tests/connectors/{source}/`, `config/severity/{source}.yml`, `config/status/{source}.yml`, or `resources/{source}-job.yml`. The connector generation is self-contained.
+- No file is written outside `src/connectors/{source}/`, `src/connectors/{source}/tests/`, `config/severity/{source}.yml`, `config/status/{source}.yml`, or `resources/{source}-job.yml`. The connector generation is self-contained.
 - Every REQ-ID applicable to the category (from `platform/reference/catalog`) has at least one bound test function.
 - All imports from `src/common/` reference only functions that already exist in that module; new shared helpers are not introduced by this skill.
 ````
@@ -155,7 +155,7 @@ Run the test suite for a generated connector and populate the **Validation** sec
 - Source name (for path resolution).
 - AppSec category (one of: `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf`).
 - Connector module path at `src/connectors/{source}/`.
-- Test suite path at `tests/connectors/{source}/`.
+- Test suite path at `src/connectors/{source}/tests/`.
 - Applicable REQ-IDs for the connector's category (looked up from `platform/reference/catalog`).
 
 ## Output
@@ -165,7 +165,7 @@ Run the test suite for a generated connector and populate the **Validation** sec
 
 ## Steps
 
-1. Run `pytest tests/connectors/{source}/ -v --tb=short` with coverage collection enabled.
+1. Run `pytest src/connectors/{source}/tests/ -v --tb=short` with coverage collection enabled.
 2. Collect every test function carrying a `@pytest.mark.requirement("REQ-...")` marker and its outcome (passed / failed / skipped).
 3. For each REQ-ID in the category's applicable set (from `platform/reference/catalog`), record: is there a bound test? did it pass? what is the line coverage of the production code invoked by that test?
 4. Emit the Markdown table with one row per REQ-ID, using the symbols `PASS`, `FAIL`, or `—` (no bound test).

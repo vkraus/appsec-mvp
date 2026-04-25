@@ -146,16 +146,16 @@ Expected: `file_path IS NULL` and `url` populated for every row. This is the sha
 | `REQ-ING-AUTH` | — | N/A |
 | `REQ-ING-PAG` | — | N/A |
 | `REQ-ING-RL` | — | N/A |
-| `REQ-ING-HWM` | `tests/connectors/owasp_zap/test_ingest.py::test_s3_marker_resume_after_last_processed_key` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/owasp_zap/test_transform.py::test_zap_alert_mapping` | PASS |
-| `REQ-TRF-SEV` | `tests/connectors/owasp_zap/test_transform.py::test_risk_to_severity_normalization` | PASS |
-| `REQ-TRF-STS` | `tests/connectors/owasp_zap/test_transform.py::test_confidence_to_status_normalization` | PASS |
-| `REQ-TRF-TS` | `tests/connectors/owasp_zap/test_transform.py::test_scan_timestamp_to_utc_datetime` | PASS |
-| `REQ-DQ` | `tests/connectors/owasp_zap/test_transform.py::test_findings_expectation_quarantines_null_url` | PASS |
-| `REQ-DEDUP` | `tests/connectors/owasp_zap/test_transform.py::test_dedup_links_against_dast_overlap` | PASS |
+| `REQ-ING-HWM` | `src/connectors/owasp_zap/tests/test_ingest.py::test_s3_marker_resume_after_last_processed_key` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/owasp_zap/tests/test_transform.py::test_zap_alert_mapping` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/owasp_zap/tests/test_transform.py::test_risk_to_severity_normalization` | PASS |
+| `REQ-TRF-STS` | `src/connectors/owasp_zap/tests/test_transform.py::test_confidence_to_status_normalization` | PASS |
+| `REQ-TRF-TS` | `src/connectors/owasp_zap/tests/test_transform.py::test_scan_timestamp_to_utc_datetime` | PASS |
+| `REQ-DQ` | `src/connectors/owasp_zap/tests/test_transform.py::test_findings_expectation_quarantines_null_url` | PASS |
+| `REQ-DEDUP` | `src/connectors/owasp_zap/tests/test_transform.py::test_dedup_links_against_dast_overlap` | PASS |
 
-Collected 7 requirement-bound tests via `pytest tests/connectors/owasp_zap/ -v --tb=short` (2026-04-22, 2.9 s wall-clock); 7 passed, 3 marked `N/A` because the CLI-artifact ingestion path has no API auth, pagination, or upstream rate limit.
+Collected 7 requirement-bound tests via `pytest src/connectors/owasp_zap/tests/ -v --tb=short` (2026-04-22, 2.9 s wall-clock); 7 passed, 3 marked `N/A` because the CLI-artifact ingestion path has no API auth, pagination, or upstream rate limit.
 
 ### Tests
 
-Tests live under [`tests/connectors/owasp_zap/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/owasp_zap). The report table above is the per-REQ outcome of running the bound tests in that directory.
+Tests live under [`src/connectors/owasp_zap/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/owasp_zap/tests). The report table above is the per-REQ outcome of running the bound tests in that directory.

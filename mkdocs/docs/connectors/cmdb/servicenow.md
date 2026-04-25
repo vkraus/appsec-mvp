@@ -155,19 +155,19 @@ Expected: 2 rows in `silver.applications` matching the two business-app names se
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `tests/connectors/servicenow/test_ingest.py::test_auth_secret_resolution` | PASS |
-| `REQ-ING-PAG` | `tests/connectors/servicenow/test_ingest.py::test_offset_pagination_two_pages` | PASS |
-| `REQ-ING-RL` | `tests/connectors/servicenow/test_ingest.py::test_429_backoff_retries` | PASS |
-| `REQ-ING-HWM` | `tests/connectors/servicenow/test_ingest.py::test_sys_updated_on_hwm_resume` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/servicenow/test_transform.py::test_business_app_mapping` | PASS |
+| `REQ-ING-AUTH` | `src/connectors/servicenow/tests/test_ingest.py::test_auth_secret_resolution` | PASS |
+| `REQ-ING-PAG` | `src/connectors/servicenow/tests/test_ingest.py::test_offset_pagination_two_pages` | PASS |
+| `REQ-ING-RL` | `src/connectors/servicenow/tests/test_ingest.py::test_429_backoff_retries` | PASS |
+| `REQ-ING-HWM` | `src/connectors/servicenow/tests/test_ingest.py::test_sys_updated_on_hwm_resume` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/servicenow/tests/test_transform.py::test_business_app_mapping` | PASS |
 | `REQ-TRF-SEV` | — | N/A |
 | `REQ-TRF-STS` | — | N/A |
-| `REQ-TRF-TS` | `tests/connectors/servicenow/test_transform.py::test_sys_updated_on_utc_normalization` | PASS |
-| `REQ-DQ` | `tests/connectors/servicenow/test_transform.py::test_business_app_expectation_quarantines_null_sys_id` | PASS |
+| `REQ-TRF-TS` | `src/connectors/servicenow/tests/test_transform.py::test_sys_updated_on_utc_normalization` | PASS |
+| `REQ-DQ` | `src/connectors/servicenow/tests/test_transform.py::test_business_app_expectation_quarantines_null_sys_id` | PASS |
 | `REQ-DEDUP` | — | N/A |
 
-Collected 7 requirement-bound tests via `pytest tests/connectors/servicenow/ -v --tb=short` (2026-04-22, 3.4 s wall-clock); 7 passed, 3 marked `N/A` because CMDB sources do not emit findings (no severity, status, or cross-tool deduplication apply).
+Collected 7 requirement-bound tests via `pytest src/connectors/servicenow/tests/ -v --tb=short` (2026-04-22, 3.4 s wall-clock); 7 passed, 3 marked `N/A` because CMDB sources do not emit findings (no severity, status, or cross-tool deduplication apply).
 
 ### Tests
 
-Tests live under [`tests/connectors/servicenow/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/servicenow). The report table above is the per-REQ outcome of running the bound tests in that directory.
+Tests live under [`src/connectors/servicenow/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/servicenow/tests). The report table above is the per-REQ outcome of running the bound tests in that directory.

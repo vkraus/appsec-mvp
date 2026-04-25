@@ -1,6 +1,6 @@
 # Requirement Catalog and Traceability
 
-The implementation's test suite binds to requirement identifiers through `@pytest.mark.requirement(...)` markers in [`tests/`](https://github.com/vkraus/appsec-mvp/tree/main/tests). The catalog below is the authoritative set; the traceability matrix tracks per-source coverage.
+The implementation's test suite binds to requirement identifiers through `@pytest.mark.requirement(...)` markers in the co-located [`src/{platform,connectors/<source>}/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src) folders. The catalog below is the authoritative set; the traceability matrix tracks per-source coverage.
 
 ## Requirement catalog
 
@@ -40,4 +40,4 @@ Cells marked `N/A` indicate a REQ-ID that does not apply to a source — either 
 
 ## How traceability is populated
 
-See [Tests → Traceability](../../analytics/tests.md) for the end-to-end flow: `validate-implementation` runs [`tests/connectors/{source}/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors), collects `@pytest.mark.requirement("REQ-...")` markers and outcomes, and emits both the fix list and the traceability row for this matrix.
+See [Tests → Traceability](../../analytics/tests.md) for the end-to-end flow: `validate-implementation` runs [`src/connectors/{source}/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors), collects `@pytest.mark.requirement("REQ-...")` markers and outcomes, and emits both the fix list and the traceability row for this matrix.

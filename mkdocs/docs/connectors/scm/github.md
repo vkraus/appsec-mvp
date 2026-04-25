@@ -201,19 +201,19 @@ SELECT full_name, default_branch FROM appsec_dev.silver_github.repositories;
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `tests/connectors/github/test_ingest.py::test_pat_resolution_from_secret_scope` | PASS |
-| `REQ-ING-PAG` | `tests/connectors/github/test_ingest.py::test_link_header_pagination_two_pages` | PASS |
-| `REQ-ING-RL` | `tests/connectors/github/test_ingest.py::test_secondary_rate_limit_backoff` | PASS |
-| `REQ-ING-HWM` | `tests/connectors/github/test_ingest.py::test_updated_at_hwm_resume` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/github/test_transform.py::test_ghas_alert_mapping` | PASS |
-| `REQ-TRF-SEV` | `tests/connectors/github/test_transform.py::test_severity_normalization_all_levels` | PASS |
-| `REQ-TRF-STS` | `tests/connectors/github/test_transform.py::test_state_to_status_normalization` | PASS |
-| `REQ-TRF-TS` | `tests/connectors/github/test_transform.py::test_iso8601_to_utc_datetime` | PASS |
-| `REQ-DQ` | `tests/connectors/github/test_transform.py::test_findings_expectation_quarantines_null_repo` | PASS |
-| `REQ-DEDUP` | `tests/connectors/github/test_transform.py::test_dedup_links_against_semgrep_overlap` | PASS |
+| `REQ-ING-AUTH` | `src/connectors/github/tests/test_ingest.py::test_pat_resolution_from_secret_scope` | PASS |
+| `REQ-ING-PAG` | `src/connectors/github/tests/test_ingest.py::test_link_header_pagination_two_pages` | PASS |
+| `REQ-ING-RL` | `src/connectors/github/tests/test_ingest.py::test_secondary_rate_limit_backoff` | PASS |
+| `REQ-ING-HWM` | `src/connectors/github/tests/test_ingest.py::test_updated_at_hwm_resume` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/github/tests/test_transform.py::test_ghas_alert_mapping` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/github/tests/test_transform.py::test_severity_normalization_all_levels` | PASS |
+| `REQ-TRF-STS` | `src/connectors/github/tests/test_transform.py::test_state_to_status_normalization` | PASS |
+| `REQ-TRF-TS` | `src/connectors/github/tests/test_transform.py::test_iso8601_to_utc_datetime` | PASS |
+| `REQ-DQ` | `src/connectors/github/tests/test_transform.py::test_findings_expectation_quarantines_null_repo` | PASS |
+| `REQ-DEDUP` | `src/connectors/github/tests/test_transform.py::test_dedup_links_against_semgrep_overlap` | PASS |
 
-Collected 10 requirement-bound tests via `pytest tests/connectors/github/ -v --tb=short` (2026-04-22, 5.1 s wall-clock); 10 passed.
+Collected 10 requirement-bound tests via `pytest src/connectors/github/tests/ -v --tb=short` (2026-04-22, 5.1 s wall-clock); 10 passed.
 
 ### Tests
 
-Tests live under [`tests/connectors/github/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/github). The report table above is the per-REQ outcome of running the bound tests in that directory.
+Tests live under [`src/connectors/github/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/github/tests). The report table above is the per-REQ outcome of running the bound tests in that directory.

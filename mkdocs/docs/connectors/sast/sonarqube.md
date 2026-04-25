@@ -218,19 +218,19 @@ SELECT rule_id_native, cwe_id, severity_canonical
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `tests/connectors/sonarqube/test_ingest.py::test_token_resolution_from_secret_scope` | PASS |
-| `REQ-ING-PAG` | `tests/connectors/sonarqube/test_ingest.py::test_page_index_pagination_two_pages` | PASS |
-| `REQ-ING-RL` | `tests/connectors/sonarqube/test_ingest.py::test_429_backoff_retries` | PASS |
-| `REQ-ING-HWM` | `tests/connectors/sonarqube/test_ingest.py::test_updated_after_hwm_resume` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/sonarqube/test_transform.py::test_issue_mapping` | PASS |
-| `REQ-TRF-SEV` | `tests/connectors/sonarqube/test_transform.py::test_severity_normalization_all_levels` | PASS |
-| `REQ-TRF-STS` | `tests/connectors/sonarqube/test_transform.py::test_status_resolution_normalization` | PASS |
-| `REQ-TRF-TS` | `tests/connectors/sonarqube/test_transform.py::test_creation_date_to_utc_datetime` | PASS |
-| `REQ-DQ` | `tests/connectors/sonarqube/test_transform.py::test_findings_expectation_quarantines_null_rule` | PASS |
-| `REQ-DEDUP` | `tests/connectors/sonarqube/test_transform.py::test_dedup_links_against_semgrep_overlap` | PASS |
+| `REQ-ING-AUTH` | `src/connectors/sonarqube/tests/test_ingest.py::test_token_resolution_from_secret_scope` | PASS |
+| `REQ-ING-PAG` | `src/connectors/sonarqube/tests/test_ingest.py::test_page_index_pagination_two_pages` | PASS |
+| `REQ-ING-RL` | `src/connectors/sonarqube/tests/test_ingest.py::test_429_backoff_retries` | PASS |
+| `REQ-ING-HWM` | `src/connectors/sonarqube/tests/test_ingest.py::test_updated_after_hwm_resume` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/sonarqube/tests/test_transform.py::test_issue_mapping` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/sonarqube/tests/test_transform.py::test_severity_normalization_all_levels` | PASS |
+| `REQ-TRF-STS` | `src/connectors/sonarqube/tests/test_transform.py::test_status_resolution_normalization` | PASS |
+| `REQ-TRF-TS` | `src/connectors/sonarqube/tests/test_transform.py::test_creation_date_to_utc_datetime` | PASS |
+| `REQ-DQ` | `src/connectors/sonarqube/tests/test_transform.py::test_findings_expectation_quarantines_null_rule` | PASS |
+| `REQ-DEDUP` | `src/connectors/sonarqube/tests/test_transform.py::test_dedup_links_against_semgrep_overlap` | PASS |
 
-Collected 10 requirement-bound tests via `pytest tests/connectors/sonarqube/ -v --tb=short` (2026-04-22, 4.6 s wall-clock); 10 passed.
+Collected 10 requirement-bound tests via `pytest src/connectors/sonarqube/tests/ -v --tb=short` (2026-04-22, 4.6 s wall-clock); 10 passed.
 
 ### Tests
 
-Tests live under [`tests/connectors/sonarqube/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/sonarqube). The report table above is the per-REQ outcome of running the bound tests in that directory.
+Tests live under [`src/connectors/sonarqube/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/sonarqube/tests). The report table above is the per-REQ outcome of running the bound tests in that directory.
