@@ -17,6 +17,8 @@ Apply this module if you want appsec-mvp to provision a ZAP daemon on your EKS c
 
 The runtime is pure Kubernetes — no IRSA, no IAM role, no S3 grants. (The LoadBalancer Service does cause AWS to provision an ELB on the cluster's behalf, but that is managed transparently by the EKS cloud-controller-manager, not by this module.)
 
+> **Security note:** the Deployment runs ZAP with `api.addrs.addr.name=.*` + `api.addrs.addr.regex=true`, which whitelists *all caller IPs* against the ZAP API. Combined with the public LoadBalancer Service, this means the daemon's API is internet-facing and the only access control is the 40-character random API key. This is faithful to the upstream demo configuration. **Production deployments should front the daemon with a Kubernetes NetworkPolicy, a private (`internal`-mode) LoadBalancer, or a VPN gateway** — and consider tightening `api.addrs.addr.*` to a specific caller IP/range.
+
 ## Operator-supplied inputs
 
 ### Required
