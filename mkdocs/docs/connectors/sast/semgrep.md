@@ -141,13 +141,20 @@ The artefact's S3 key contributes two fields not present in the document body it
 
 ## Validation
 
-!!! info "Pending validation"
-    The Implementation report (per-REQ PASS / FAIL / N/A table, bound test
-    paths, pytest summary) is populated by `validate-implementation` after the
-    connector module is generated. `REQ-ING-AUTH`, `REQ-ING-PAG`, and
-    `REQ-ING-RL` are expected to be marked `N/A` per the CLI-artefact posture
-    documented in §3 above and in
-    [`mkdocs/docs/platform/reference/catalog.md`](../../platform/reference/catalog.md).
+| Requirement     | Bound test                                                                                                  | Outcome |
+|-----------------|-------------------------------------------------------------------------------------------------------------|---------|
+| `REQ-ING-AUTH`  | —                                                                                                           | N/A     |
+| `REQ-ING-PAG`   | —                                                                                                           | N/A     |
+| `REQ-ING-RL`    | —                                                                                                           | N/A     |
+| `REQ-ING-HWM`   | `src/connectors/semgrep/tests/test_ingest.py::test_parse_artefact_key_routes_cicd_and_periodic_lanes`       | PASS    |
+| `REQ-TRF-MAP`   | `src/connectors/semgrep/tests/test_transform.py::test_record_to_silver_json_projects_every_consumed_field`  | PASS    |
+| `REQ-TRF-SEV`   | `src/connectors/semgrep/tests/test_transform.py::test_mixed_severity_fixture_round_trips_to_canonical_levels` | PASS  |
+| `REQ-TRF-STS`   | `src/connectors/semgrep/tests/test_transform.py::test_status_canonical_is_literal_open_for_every_row`       | PASS    |
+| `REQ-TRF-TS`    | `src/connectors/semgrep/tests/test_transform.py::test_source_timestamp_is_none_for_json_records`            | PASS    |
+| `REQ-DQ`        | `src/connectors/semgrep/tests/test_transform.py::test_record_without_metadata_still_produces_well_formed_row` | PASS  |
+| `REQ-DEDUP`     | `src/connectors/semgrep/tests/test_transform.py::test_dedup_key_is_three_tuple_per_sast_reference`          | PASS    |
+
+Summary: 10 collected, **0.46 s** wall-clock, **7 PASS / 0 FAIL / 3 N/A**. N/A rationale: "the CLI-artifact ingestion path used by OWASP ZAP has no API auth, pagination, or rate limit" — the same rationale applies to CLI-based SAST (Semgrep).
 
 ## Generation log
 
@@ -157,7 +164,7 @@ This connector page is produced by the connector lifecycle skills. The Generatio
 |--------------------|------------------------------------|-------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (sast)            | name=Semgrep; url=https://semgrep.dev/docs/cli-reference (+ SARIF v2.1.0 spec at https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html); category=sast | mkdocs/docs/connectors/sast/semgrep.md §1–§3                                       | 2026-04-25 | 3cd1028 (regenerate-4-originals)         |
 | Module generation | `generate-connector` (sast) | page hash=866cfaf193ed | src/connectors/semgrep/__init__.py, src/connectors/semgrep/config.yml, src/connectors/semgrep/ingest.py, src/connectors/semgrep/transform.py, src/connectors/semgrep/mapping.yml, src/connectors/semgrep/severity.yml, src/connectors/semgrep/status.yml, src/connectors/semgrep/resources/job.yml, src/connectors/semgrep/tests/__init__.py, src/connectors/semgrep/tests/test_ingest.py, src/connectors/semgrep/tests/test_transform.py, src/connectors/semgrep/tests/fixtures/cicd_scan.json, src/connectors/semgrep/tests/fixtures/periodic_scan.sarif, src/connectors/semgrep/tests/fixtures/prefix_routing.json, src/connectors/semgrep/tests/fixtures/mixed_severity.json | 2026-04-25 | 76c543e (regenerate-4-originals) |
-| Validation         | `validate-implementation` (sast)   | (pending)                                                                           | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation         | `validate-implementation` (sast)   | module path=src/connectors/semgrep/                                                 | mkdocs/docs/connectors/sast/semgrep.md §5                                          | 2026-04-25 | 7fec0ac (regenerate-4-originals)         |
 
 ## References
 

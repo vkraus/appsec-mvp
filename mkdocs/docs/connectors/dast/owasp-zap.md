@@ -125,8 +125,20 @@ The dedup key per the [DAST category reference](../../../.claude/skills/analyze-
 
 ## 5. Validation
 
-!!! info "Pending validation"
-    The Validation section is populated by `validate-implementation` (Phase 3). It will list each `REQ-*` ID applicable to OWASP ZAP, the bound test under `src/connectors/owasp_zap/tests/`, and its outcome (`PASS` / `FAIL` / `N/A`). Per the catalog at [`mkdocs/docs/platform/reference/catalog.md`](../../platform/reference/catalog.md), the expected applicability is `REQ-ING-AUTH = N/A`, `REQ-ING-PAG = N/A`, `REQ-ING-RL = N/A` (CLI-artefact path drives the N/A trio for the matrix row); `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-TRF-TS`, `REQ-DQ`, and `REQ-DEDUP` apply.
+| Requirement | Bound test | Outcome |
+|---|---|---|
+| `REQ-ING-AUTH` | — | N/A |
+| `REQ-ING-PAG` | — | N/A |
+| `REQ-ING-RL` | — | N/A |
+| `REQ-ING-HWM` | `src/connectors/owasp_zap/tests/test_ingest.py::test_scan_id_hwm_round_trip` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/owasp_zap/tests/test_transform.py::test_alert_mapping` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/owasp_zap/tests/test_transform.py::test_severity_normalization_all_four_levels` | PASS |
+| `REQ-TRF-STS` | `src/connectors/owasp_zap/tests/test_transform.py::test_status_always_open` | PASS |
+| `REQ-TRF-TS` | `src/connectors/owasp_zap/tests/test_transform.py::test_first_seen_at_is_utc_aware` | PASS |
+| `REQ-DQ` | `src/connectors/owasp_zap/tests/test_transform.py::test_findings_expectation_quarantines_malformed` | PASS |
+| `REQ-DEDUP` | `src/connectors/owasp_zap/tests/test_transform.py::test_dedup_key_tuple_matches_mapping_yml` | PASS |
+
+Validation summary: 19 requirement-bound tests collected across the seven applicable REQ-IDs (additional tests bind multiply to `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-TRF-TS`, `REQ-DQ`, and `REQ-DEDUP`); 7 PASS, 0 FAIL, 3 N/A. Wall-clock duration: 49.92 s (37 tests collected in the full suite, 33 passed, 4 skipped — 3 of which carry `REQ-ING-AUTH`, `REQ-ING-PAG`, and `REQ-ING-RL` markers and contribute the N/A rows; the fourth is a live-only ZAP-daemon connectivity test, not requirement-bound). N/A rationale per `references/dast.md`: the CLI-artefact ingestion path used by OWASP ZAP has no API auth, pagination, or rate limit — `REQ-ING-AUTH`, `REQ-ING-PAG`, and `REQ-ING-RL` are recorded N/A on the matrix row even though the daemon path can exercise them, because the matrix outcome reflects the documented CI/CD-artefact path.
 
 ## 6. Generation log
 
@@ -134,7 +146,7 @@ The dedup key per the [DAST category reference](../../../.claude/skills/analyze-
 |---|---|---|---|---|---|
 | Source analysis | `analyze-source` (dast) | name=OWASP ZAP; url=https://www.zaproxy.org/docs/api/; category=dast | mkdocs/docs/connectors/dast/owasp-zap.md §1–§3 | 2026-04-25 | 3cd1028 (regenerate-4-originals) |
 | Module generation | `generate-connector` (dast) | page hash=0a7a007c142c | src/connectors/owasp_zap/, src/connectors/owasp_zap/tests/, src/connectors/owasp_zap/severity.yml, src/connectors/owasp_zap/status.yml, src/connectors/owasp_zap/resources/job.yml | 2026-04-25 | 76c543e (regenerate-4-originals) |
-| Validation | `validate-implementation` (dast) | (pending) | (pending) | (pending) | (pending) |
+| Validation | `validate-implementation` (dast) | module path=src/connectors/owasp_zap/ | mkdocs/docs/connectors/dast/owasp-zap.md §5 | 2026-04-25 | 7fec0ac (regenerate-4-originals) |
 
 ## References
 

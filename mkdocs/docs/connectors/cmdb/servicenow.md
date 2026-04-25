@@ -110,8 +110,20 @@ The ownership-table read (whichever table the deployment uses for team modelling
 
 ## Validation
 
-!!! info "Pending validation"
-    The Validation section is stubbed. The `validate-implementation` skill populates the per-REQ outcome table after the connector module is generated and its pytest suite runs. CMDB-applicable REQs are `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL`, `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-TS`, and `REQ-DQ`. `REQ-TRF-SEV`, `REQ-TRF-STS`, and `REQ-DEDUP` are marked N/A because CMDB sources do not emit findings (no severity, status, or cross-tool deduplication apply).
+| Requirement | Bound test | Outcome |
+|---|---|---|
+| REQ-ING-AUTH | src/connectors/servicenow/tests/test_ingest.py::test_ingest_contract_rejects_missing_credentials | PASS |
+| REQ-ING-PAG | src/connectors/servicenow/tests/test_ingest.py::test_offset_pagination_concatenates_pages_without_duplication | PASS |
+| REQ-ING-RL | src/connectors/servicenow/tests/test_ingest.py::test_pdi_hibernation_response_raises_with_clear_remediation | PASS |
+| REQ-ING-HWM | src/connectors/servicenow/tests/test_ingest.py::test_build_sysparm_query_emits_hwm_filter | PASS |
+| REQ-TRF-MAP | src/connectors/servicenow/tests/test_transform.py::test_normalise_application_projects_canonical_fields | PASS |
+| REQ-TRF-SEV | — | N/A |
+| REQ-TRF-STS | — | N/A |
+| REQ-TRF-TS | src/connectors/servicenow/tests/test_transform.py::test_servicenow_datetime_converts_europe_berlin_to_utc | PASS |
+| REQ-DQ | src/connectors/servicenow/tests/test_transform.py::test_empty_string_values_coerce_to_none_on_application | PASS |
+| REQ-DEDUP | — | N/A |
+
+Run summary: 10 collected, 0.36s, 7 PASS / 0 FAIL / 3 N/A. N/A rationale: CMDB sources emit no findings, so severity / status / dedup are not exercised — REQ-TRF-SEV / REQ-TRF-STS / REQ-DEDUP marked N/A per references/cmdb.md.
 
 ## Generation log
 
@@ -121,7 +133,7 @@ This connector page is produced by the connector-lifecycle skills under the rege
 |--------------------|------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (cmdb)            | name=ServiceNow; url=https://developer.servicenow.com/dev.do#!/reference/api/latest/rest/c_TableAPI; category=cmdb (release: Yokohama)  | mkdocs/docs/connectors/cmdb/servicenow.md sections 1 to 3                          | 2026-04-25 | 3cd1028 (regenerate-4-originals)         |
 | Module generation | `generate-connector` (cmdb) | page hash=780f588a3557 | src/connectors/servicenow/, src/connectors/servicenow/tests/, src/connectors/servicenow/severity.yml, src/connectors/servicenow/status.yml, src/connectors/servicenow/resources/job.yml | 2026-04-25 | 76c543e (regenerate-4-originals) |
-| Validation         | `validate-implementation` (cmdb)   | (pending)                                                                                                                               | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation | `validate-implementation` (cmdb) | module path=src/connectors/servicenow/ | mkdocs/docs/connectors/cmdb/servicenow.md §5 | 2026-04-25 | 7fec0ac (regenerate-4-originals) |
 
 ## References
 

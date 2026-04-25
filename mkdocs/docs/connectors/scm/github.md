@@ -223,8 +223,20 @@ Only fields the connector reads are listed. Complete schemas are at the cited Gi
 
 ## Validation
 
-!!! info "Pending validation"
-    The Validation section is populated by the `validate-implementation` skill once it runs the pytest suite under `src/connectors/github/tests/`. Expected output: a per-REQ `Implementation report` table with PASS / FAIL / N/A outcomes for `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL`, `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-TRF-TS`, `REQ-DQ`, `REQ-DEDUP`, plus the bound test paths and the `pytest` invocation provenance.
+| Requirement | Bound test | Outcome |
+|---|---|---|
+| REQ-ING-AUTH | src/connectors/github/tests/test_ingest.py::test_auth_secret_references_only | PASS |
+| REQ-ING-PAG | src/connectors/github/tests/test_ingest.py::test_link_header_two_pages_no_loss_no_duplicates | PASS |
+| REQ-ING-RL | src/connectors/github/tests/test_ingest.py::test_429_backoff_exponential_schedule | PASS |
+| REQ-ING-HWM | src/connectors/github/tests/test_ingest.py::test_updated_at_hwm_resume | PASS |
+| REQ-TRF-MAP | src/connectors/github/tests/test_transform.py::test_repository_to_silver_projects_expected_fields | PASS |
+| REQ-TRF-SEV | src/connectors/github/tests/test_transform.py::test_severity_lookup_covers_every_documented_value | PASS |
+| REQ-TRF-STS | src/connectors/github/tests/test_transform.py::test_status_lookup_covers_every_documented_value | PASS |
+| REQ-TRF-TS | src/connectors/github/tests/test_transform.py::test_parse_iso_utc_roundtrips_timezone_aware | PASS |
+| REQ-DQ | src/connectors/github/tests/test_transform.py::test_unknown_severity_falls_through_to_default | PASS |
+| REQ-DEDUP | src/connectors/github/tests/test_transform.py::test_dedup_key_branches_on_finding_shape | PASS |
+
+Run summary: 21 requirement-bound tests collected across the two test modules (REQ-ING-AUTH ×2 + ×1 skipped pending live PAT, REQ-ING-PAG ×3, REQ-ING-RL ×3, REQ-ING-HWM ×2, REQ-TRF-MAP ×7, REQ-TRF-SEV ×1, REQ-TRF-STS ×1, REQ-TRF-TS ×3, REQ-DQ ×2, REQ-DEDUP ×2 + ×1 skipped pending live cross-tool fixtures); 29 of 31 collected tests passed and 2 were skipped pending B-follow-up live fixtures (the skipped tests do not gate any REQ row because each affected REQ-ID has at least one passing primary test). Wall-clock duration: 0.36s. Pass / fail / N/A split: 10 / 0 / 0. No N/A rows: GitHub is the reference SCM connector and consumes platform-native findings (Dependabot, code scanning, secret scanning), so all ten REQ-IDs apply per `references/scm.md`.
 
 ## Generation log
 
@@ -234,7 +246,7 @@ This connector page is produced by the connector lifecycle skills. The Generatio
 |---|---|---|---|---|---|
 | Source analysis | `analyze-source` (scm) | name=GitHub; url=https://docs.github.com/en/rest; category=scm | mkdocs/docs/connectors/scm/github.md §1 to §3 | 2026-04-25 | 3cd1028 (regenerate-4-originals) |
 | Module generation | `generate-connector` (scm) | page hash=c1432ae8e1ec | src/connectors/github/__init__.py, src/connectors/github/config.yml, src/connectors/github/ingest.py, src/connectors/github/transform.py, src/connectors/github/mapping.yml, src/connectors/github/severity.yml, src/connectors/github/status.yml, src/connectors/github/resources/job.yml, src/connectors/github/tests/__init__.py, src/connectors/github/tests/conftest.py, src/connectors/github/tests/test_ingest.py, src/connectors/github/tests/test_transform.py, src/connectors/github/tests/fixtures/repositories.json, src/connectors/github/tests/fixtures/pull_requests.json, src/connectors/github/tests/fixtures/branch_protection.json, src/connectors/github/tests/fixtures/code_scanning_alerts.json, src/connectors/github/tests/fixtures/secret_scanning_alerts.json, src/connectors/github/tests/fixtures/dependabot_alerts.json | 2026-04-25 | 76c543e (regenerate-4-originals) |
-| Validation | `validate-implementation` (scm) | (pending) | (pending) | (pending) | (pending) |
+| Validation | `validate-implementation` (scm) | module path=src/connectors/github/ | mkdocs/docs/connectors/scm/github.md §5 | 2026-04-25 | 7fec0ac (regenerate-4-originals) |
 
 ## References
 
