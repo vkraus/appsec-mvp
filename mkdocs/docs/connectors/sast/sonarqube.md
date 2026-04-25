@@ -234,3 +234,13 @@ Collected 10 requirement-bound tests via `pytest tests/connectors/sonarqube/ -v 
 ### Tests
 
 Tests live under [`tests/connectors/sonarqube/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/sonarqube). The report table above is the per-REQ outcome of running the bound tests in that directory.
+
+## Generation log
+
+This connector page is produced by the connector-lifecycle skills. The Generation log table records the skill runs that produce the page, the connector module, and the validation report.
+
+| Stage              | Skill                              | Inputs                                                                                  | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (sast)            | name=SonarQube; url=https://next.sonarqube.com/sonarqube/web_api; category=sast         | mkdocs/docs/connectors/sast/sonarqube.md §1–§3                                     | 2026-04-25 | 2fa3e2d (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (sast)        | (pending)                                                                               | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation         | `validate-implementation` (sast)   | (pending)                                                                               | (pending)                                                                          | (pending)  | (pending)                                |
