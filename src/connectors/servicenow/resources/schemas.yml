@@ -1,8 +1,0 @@
-resources:
-  schemas:
-    bronze_servicenow:
-      catalog_name: ${var.catalog}
-      name: bronze_servicenow
-    silver_servicenow:
-      catalog_name: ${var.catalog}
-      name: silver_servicenow

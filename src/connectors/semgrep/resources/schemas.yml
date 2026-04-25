@@ -1,5 +1,0 @@
-resources:
-  schemas:
-    bronze_semgrep:
-      catalog_name: ${var.catalog}
-      name: bronze_semgrep

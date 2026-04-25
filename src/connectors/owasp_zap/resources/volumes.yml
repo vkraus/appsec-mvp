@@ -1,8 +1,0 @@
-resources:
-  volumes:
-    zap_artifacts:
-      catalog_name: ${var.catalog}
-      schema_name: bronze_owasp_zap
-      name: zap_artifacts
-      volume_type: EXTERNAL
-      storage_location: s3://${var.artifact_bucket}/zap/

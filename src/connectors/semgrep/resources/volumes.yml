@@ -1,8 +1,0 @@
-resources:
-  volumes:
-    semgrep_artifacts:
-      catalog_name: ${var.catalog}
-      schema_name: bronze_semgrep
-      name: semgrep_artifacts
-      volume_type: EXTERNAL
-      storage_location: s3://${var.artifact_bucket}/semgrep/

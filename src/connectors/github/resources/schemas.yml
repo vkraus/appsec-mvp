@@ -1,8 +1,0 @@
-resources:
-  schemas:
-    bronze_github:
-      catalog_name: ${var.catalog}
-      name: bronze_github
-    silver_github:
-      catalog_name: ${var.catalog}
-      name: silver_github
