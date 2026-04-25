@@ -206,9 +206,9 @@ bash src/connectors/aws_waf/scripts/install.sh
 SELECT count(*) FROM appsec_dev.bronze_aws_waf.event_envelope;
 
 -- Top terminating rules (sanity-check the rule inventory).
-SELECT terminating_rule_id, count(*)
+SELECT rule_id, count(*)
   FROM appsec_dev.silver.waf_events
-  GROUP BY terminating_rule_id
+  GROUP BY rule_id
   ORDER BY 2 DESC
   LIMIT 10;
 
@@ -216,11 +216,11 @@ SELECT terminating_rule_id, count(*)
 -- severity lookup is firing correctly.
 SELECT severity_canonical, count(*)
   FROM appsec_dev.silver.waf_events
-  WHERE webacl_id = '<your-webacl-arn>'
+  WHERE webacl_arn = '<your-webacl-arn>'
   GROUP BY severity_canonical;
 ```
 
-Expected: bronze count > 0 after the Firehose buffer flushes; events grouped by `terminating_rule_id`; `severity_canonical` derived from `action` (`BLOCK` → `high`, `COUNT` → `medium`, `ALLOW` / `CAPTCHA` / `CHALLENGE` → `low`).
+Expected: bronze count > 0 after the Firehose buffer flushes; events grouped by `rule_id` (the column populated from the WAF log envelope's `terminatingRuleId`); `severity_canonical` derived from `action` (`BLOCK` → `high`, `COUNT` → `medium`, `ALLOW` / `CAPTCHA` / `CHALLENGE` → `low`).
 
 ## Troubleshooting
 

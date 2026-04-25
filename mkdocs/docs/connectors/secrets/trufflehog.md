@@ -194,23 +194,23 @@ bash src/connectors/trufflehog/scripts/install.sh
 SELECT count(*) FROM appsec_dev.bronze_trufflehog.findings;
 
 -- Silver: per-finding projection. Includes the detector breakdown.
-SELECT detector_type, count(*)
+SELECT secret_type, count(*)
   FROM appsec_dev.silver.findings
- WHERE source_tool = 'trufflehog'
- GROUP BY detector_type
+ WHERE tool_source = 'trufflehog'
+ GROUP BY secret_type
  ORDER BY 2 DESC;
 
 -- Severity is hard-coded high for every TruffleHog finding (REQ-TRF-SEV).
 -- This count should equal the silver count above.
 SELECT count(*)
   FROM appsec_dev.silver.findings
- WHERE source_tool = 'trufflehog'
+ WHERE tool_source = 'trufflehog'
    AND severity_canonical = 'high';
 
 -- Validity status derives from Verified / VerificationError. Spot-check the mix.
 SELECT validity_status, count(*)
   FROM appsec_dev.silver.findings
- WHERE source_tool = 'trufflehog'
+ WHERE tool_source = 'trufflehog'
  GROUP BY validity_status;
 ```
 

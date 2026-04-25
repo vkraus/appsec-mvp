@@ -242,7 +242,7 @@ SELECT count(*) FROM appsec_dev.bronze_sonarqube.issues;
 -- Silver: canonical SAST findings projected from SonarQube issues + hotspots.
 SELECT severity_canonical, count(*)
   FROM appsec_dev.silver.findings
-  WHERE source_tool = 'sonarqube'
+  WHERE tool_source = 'sonarqube'
   GROUP BY severity_canonical;
 
 -- Cross-source dependency check — every sonarqube finding's repository_id
@@ -250,7 +250,7 @@ SELECT severity_canonical, count(*)
 SELECT count(*) AS missing_repo
   FROM appsec_dev.silver.findings f
   LEFT JOIN appsec_dev.silver.repositories r USING (repository_id)
-  WHERE f.source_tool = 'sonarqube' AND r.repository_id IS NULL;
+  WHERE f.tool_source = 'sonarqube' AND r.repository_id IS NULL;
 ```
 
 Expected outcome: at least one row in `bronze_sonarqube.issues` per analyzed project in the organization. The Silver row count is less than or equal to Bronze because the transform filters `type = CODE_SMELL` out (per the *CODE_SMELL filtering at the Silver layer* note in the connector reference). A non-zero `missing_repo` count means SonarQube is reporting findings against repositories the SCM connector has not yet ingested. Run [GitHub](../scm/github.md) (or another SCM) before relying on the rollups in [Evidence scenarios](../../analytics/evidence.md).

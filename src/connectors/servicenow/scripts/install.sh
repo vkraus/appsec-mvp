@@ -4,7 +4,7 @@
 # Wraps the three steps a fresh user runs to take an empty Databricks
 # workspace + an existing ServiceNow tenant from zero to populated bronze
 # rows in `appsec_dev.bronze_servicenow.business_applications` and silver
-# CMDB rows in `appsec_dev.silver.business_applications`.
+# CMDB rows in `appsec_dev.silver.applications`.
 #
 # Prerequisites
 #   - Phase 1 platform install complete (catalog, `mvp-connectors` secret
@@ -50,7 +50,7 @@ if [[ -z "${WAREHOUSE_ID:-}" ]]; then
   echo "  To verify by hand, run in a Databricks SQL editor:"
   echo "    SELECT count(*) FROM ${CATALOG}.bronze_servicenow.business_applications;"
   echo "    SELECT count(*) FROM ${CATALOG}.bronze_servicenow.app_cis;"
-  echo "    SELECT count(*) FROM ${CATALOG}.silver.business_applications;"
+  echo "    SELECT count(*) FROM ${CATALOG}.silver.applications;"
 else
   databricks sql query \
     --warehouse-id "${WAREHOUSE_ID}" \
@@ -60,7 +60,7 @@ else
     "SELECT count(*) AS n_app_cis_bronze FROM ${CATALOG}.bronze_servicenow.app_cis"
   databricks sql query \
     --warehouse-id "${WAREHOUSE_ID}" \
-    "SELECT count(*) AS n_apps_silver FROM ${CATALOG}.silver.business_applications"
+    "SELECT count(*) AS n_apps_silver FROM ${CATALOG}.silver.applications"
 fi
 
 echo "OK: servicenow connector install complete."

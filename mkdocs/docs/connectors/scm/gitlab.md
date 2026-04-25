@@ -218,7 +218,7 @@ SELECT count(*) AS n_vulns FROM appsec_dev.bronze_gitlab.vulnerabilities;
 -- Silver: GitLab-sourced repository rows projected through transform.py.
 SELECT repository_id, full_name, default_branch
   FROM appsec_dev.silver.repositories
- WHERE source = 'gitlab'
+ WHERE scm_source = 'gitlab'
  ORDER BY full_name;
 -- Expect: one row per non-archived project under the configured group.
 

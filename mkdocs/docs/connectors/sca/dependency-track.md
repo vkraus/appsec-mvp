@@ -158,12 +158,12 @@ SELECT count(*) FROM appsec_dev.bronze_dependency_track.findings_envelope;
 
 -- Silver: severity distribution after canonical mapping.
 SELECT severity_canonical, count(*) FROM appsec_dev.silver.findings
-WHERE source_tool = 'dependency_track' GROUP BY severity_canonical;
+WHERE tool_source = 'dependency_track' GROUP BY severity_canonical;
 
 -- Silver: CVE-bearing findings. SCA findings carry cve_id (NOT cwe_id),
 -- per the canonical schema split between SCA (CVE-keyed) and SAST (CWE-keyed).
 SELECT count(*) FROM appsec_dev.silver.findings
-WHERE source_tool = 'dependency_track' AND cve_id IS NOT NULL;
+WHERE tool_source = 'dependency_track' AND cve_id IS NOT NULL;
 ```
 
 Expected: bronze count > 0 if an SBOM has been uploaded; silver counts include CVE-bearing rows (`cve_id` populated, `cwe_id` null, per the canonical schema split between SCA and SAST findings).
