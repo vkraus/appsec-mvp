@@ -103,8 +103,26 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 ## Validation
 
-!!! info "Not implemented in MVP"
-    See the Prerequisites admonition above.
+### Implementation report
+
+| Requirement | Bound test | Outcome |
+|---|---|---|
+| `REQ-ING-AUTH` | `tests/connectors/dependency_track/test_ingest.py::test_ingest_contract_rejects_missing_api_key` | PASS |
+| `REQ-ING-PAG` | `tests/connectors/dependency_track/test_ingest.py::test_project_list_pagination_covers_two_pages_without_duplication` | PASS |
+| `REQ-ING-RL` | `tests/connectors/dependency_track/test_ingest.py::test_run_ingest_pipeline_deferred_to_databricks_dlt_source` | PASS |
+| `REQ-ING-HWM` | `tests/connectors/dependency_track/test_ingest.py::test_select_finding_hwm_picks_maximum_attributed_on` | PASS |
+| `REQ-TRF-MAP` | `tests/connectors/dependency_track/test_transform.py::test_flatten_to_silver_row_projects_all_silver_columns` | PASS |
+| `REQ-TRF-SEV` | `tests/connectors/dependency_track/test_transform.py::test_severity_lookup_covers_every_documented_value` | PASS |
+| `REQ-TRF-STS` | `tests/connectors/dependency_track/test_transform.py::test_status_lookup_covers_every_documented_state` | PASS |
+| `REQ-TRF-TS` | `tests/connectors/dependency_track/test_transform.py::test_attributed_on_parses_to_utc_datetime` | PASS |
+| `REQ-DQ` | `tests/connectors/dependency_track/test_transform.py::test_unassigned_severity_routes_to_dq_default_not_dropped` | PASS |
+| `REQ-DEDUP` | `tests/connectors/dependency_track/test_transform.py::test_dedup_key_collapses_same_cve_across_advisory_sources` | PASS |
+
+Collected 10 requirement-bound tests via `pytest tests/connectors/dependency_track/ -v --tb=short` (2026-04-25, 0.35 s wall-clock); 10 passed, 0 failed, 0 N/A. The overall suite reports 25 passed and 1 skipped — the skip is a live-API placeholder (`test_live_api_key_header_is_x_api_key`) guarded by `@pytest.mark.skip` because a Dependency-Track instance is not reachable from the unit-test environment. All ten REQ-IDs apply to this server-based SCA connector per the category reference; none are N/A.
+
+### Tests
+
+Tests live under [`tests/connectors/dependency_track/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/dependency_track). The report table above is the per-REQ outcome.
 
 ## Generation log
 
@@ -114,4 +132,4 @@ This connector page is produced by the connector-lifecycle skills. The Generatio
 |--------------------|------------------------------------|-------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (sca)             | name=Dependency-Track; url=https://docs.dependencytrack.org/integrations/rest-api/; category=sca | mkdocs/docs/connectors/sca/dependency-track.md §1–§3                               | 2026-04-25 | b3af2e0 (retrofit-9-connectors)          |
 | Module generation  | `generate-connector` (sca)         | page hash=1b08b07046bc                                           | src/connectors/dependency_track/, tests/connectors/dependency_track/, config/severity/dependency_track.yml, config/status/dependency_track.yml, resources/dependency_track-job.yml | 2026-04-25 | 15935ca (retrofit-9-connectors)  |
-| Validation         | `validate-implementation` (sca)    | (pending)                                                                                       | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation         | `validate-implementation` (sca)    | module path=src/connectors/dependency_track/                                                    | mkdocs/docs/connectors/sca/dependency-track.md §5                                  | 2026-04-25 | 26a3f61 (retrofit-9-connectors)          |
