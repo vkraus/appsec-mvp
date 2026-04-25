@@ -1,6 +1,6 @@
 # Tests
 
-The Tests surface is a **traceability index** into the `pytest` suites that live in [`tests/`](https://github.com/vkraus/appsec-mvp/tree/main/tests). Tests themselves are not duplicated in this documentation — they live with the code — so this page describes the conventions and links out to the sources.
+The Tests page is a **traceability index** into the `pytest` suites that live in [`tests/`](https://github.com/vkraus/appsec-mvp/tree/main/tests). Tests themselves are not duplicated in this documentation — they live with the code — so this page describes the conventions and links out to the sources.
 
 ## Marker convention
 

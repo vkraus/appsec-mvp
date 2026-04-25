@@ -1,6 +1,6 @@
 # Connector skills
 
-*Connectors in this framework are produced by three category-aware skills: `analyze-source`, `generate-connector`, and `validate-implementation`. The four connectors implemented in the MVP were authored prior to skill formalization but conform to the same contract; the connector-lifecycle skills produce all subsequent connectors. Each connector page includes a Provenance section recording the skill version (git ref), inputs, and outputs of its generation.*
+*Connectors in this framework are produced by three category-aware skills: `analyze-source`, `generate-connector`, and `validate-implementation`. The four connectors implemented in the MVP were authored prior to skill formalization but conform to the same contract; the connector-lifecycle skills produce all subsequent connectors. Each connector page includes a Generation log section recording the skill version (git ref), inputs, and outputs of its generation.*
 
 ## Generated connectors
 
@@ -11,7 +11,7 @@
 | Semgrep        | sast     | (pre-skill)    | (pre-skill)        | (pre-skill)              | Conformant              |
 | OWASP ZAP      | dast     | (pre-skill)    | (pre-skill)        | (pre-skill)              | Conformant              |
 
-Future cells will link to the corresponding row in each connector page's Provenance section. Today's `(pre-skill)` rows reference connectors authored before skill formalization. New rows are added when subsequent connectors are generated.
+Future cells will link to the corresponding row in each connector page's Generation log section. Today's `(pre-skill)` rows reference connectors authored before skill formalization. New rows are added when subsequent connectors are generated.
 
 ## The three skills
 
@@ -19,7 +19,7 @@ Future cells will link to the corresponding row in each connector page's Provena
 
 #### Overview
 
-This skill produces a six-section per-connector documentation page from a source's official API documentation. The page lives at `mkdocs/docs/connectors/<category>/<source-slug>.md` and feeds the downstream `generate-connector` and `validate-implementation` skills. The Reference section captures the seven API facts the framework needs to mechanically derive a connector module; the Provenance section opens the lifecycle audit trail that the next two skills extend.
+This skill produces a six-section per-connector documentation page from a source's official API documentation. The page lives at `mkdocs/docs/connectors/<category>/<source-slug>.md` and feeds the downstream `generate-connector` and `validate-implementation` skills. The Reference section captures the seven API facts the framework needs to mechanically derive a connector module; the Generation log section opens the lifecycle audit trail that the next two skills extend.
 
 This skill is the analysis stage. It does not write any Python, YAML, or test code; it only writes Markdown. Category-specific facts (applicable REQ-IDs, default severity, HWM preference, dedup key shape, target Silver tables, auth norms, ingestion-tooling preference, quirks) live in `references/<category>.md` and MUST be read for the source's category before drafting Reference.
 
@@ -39,7 +39,7 @@ A single Markdown page emitted at `mkdocs/docs/connectors/<category>/<source-slu
 3. **Reference** — the seven API facts (see the bullet list under Procedure).
 4. **Setup** — configuration, bundle deployment, first-run commands. Stub with `!!! info "Not implemented in MVP"` if out-of-scope.
 5. **Validation** — always stubbed on first emit with `!!! info "Pending validation"`; `validate-implementation` populates this later.
-6. **Provenance** — a Markdown table with three rows. Row 1 is filled by this skill (see Provenance row template below). Rows 2 and 3 are placeholders marked `(pending)` for `generate-connector` and `validate-implementation` to fill in.
+6. **Generation log** — a Markdown table with three rows. Row 1 is filled by this skill (see Generation log row template below). Rows 2 and 3 are placeholders marked `(pending)` for `generate-connector` and `validate-implementation` to fill in.
 
 #### Procedure
 
@@ -52,7 +52,7 @@ A single Markdown page emitted at `mkdocs/docs/connectors/<category>/<source-slu
 7. Produce severity and status lookup proposals per the canonical enumeration models at `mkdocs/docs/platform/reference/canonical-mapping.md`. For categories where severity or status do not apply (CMDB, secrets-status), record the N/A explicitly.
 8. Document quirks: deviations from category norms, format surprises, per-source handling policies. Cross-check `references/<category>.md` for category quirks the source may inherit.
 9. Assemble the six-section Markdown page and emit to the output path.
-10. Stub the Provenance section with the row for this skill (date, inputs, outputs, skill repo ref via `git rev-parse --short HEAD`); leave rows for `generate-connector` and `validate-implementation` marked `(pending)`.
+10. Stub the Generation log section with the row for this skill (date, inputs, outputs, skill repo ref via `git rev-parse --short HEAD`); leave rows for `generate-connector` and `validate-implementation` marked `(pending)`.
 
 The seven API facts captured under Reference are:
 
@@ -70,14 +70,14 @@ Authentication is folded into the API surface fact; that is six visible facts bu
 - Every official documentation URL used MUST be cited inline or in a References list at the bottom of the page. No fabricated facts: every claim about the source's API MUST be traceable to fetched documentation or to `references/<category>.md`.
 - The severity and status lookups MUST cover every documented source value; undocumented values default to the configured fallback with a data-quality warning noted inline.
 - The page slug and category directory MUST match the AppSec category input exactly; do not invent a new category.
-- The Provenance table MUST have row 1 populated; rows 2 and 3 MUST exist with the `(pending)` marker so downstream skills have a target to overwrite.
+- The Generation log table MUST have row 1 populated; rows 2 and 3 MUST exist with the `(pending)` marker so downstream skills have a target to overwrite.
 - Output is Markdown only. Do not write Python, YAML, or test files in this skill.
 
 Category-specific invariants (applicable REQ-IDs, default severity convention, HWM preference, dedup key shape, target Silver tables, auth norms, ingestion-tooling preference, category quirks) live in `references/<category>.md`. Read the file matching the input category before drafting Reference.
 
-#### Provenance row template
+#### Generation log row template
 
-Append exactly one row to the Provenance table for this skill's invocation. Use this row shape verbatim, replacing the bracketed placeholders with the four data cells:
+Append exactly one row to the Generation log table for this skill's invocation. Use this row shape verbatim, replacing the bracketed placeholders with the four data cells:
 
 ```
 | Source analysis | analyze-source ({category}) | name={source}; url={doc_url}; category={category} | mkdocs/docs/connectors/{category}/{slug}.md §1–§3 | {YYYY-MM-DD} | {git_short_sha} ({branch}) |
@@ -91,7 +91,7 @@ Append exactly one row to the Provenance table for this skill's invocation. Use 
 - `{git_short_sha}` — output of `git rev-parse --short HEAD` on the skill's repo.
 - `{branch}` — output of `git rev-parse --abbrev-ref HEAD`.
 
-Rows 2 and 3 of the Provenance table must be present and marked `(pending)` so that `generate-connector` and `validate-implementation` can overwrite them on their respective runs. The standard placeholder rows are:
+Rows 2 and 3 of the Generation log table must be present and marked `(pending)` so that `generate-connector` and `validate-implementation` can overwrite them on their respective runs. The standard placeholder rows are:
 
 ```
 | Implementation | generate-connector ({category}) | (pending) | (pending) | (pending) | (pending) |
@@ -114,7 +114,7 @@ This skill emits the eight-file connector module for a single source given a rev
 
 Preconditions:
 
-- The per-connector page exists at `mkdocs/docs/connectors/{category}/{slug}.md` and has been reviewed for completeness (Reference section populated; Provenance row 1 filled by `analyze-source`).
+- The per-connector page exists at `mkdocs/docs/connectors/{category}/{slug}.md` and has been reviewed for completeness (Reference section populated; Generation log row 1 filled by `analyze-source`).
 - The framework's shared utilities at `src/common/` are intact (HTTP client, pagination, HWM state, severity/status normalization, dedup helpers — referenced as `src/common/` in earlier code; the worktree path is `src/common/`).
 
 #### Output
@@ -142,22 +142,22 @@ A connector module composed of exactly the following eight files (per the baseli
 8. Emit the bundle fragment at `resources/{source}-job.yml` using the canonical two-task shape from `mkdocs/docs/platform/reference/connector-job-template.md`, substituting the source name.
 9. Emit the test suite at `tests/connectors/{source}/`: one test function per REQ-ID applicable to the category (per `references/<category>.md`), each marked with `@pytest.mark.requirement("REQ-...")`. Fixtures named `{endpoint}_{scenario}.json` under `tests/connectors/{source}/fixtures/`. Tests cover the framework contract from `src/common/`; pure-Python only — no local `SparkSession`.
 10. Record the invocation: list the generated file paths, run `git rev-parse --short HEAD` for the skill repo ref, and compute `sha256sum mkdocs/docs/connectors/{category}/{slug}.md` for the page hash that pins this generation to a specific page revision.
-11. Update the connector page's Provenance section: fill in row 2 (`generate-connector`) with the run date, inputs (page hash via `sha256sum mkdocs/docs/connectors/{category}/{slug}.md`), outputs (the eight-file list above), and the skill repo ref via `git rev-parse --short HEAD`. Mark row 3 unchanged (`(pending)`) so `validate-implementation` has a target to overwrite.
+11. Update the connector page's Generation log section: fill in row 2 (`generate-connector`) with the run date, inputs (page hash via `sha256sum mkdocs/docs/connectors/{category}/{slug}.md`), outputs (the eight-file list above), and the skill repo ref via `git rev-parse --short HEAD`. Mark row 3 unchanged (`(pending)`) so `validate-implementation` has a target to overwrite.
 
 #### Invariants
 
 - No file is written outside `src/connectors/{source}/`, `tests/connectors/{source}/`, `config/severity/{source}.yml`, `config/status/{source}.yml`, or `resources/{source}-job.yml`. The connector generation is self-contained.
 - Both `config/severity/{source}.yml` and `config/status/{source}.yml` exist for every connector — even for categories where one or both are N/A. The N/A files carry an explanatory comment per `references/<category>.md`.
-- All imports in `ingest.py` and `transform.py` reference only functions that already exist in `src/common/`. New shared helpers are NOT introduced by this skill; if a missing helper is identified, halt and surface the gap rather than adding it inline.
+- All imports in `ingest.py` and `transform.py` reference only functions that already exist in `src/common/`. New shared helpers are NOT introduced by this skill; if a missing helper is identified, halt and report the gap rather than adding it inline.
 - Every REQ-ID applicable to the category (per `references/<category>.md`) has at least one bound test function carrying `@pytest.mark.requirement("REQ-...")`. REQ-IDs marked N/A for the category are not bound.
-- The Provenance section of `mkdocs/docs/connectors/{category}/{slug}.md` has row 2 filled and row 3 still marked `(pending)` after this skill runs. Row 1 (set by `analyze-source`) is not modified.
-- Output is code, configuration, and test fixtures only — plus the single-line Provenance row update on the connector page. No new Markdown files are created.
+- The Generation log section of `mkdocs/docs/connectors/{category}/{slug}.md` has row 2 filled and row 3 still marked `(pending)` after this skill runs. Row 1 (set by `analyze-source`) is not modified.
+- Output is code, configuration, and test fixtures only — plus the single-line Generation log row update on the connector page. No new Markdown files are created.
 
 Category-specific invariants (target Silver tables, dedup-key tuple, ingestion-tooling override, severity / status lookup shape, mapping.yml shape, applicable REQ-IDs, category quirks affecting code emission) live in `references/<category>.md`. Read the file matching the input category before emitting any file.
 
-#### Provenance row template
+#### Generation log row template
 
-Append exactly one row to the connector page's Provenance table, overwriting the `(pending)` placeholder for `generate-connector`. Use this row shape verbatim, replacing the bracketed placeholders:
+Append exactly one row to the connector page's Generation log table, overwriting the `(pending)` placeholder for `generate-connector`. Use this row shape verbatim, replacing the bracketed placeholders:
 
 ```
 | Module generation | generate-connector ({category}) | page hash={sha256_of_page} | src/connectors/{source}/, tests/connectors/{source}/, config/severity/{source}.yml, config/status/{source}.yml | {YYYY-MM-DD} | {git_short_sha} ({branch}) |
@@ -178,24 +178,24 @@ Row 3 (`validate-implementation`) MUST remain marked `(pending)` so the next ski
 
 #### Overview
 
-This skill runs `pytest tests/connectors/{source}/`, summarises outcomes into a per-REQ-ID Validation table, emits a fix list for failing REQs, and updates the Validation and Provenance sections of the connector page at `mkdocs/docs/connectors/{category}/{source}.md`. It is observational over the codebase: it modifies only the per-connector Markdown page.
+This skill runs `pytest tests/connectors/{source}/`, summarises outcomes into a per-REQ-ID Validation table, emits a fix list for failing REQs, and updates the Validation and Generation log sections of the connector page at `mkdocs/docs/connectors/{category}/{source}.md`. It is observational over the codebase: it modifies only the per-connector Markdown page.
 
 #### Inputs
 
 - **Source name** — determines the test directory `tests/connectors/{source}/` and the connector page filename slug.
 - **AppSec category** — one of `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf`. Determines which `references/<category>.md` to load. The category-applicable REQ-ID set, with explicit N/A reasons drawn from `mkdocs/docs/platform/reference/catalog.md`, lives in `references/<category>.md` and is the load-bearing per-category artefact for this skill.
-- **Connector module path** — `src/connectors/{source}/`. Used to resolve the per-source code under test for the fix list and as input for the Provenance row.
+- **Connector module path** — `src/connectors/{source}/`. Used to resolve the per-source code under test for the fix list and as input for the Generation log row.
 
 Preconditions:
 
 - The connector module and test suite at `src/connectors/{source}/` and `tests/connectors/{source}/` exist (typically emitted by `generate-connector`).
-- The connector page at `mkdocs/docs/connectors/{category}/{source}.md` exists with a stub Validation section (an `!!! info "Pending validation"` admonition emitted by `analyze-source`) and a Provenance table whose row 3 is marked `(pending)`.
+- The connector page at `mkdocs/docs/connectors/{category}/{source}.md` exists with a stub Validation section (an `!!! info "Pending validation"` admonition emitted by `analyze-source`) and a Generation log table whose row 3 is marked `(pending)`.
 
 #### Output
 
 - The Validation section of `mkdocs/docs/connectors/{category}/{source}.md` is updated: the stub admonition is replaced with a populated REQ-ID table whose rows are exactly the category's applicable REQ-IDs (in catalog order), each cell carrying `PASS`, `FAIL`, or `N/A` (`N/A` for REQ-IDs the category excludes per `references/<category>.md`).
 - A fix list is appended below the table as plain text: for each `FAIL` row, the failing test file path and a one-line summary of the failure.
-- The Provenance section row 3 (`validate-implementation`) is updated with the run date, inputs (the connector module path), outputs (the connector page §5), and the skill repo ref (`git rev-parse --short HEAD`).
+- The Generation log section row 3 (`validate-implementation`) is updated with the run date, inputs (the connector module path), outputs (the connector page §5), and the skill repo ref (`git rev-parse --short HEAD`).
 
 No file outside the connector page is modified by this skill.
 
@@ -208,7 +208,7 @@ No file outside the connector page is modified by this skill.
 5. Emit the Markdown table with one row per REQ-ID using `PASS`, `FAIL`, or `N/A`. The table columns match the example at `mkdocs/docs/connectors/cmdb/servicenow.md` § "## Validation" (`Requirement | Bound test | Outcome`). For N/A rows, the bound-test cell is `—`.
 6. Emit the fix list as plain text below the table: for each `FAIL` row, one line listing the failing test file path (`tests/connectors/{source}/test_*.py::test_name`) and a one-line summary of the failure drawn from the pytest `--tb=short` output. Omit the fix list entirely if there are no failures.
 7. Replace the stub admonition in the **Validation** section of `mkdocs/docs/connectors/{category}/{source}.md` with the table from step 5 and the fix list from step 6 (if any). Append a one-line summary noting how many requirement-bound tests were collected, the wall-clock duration, the pass / fail / N/A split, and the N/A rationale for the category (sourced from `references/<category>.md`).
-8. Update the connector page's Provenance section row 3 (`validate-implementation`) with the run date, inputs (the connector module path `src/connectors/{source}/`), outputs (the connector page §5), and the skill repo ref via `git rev-parse --short HEAD`. Use the row template below.
+8. Update the connector page's Generation log section row 3 (`validate-implementation`) with the run date, inputs (the connector module path `src/connectors/{source}/`), outputs (the connector page §5), and the skill repo ref via `git rev-parse --short HEAD`. Use the row template below.
 
 #### Invariants
 
@@ -218,9 +218,9 @@ No file outside the connector page is modified by this skill.
 
 Category-specific invariants (which REQ-IDs apply, the canonical N/A reason for each excluded REQ-ID, and the test-suite assertions a category's tests must verify) live in `references/<category>.md`. Read the file matching the input category before drafting the Validation table.
 
-#### Provenance row template
+#### Generation log row template
 
-Overwrite the `(pending)` placeholder for `validate-implementation` in the connector page's Provenance table. Use this row shape verbatim, replacing the bracketed placeholders:
+Overwrite the `(pending)` placeholder for `validate-implementation` in the connector page's Generation log table. Use this row shape verbatim, replacing the bracketed placeholders:
 
 ```
 | Validation | validate-implementation ({category}) | module path=src/connectors/{source}/ | mkdocs/docs/connectors/{category}/{source}.md §5 | {YYYY-MM-DD} | {git_short_sha} ({branch}) |

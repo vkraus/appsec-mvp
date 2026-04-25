@@ -70,4 +70,4 @@ Per the standard order with the practical split documented in the generate-conne
 - **Plural Silver names are authoritative.** `silver.repositories`, `silver.pull_requests`, `silver.branch_policies`. Tests assert against the plural names.
 - **Cursor vs keyset pagination.** GraphQL cursor pagination and REST keyset pagination are both exercised by `REQ-ING-PAG` per endpoint; the test suite covers each style the source uses.
 - **Webhook replay.** Webhook-mode connectors include a fallback polling-window assertion under `REQ-ING-HWM`.
-- **Finding-shape branch.** The `REQ-DEDUP` test exercises every emitted shape (code-scanning, secret-scanning, Dependabot). Mis-branched dedup keys are surfaced as `FAIL`.
+- **Finding-shape branch.** The `REQ-DEDUP` test exercises every emitted shape (code-scanning, secret-scanning, Dependabot). Mis-branched dedup keys are flagged as `FAIL`.

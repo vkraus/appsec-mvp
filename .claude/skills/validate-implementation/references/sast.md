@@ -45,7 +45,7 @@ Per `mkdocs/docs/connectors/sast/index.md` § "Capability surface": server-based
 
 ## Deduplication key
 
-`(repository_id, file_path, rule_id)` per `mkdocs/docs/connectors/sast/index.md` § "Canonical mapping contribution". The test suite asserts `dedup_links` linkage in `test_dedup_links`, bound to `REQ-DEDUP`, against this exact tuple. Mis-keyed `dedup_links` rows are surfaced as `FAIL`.
+`(repository_id, file_path, rule_id)` per `mkdocs/docs/connectors/sast/index.md` § "Canonical mapping contribution". The test suite asserts `dedup_links` linkage in `test_dedup_links`, bound to `REQ-DEDUP`, against this exact tuple. Mis-keyed `dedup_links` rows are flagged as `FAIL`.
 
 ## Target Silver tables
 

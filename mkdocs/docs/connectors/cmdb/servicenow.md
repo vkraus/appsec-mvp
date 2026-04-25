@@ -172,9 +172,9 @@ Collected 7 requirement-bound tests via `pytest tests/connectors/servicenow/ -v 
 
 Tests live under [`tests/connectors/servicenow/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/servicenow). The report table above is the per-REQ outcome of running the bound tests in that directory.
 
-## Provenance
+## Generation log
 
-This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated provenance row is tracked as a deferred follow-up.
+This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated generation log row is tracked as a deferred follow-up.
 
 | Stage              | Skill                            | Inputs       | Outputs                                            | Run on     | Skills repo ref |
 |--------------------|----------------------------------|--------------|----------------------------------------------------|------------|-----------------|

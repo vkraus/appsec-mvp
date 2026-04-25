@@ -2,7 +2,7 @@
 
 The platform is a Databricks-based data integration framework for application security. It ingests from AppSec sources via connectors, normalizes to canonical schemas, and exposes an analytics layer over them.
 
-This surface describes the **implementation-level architecture** of the Databricks reference MVP: module layout, shared libraries, per-connector components, data flow through Bronze / Silver / Gold, and Databricks Asset Bundle (DAB) orchestration.
+This page describes the **implementation-level architecture** of the Databricks reference MVP: module layout, shared libraries, per-connector components, data flow through Bronze / Silver / Gold, and Databricks Asset Bundle (DAB) orchestration.
 
 ## Architecture
 
@@ -115,4 +115,4 @@ For reproducing the MVP end-to-end against real accounts — whether as a one-ti
 
 ## Details in code
 
-This Platform surface intentionally stays at the architecture-overview level. For line-level detail, read the code — every module above is linked to its source on GitHub. The Tests surface links from each `REQ-*` to the test file that validates the corresponding module.
+This Platform page intentionally stays at the architecture-overview level. For line-level detail, read the code — every module above is linked to its source on GitHub. The Tests page links from each `REQ-*` to the test file that validates the corresponding module.

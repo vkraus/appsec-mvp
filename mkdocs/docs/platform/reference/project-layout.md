@@ -1,6 +1,6 @@
 # Project layout
 
-The platform repository keeps connector modules, analytics computations, and configuration separate so each surface is discoverable and editable without cross-cutting reads.
+The platform repository keeps connector modules, analytics computations, and configuration separate so each section is discoverable and editable without cross-cutting reads.
 
 ## Top-level structure
 
