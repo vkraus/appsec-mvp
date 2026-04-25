@@ -37,8 +37,8 @@ state = {
     "source": source_name,
     "hwm_value": None if hwm_reset else None,
     "extra": {
-        "token": dbutils.secrets.get(scope="appsec", key="github_token"),
-        "org": dbutils.secrets.get(scope="appsec", key="github_org"),
+        "token": dbutils.secrets.get(scope="mvp-connectors", key="github_token"),
+        "org": dbutils.secrets.get(scope="mvp-connectors", key="github_org"),
         "catalog": target_catalog,
     },
 }
