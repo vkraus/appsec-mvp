@@ -97,7 +97,7 @@ The fields below are the subset the connector consumes; the JSON shape is shared
 | `wascid` | string (numeric) | WASC threat-classification identifier; `-1` if not mapped. |
 | `sourceid` | string (numeric) | Source classification (passive vs active scan origin). |
 
-The dedup key per the [DAST category reference](../../../.claude/skills/analyze-source/references/dast.md) is `(target, alert_id, uri_path)`, derived from `uri` (split) and `pluginId`. Application linkage resolves `target` against `silver.deployments` at transform time.
+The dedup key per the DAST category reference (`.claude/skills/analyze-source/references/dast.md`, cited in the References list at the bottom of this page) is `(target, alert_id, uri_path)`, derived from `uri` (split) and `pluginId`. Application linkage resolves `target` against `silver.deployments` at transform time.
 
 ### Enumerations
 

@@ -8,7 +8,7 @@ Three scenarios that exercise the end-to-end pipeline. Completing all three is y
 
 ### Setup
 
-You already have SAST target repos (`BenchmarkJava`, `BenchmarkPython`) referenced by the github runtime under `src/connectors/github/runtime/`. These are forks of the OWASP Benchmark projects, which carry a curated catalogue of planted defects (CWE-89, CWE-78, CWE-79, CWE-22 among others). Scan each repo with `sonar-scanner-cli` per the [SonarQube connector page, Run the job](../connectors/sast/sonarqube.md#run-the-job), then wait for the next semgrep CronJob (or trigger one manually per the [Semgrep connector page, Run the job](../connectors/sast/semgrep.md#run-the-job)). Run the ingest jobs for both connectors via `databricks bundle run sonarqube-connector` and `databricks bundle run semgrep-connector`.
+You already have SAST target repos (`BenchmarkJava`, `BenchmarkPython`) referenced by the github runtime under `src/connectors/github/runtime/`. These are forks of the OWASP Benchmark projects, which carry a curated catalogue of planted defects (CWE-89, CWE-78, CWE-79, CWE-22 among others). Scan each repo with `sonar-scanner-cli` per the [SonarQube connector page, Run the job](../connectors/sast/sonarqube.md#run-the-job), then wait for the next semgrep CronJob (or trigger one manually per the [Semgrep connector page](../connectors/sast/semgrep.md); the runbook section is restored by the production-shape follow-up). Run the ingest jobs for both connectors via `databricks bundle run sonarqube-connector` and `databricks bundle run semgrep-connector`.
 
 ### Query
 
