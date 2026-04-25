@@ -85,3 +85,234 @@ Standard order: Lakeflow Connect → Databricks SDK → dlt.
 - **No status transitions.** `REQ-TRF-STS` is N/A; do not generate status-transition code or status-lookup references. The Silver `status` field is left null (or set to `open` on first emit) — encode the constant in `mapping.yml`, NOT a lookup.
 - **CI/CD-step dominance.** Secret detection is almost exclusively CI/CD-step in practice; the `config.yml` HWM shape is the commit SHA. Periodic-global host-side scans (GitHub Secret Scanning) use scan-start timestamp; both shapes co-exist on the four-tuple dedup key.
 - **Detector-class severity overrides.** The optional `config/severity/{source}.yml` deployment override may downgrade specific detector classes (low-entropy patterns, deprecated detectors) below the default `high`. The override path is opt-in; the default code path uses the `mapping.yml` literal.
+
+## operational.yml.databricks_runtime schema
+
+Reverse-engineered from `src/connectors/trufflehog/...` (live follower; CLI-artefact secrets).
+
+| Field | Type | Required | Default | Source-of-derivation |
+|---|---|---|---|---|
+| `secret_scope` | string | yes | `mvp-connectors` | `scripts/load-secrets.sh` `SCOPE="mvp-connectors"`; `config.yml` `bucket_secret_scope: mvp-connectors`. |
+| `bronze_schema` | string | yes | `bronze_{source}` | `resources/schemas.yml` `name: bronze_trufflehog`; `sql/artefact_envelope.sql` `${catalog}.bronze_trufflehog.findings`. |
+| `bronze_tables` | list[string] | yes | (none) | `config.yml` `bronze_table: ${catalog}.bronze_trufflehog.findings`. |
+| `envelope_table` | string | yes | `findings` | `sql/artefact_envelope.sql` `CREATE TABLE … bronze_trufflehog.findings`. Note: secrets envelope IS the bronze table (CREATE TABLE; not a VIEW overlay). |
+| `cron_schedule` | string | yes | `0 0 * * * ?` (hourly) | `resources/job.yml` `quartz_cron_expression`. |
+| `uc_catalog_var` | string | yes | `${var.catalog}` | `resources/schemas.yml` `catalog_name`. |
+| `job_name` | string | yes | `{source}-connector` (kebab) | `resources/job.yml` `jobs.{job_name}`. |
+| `default_target` | string | no | `dev` | `scripts/install.sh` `--target dev`. |
+| `default_catalog` | string | no | `appsec_dev` | (not currently used in trufflehog install.sh — value implicit). |
+| `secret_env_vars` | list[{env_var,secret_key}] | yes | (none) | `scripts/load-secrets.sh` put-secret lines. trufflehog: `(TRUFFLEHOG_ARTIFACT_BUCKET→trufflehog_artifact_bucket)`, plus a CONDITIONAL `(AWS_ACCESS_KEY_ID+AWS_SECRET_ACCESS_KEY→trufflehog_aws_credentials)` JSON-encoded blob. |
+| `optional_aws_credentials_secret` | bool | yes | `true` | `scripts/load-secrets.sh` conditional block: writes `trufflehog_aws_credentials` JSON only when `AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY` are exported (S3 path); skipped on UC Volume mode. |
+| `tool_source_label` | string | yes | `{source}` | Verify-step assumption — silver.findings `tool_source` discriminator. |
+| `entry_wrappers` | bool | yes | `false` | trufflehog `resources/job.yml` `notebook_path: ../ingest.py` (no entry wrappers). Auto Loader on the artefact path runs in-notebook. |
+| `cli_artefact_prefixes` | list[string] | yes | `[trufflehog/]` | `config.yml` `prefixes:`. trufflehog=`[trufflehog/]`. |
+| `bronze_volume` | string | no | (none) | trufflehog does NOT currently emit `resources/volumes.yml` (uses bucket-secret-pointer instead of declarative UC Volume). Optional for sources that prefer UC Volume Auto Loader. |
+
+15 fields.
+
+**Judgment call:** `optional_aws_credentials_secret` is trufflehog-specific — the CLI-artefact path supports BOTH S3 (needs creds) and UC Volume (no creds, Databricks-internal IAM). Generate-connector emits a conditional block in `load-secrets.sh` driven by this flag.
+
+## Databricks-side production-shape
+
+### scripts/load-secrets.sh template
+
+```bash
+#!/usr/bin/env bash
+# Populate {{ source }} connector secrets into the {{ databricks_runtime.secret_scope }} scope.
+#
+# {{ source }} is a CLI-artefact connector: scans run on CI/CD runners and
+# write `--json` line-delimited output to a Databricks Volume or S3 bucket.
+# The connector reads from that location autoloader-style.
+#
+# Reads from environment variables:
+{% for entry in databricks_runtime.secret_env_vars %}
+#   {{ entry.env_var }}
+{% endfor %}
+{% if databricks_runtime.optional_aws_credentials_secret %}
+#   AWS_ACCESS_KEY_ID          — optional (S3 path only)
+#   AWS_SECRET_ACCESS_KEY      — optional (S3 path only)
+{% endif %}
+#
+# Idempotent: re-runs update existing secret values.
+
+set -euo pipefail
+
+{% for entry in databricks_runtime.secret_env_vars %}
+: "${{ '{' }}{{ entry.env_var }}:?{{ entry.env_var }} is required{{ '}' }}"
+{% endfor %}
+
+SCOPE="{{ databricks_runtime.secret_scope }}"
+
+{% for entry in databricks_runtime.secret_env_vars %}
+databricks secrets put-secret "$SCOPE" {{ entry.secret_key }} --string-value "${{ entry.env_var }}"
+{% endfor %}
+
+{% if databricks_runtime.optional_aws_credentials_secret %}
+if [[ -n "${AWS_ACCESS_KEY_ID:-}" && -n "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
+  CREDS=$(printf '{"access_key_id":"%s","secret_access_key":"%s"}' "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY")
+  databricks secrets put-secret "$SCOPE" {{ source }}_aws_credentials --string-value "$CREDS"
+  echo "OK: {{ source }} secrets loaded into scope $SCOPE (incl. AWS credentials)"
+else
+  echo "OK: {{ source }} secrets loaded into scope $SCOPE (no AWS credentials; UC Volume mode)"
+fi
+{% else %}
+echo "OK: {{ source }} secrets loaded into scope $SCOPE"
+{% endif %}
+```
+
+### scripts/install.sh template
+
+Minimal three-step shape (load-secrets → bundle run → echo verify).
+
+```bash
+#!/usr/bin/env bash
+# End-to-end {{ source }} connector install orchestrator.
+#
+# Pre-conditions:
+#   - Phase 1 platform bootstrap is complete (catalog, {{ databricks_runtime.secret_scope }} scope, silver schema).
+#   - At least one SCM connector has been installed and run so silver.repositories is populated.
+#   - {{ databricks_runtime.secret_env_vars[0].env_var }} is exported (artefact location).
+#   - At least one {{ source }} `--json` artefact is dropped at the configured location.
+set -euo pipefail
+
+echo "Step 1/3: Loading secrets..."
+bash src/connectors/{{ source }}/scripts/load-secrets.sh
+echo "Step 2/3: Triggering pipeline..."
+databricks bundle run {{ databricks_runtime.job_name }} --target {{ databricks_runtime.default_target }}
+echo "Step 3/3: Run verification SQL — see runbook"
+echo "OK: {{ source | title }} connector install complete."
+```
+
+### install.sh (top-level) template
+
+Same chain as other categories. Secrets source-side runtime is typically `hashicorp/aws` (S3 bucket / UC Volume) + `hashicorp/kubernetes` (CronJob).
+
+### *_entry.py applicability
+
+**N/A for secrets.** CLI-artefact path uses Auto Loader on the artefact prefix; ingest runs in-notebook from `ingest.py`. Generate-connector emits no `*_entry.py` for secrets sources.
+
+### sql/<envelope>.sql template
+
+REQUIRED. CREATE TABLE shape (the bronze table itself; Auto Loader writes raw JSON envelopes here).
+
+```sql
+-- Bronze envelope for {{ source }} scan artefacts.
+--
+-- Autoloader reads line-delimited JSON files from the UC Volume
+-- (`<catalog>.{{ databricks_runtime.bronze_schema }}.artefacts`) and lands them here.
+-- The secrets transform (`src/connectors/{{ source }}/transform.py`) projects
+-- this table into silver.findings, dropping the `Raw` / `RawV2` fields
+-- per the references/secrets.md redaction rule.
+--
+-- The table name `{{ databricks_runtime.envelope_table }}` matches the `bronze_table` configured in
+-- `src/connectors/{{ source }}/config.yml` and the literal default in
+-- `ingest.run_ingest_pipeline` — keep all three in sync if renamed.
+
+CREATE TABLE IF NOT EXISTS {{ databricks_runtime.uc_catalog_var }}.{{ databricks_runtime.bronze_schema }}.{{ databricks_runtime.envelope_table }} (
+  raw_payload STRING,
+  artefact_path STRING,
+  ingested_at TIMESTAMP,
+  run_id STRING
+)
+USING DELTA
+COMMENT '{{ source | title }} scan JSON; transformed into silver.findings (secrets).';
+```
+
+### resources/extras (per category)
+
+- `resources/job.yml` (8-file core) with `notebook_path: ../ingest.py` / `../transform.py`. Hourly cron.
+- `resources/schemas.yml` — `bronze_{source}` only.
+- `resources/connection.yml` — **N/A** (no API auth).
+- `resources/pipeline.yml` — **N/A** (notebook job, not Lakeflow Connect).
+- `resources/volumes.yml` — OPTIONAL. Emit when `databricks_runtime.bronze_volume` is set. Trufflehog currently does NOT emit one (pointer-based via secret scope); peer CLI-artefact connectors (semgrep) DO emit one. Template:
+
+  ```yaml
+  resources:
+    volumes:
+      {{ databricks_runtime.bronze_volume }}:
+        catalog_name: {{ databricks_runtime.uc_catalog_var }}
+        schema_name: {{ databricks_runtime.bronze_schema }}
+        name: {{ databricks_runtime.bronze_volume }}
+        volume_type: EXTERNAL
+        storage_location: s3://${var.artifact_bucket}/{{ source }}/
+  ```
+
+### Page §4–§7 templates
+
+#### §Secrets (page §4)
+
+```markdown
+## Secrets
+
+Loaded into the `{{ databricks_runtime.secret_scope }}` secret scope by `src/connectors/{{ source }}/scripts/load-secrets.sh`:
+
+| Secret key | Source env var | Purpose |
+|---|---|---|
+{% for entry in databricks_runtime.secret_env_vars %}
+| `{{ entry.secret_key }}` | `{{ entry.env_var }}` | Artefact location pointer or {{ source }}-specific config. |
+{% endfor %}
+{% if databricks_runtime.optional_aws_credentials_secret %}
+| `{{ source }}_aws_credentials` | `AWS_ACCESS_KEY_ID`+`AWS_SECRET_ACCESS_KEY` (optional) | JSON blob; skipped on UC Volume mode. |
+{% endif %}
+
+```bash
+{% for entry in databricks_runtime.secret_env_vars %}
+export {{ entry.env_var }}="..."
+{% endfor %}
+{% if databricks_runtime.optional_aws_credentials_secret %}
+# Optional — skip on UC Volume mode:
+# export AWS_ACCESS_KEY_ID="..."
+# export AWS_SECRET_ACCESS_KEY="..."
+{% endif %}
+bash src/connectors/{{ source }}/scripts/load-secrets.sh
+```
+```
+
+#### §Run the job (page §5)
+
+```markdown
+## Run the job
+
+Before the connector ingests anything, the {{ source }} CLI must drop `--json` artefacts under the configured prefix(es) ({{ databricks_runtime.cli_artefact_prefixes | join(", ") }}).
+
+```bash
+databricks bundle run {{ databricks_runtime.job_name }} --target dev
+```
+
+For a one-shot orchestration:
+
+```bash
+bash src/connectors/{{ source }}/scripts/install.sh
+```
+```
+
+#### §Verify (page §6)
+
+```markdown
+## Verify
+
+```sql
+SELECT count(*) FROM {{ databricks_runtime.default_catalog }}.{{ databricks_runtime.bronze_schema }}.{{ databricks_runtime.envelope_table }};
+
+SELECT count(*) FROM {{ databricks_runtime.default_catalog }}.silver.findings
+  WHERE tool_source = '{{ databricks_runtime.tool_source_label }}' AND category = 'secrets';
+
+-- Verify Raw / RawV2 redaction (must NOT appear in silver):
+SELECT count(*) FROM {{ databricks_runtime.default_catalog }}.silver.findings
+  WHERE tool_source = '{{ databricks_runtime.tool_source_label }}'
+    AND raw_payload LIKE '%"RawV2"%';
+-- Expected: 0 (raw fields dropped at Bronze→Silver)
+```
+```
+
+#### §Troubleshooting (page §7)
+
+```markdown
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| 0 rows in `{{ databricks_runtime.bronze_schema }}.{{ databricks_runtime.envelope_table }}` | No artefacts have landed under the configured prefix. Verify with object-storage `ls`. |
+| Auto Loader fails on permission error (S3 mode) | The `{{ source }}_aws_credentials` secret is missing or wrong. Re-export `AWS_ACCESS_KEY_ID`+`AWS_SECRET_ACCESS_KEY` and re-run `bash src/connectors/{{ source }}/scripts/load-secrets.sh`. |
+| Redaction check returns rows | The Bronze→Silver transform is not dropping `Raw` / `RawV2`. This is a bug in `transform.py` — secrets findings MUST drop raw fields per `references/secrets.md`. |
+```

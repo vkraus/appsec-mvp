@@ -7,7 +7,7 @@ description: Use when analyzing a data source (REST, GraphQL, SDK, or CLI) for t
 
 ## Overview
 
-This skill produces a six-section per-connector documentation page from a source's official API documentation. The page lives at `mkdocs/docs/connectors/<category>/<source-slug>.md` and feeds the downstream `generate-connector` and `validate-implementation` skills. The Reference section captures the seven API facts the framework needs to mechanically derive a connector module; the Generation log section opens the lifecycle audit trail that the next two skills extend.
+This skill produces a six-section per-connector documentation page from a source's official API documentation. The page lives at `mkdocs/docs/connectors/<category>/<source-slug>.md` and feeds the downstream `provision-source`, `generate-connector`, and `validate-implementation` skills. The Reference section captures the seven API facts the framework needs to mechanically derive a connector module; the Implementation log section opens the lifecycle audit trail that the next three skills extend.
 
 This skill is the analysis stage. It does not write any Python, YAML, or test code; it only writes Markdown. Category-specific facts (applicable REQ-IDs, default severity, HWM preference, dedup key shape, target Silver tables, auth norms, ingestion-tooling preference, quirks) live in `references/<category>.md` and MUST be read for the source's category before drafting Reference.
 
@@ -27,7 +27,7 @@ A single Markdown page emitted at `mkdocs/docs/connectors/<category>/<source-slu
 3. **Reference** — the seven API facts (see the bullet list under Procedure).
 4. **Setup** — configuration, bundle deployment, first-run commands. Stub with `!!! info "Not implemented in MVP"` if out-of-scope.
 5. **Validation** — always stubbed on first emit with `!!! info "Pending validation"`; `validate-implementation` populates this later.
-6. **Generation log** — a Markdown table with three rows. Row 1 is filled by this skill (see Generation log row template below). Rows 2 and 3 are placeholders marked `(pending)` for `generate-connector` and `validate-implementation` to fill in.
+6. **Implementation log** — a Markdown table with four rows. Row 1 is filled by this skill (see Implementation log row template below). Rows 2, 3, and 4 are placeholders marked `(pending)` for `provision-source`, `generate-connector`, and `validate-implementation` to fill in.
 
 ## Procedure
 
@@ -40,7 +40,7 @@ A single Markdown page emitted at `mkdocs/docs/connectors/<category>/<source-slu
 7. Produce severity and status lookup proposals per the canonical enumeration models at `mkdocs/docs/platform/reference/canonical-mapping.md`. For categories where severity or status do not apply (CMDB, secrets-status), record the N/A explicitly.
 8. Document quirks: deviations from category norms, format surprises, per-source handling policies. Cross-check `references/<category>.md` for category quirks the source may inherit.
 9. Assemble the six-section Markdown page and emit to the output path.
-10. Stub the Generation log section with the row for this skill (date, inputs, outputs, skill repo ref via `git rev-parse --short HEAD`); leave rows for `generate-connector` and `validate-implementation` marked `(pending)`.
+10. Stub the Implementation log section with the row for this skill (date, inputs, outputs, skill repo ref via `git rev-parse --short HEAD`); leave rows for `generate-connector` and `validate-implementation` marked `(pending)`.
 
 The seven API facts captured under Reference are:
 
@@ -58,14 +58,14 @@ Authentication is folded into the API surface fact; that is six visible facts bu
 - Every official documentation URL used MUST be cited inline or in a References list at the bottom of the page. No fabricated facts: every claim about the source's API MUST be traceable to fetched documentation or to `references/<category>.md`.
 - The severity and status lookups MUST cover every documented source value; undocumented values default to the configured fallback with a data-quality warning noted inline.
 - The page slug and category directory MUST match the AppSec category input exactly; do not invent a new category.
-- The Generation log table MUST have row 1 populated; rows 2 and 3 MUST exist with the `(pending)` marker so downstream skills have a target to overwrite.
+- The Implementation log table MUST have row 1 populated; rows 2, 3, and 4 MUST exist with the `(pending)` marker so downstream skills have a target to overwrite.
 - Output is Markdown only. Do not write Python, YAML, or test files in this skill.
 
 Category-specific invariants (applicable REQ-IDs, default severity convention, HWM preference, dedup key shape, target Silver tables, auth norms, ingestion-tooling preference, category quirks) live in `references/<category>.md`. Read the file matching the input category before drafting Reference.
 
-## Generation log row template
+## Implementation log row template
 
-Append exactly one row to the Generation log table for this skill's invocation. Use this row shape verbatim, replacing the bracketed placeholders with the four data cells:
+Append exactly one row to the Implementation log table for this skill's invocation. Use this row shape verbatim, replacing the bracketed placeholders with the four data cells:
 
 ```
 | Source analysis | analyze-source ({category}) | name={source}; url={doc_url}; category={category} | mkdocs/docs/connectors/{category}/{slug}.md §1–§3 | {YYYY-MM-DD} | {git_short_sha} ({branch}) |
@@ -79,9 +79,10 @@ Append exactly one row to the Generation log table for this skill's invocation. 
 - `{git_short_sha}` — output of `git rev-parse --short HEAD` on the skill's repo.
 - `{branch}` — output of `git rev-parse --abbrev-ref HEAD`.
 
-Rows 2 and 3 of the Generation log table must be present and marked `(pending)` so that `generate-connector` and `validate-implementation` can overwrite them on their respective runs. The standard placeholder rows are:
+Rows 2, 3, and 4 of the Implementation log table must be present and marked `(pending)` so that `provision-source`, `generate-connector`, and `validate-implementation` can overwrite them on their respective runs. The standard placeholder rows are:
 
 ```
-| Implementation | generate-connector ({category}) | (pending) | (pending) | (pending) | (pending) |
+| Source provisioning | provision-source ({category}) | (pending) | (pending) | (pending) | (pending) |
+| Module generation | generate-connector ({category}) | (pending) | (pending) | (pending) | (pending) |
 | Validation | validate-implementation ({category}) | (pending) | (pending) | (pending) | (pending) |
 ```
