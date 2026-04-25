@@ -185,88 +185,46 @@ data "kubernetes_service" "juiceshop" {
 }
 
 # ---------------------------------------------------------------------------
-# Seed repositories (deliberately-vulnerable code for SAST/SCA targets).
-# (Migrated from infra/terraform/modules/github-seed/main.tf.)
+# SAST/SCA target repositories. The forks already exist under the operator's
+# GitHub organization. This module references them as data sources rather
+# than creating fresh repositories or pushing fixture code.
 # ---------------------------------------------------------------------------
+
+data "github_repository" "benchmark_java" {
+  full_name = "${var.github_org}/BenchmarkJava"
+}
+
+data "github_repository" "benchmark_python" {
+  full_name = "${var.github_org}/BenchmarkPython"
+}
+
+# ---------------------------------------------------------------------------
+# Juice Shop fork (DAST target and CI/CD pattern demonstrator). The fork
+# already carries the Juice Shop source. This module references the fork and
+# writes only the appsec-mvp overlays (.sonarcloud.properties and the
+# Kubernetes deployment manifest) into it. The cross-scanner CI workflow
+# (scan.yml) lives at examples/end-to-end-demo/.github/workflows/scan.yml and
+# is copied into the fork manually by the operator.
+# ---------------------------------------------------------------------------
+
+data "github_repository" "juice_shop" {
+  full_name = "${var.github_org}/juice-shop"
+}
 
 locals {
-  seed_repos = {
-    "seed-python-a"     = "seed-repo-a"
-    "seed-javascript-b" = "seed-repo-b"
-  }
+  juice_shop_overlay_files = toset([
+    ".sonarcloud.properties",
+    "deploy/juiceshop.yaml",
+  ])
 }
 
-resource "github_repository" "seed" {
-  for_each = local.seed_repos
+resource "github_repository_file" "juice_shop_overlays" {
+  for_each = local.juice_shop_overlay_files
 
-  name        = each.key
-  description = "MVP seed repo — deliberately vulnerable fixture"
-  visibility  = "private"
-  auto_init   = true
-}
-
-resource "github_branch_default" "seed" {
-  for_each   = github_repository.seed
-  repository = each.value.name
-  branch     = "main"
-}
-
-resource "github_branch_protection" "seed" {
-  for_each      = github_repository.seed
-  repository_id = each.value.node_id
-  pattern       = "main"
-  required_pull_request_reviews {
-    required_approving_review_count = 0
-  }
-}
-
-resource "github_repository_file" "seed_code" {
-  for_each = merge([
-    for repo_key, dir in local.seed_repos : {
-      for file in fileset("${path.module}/files/${dir}", "**") :
-      "${repo_key}/${file}" => {
-        repository = repo_key
-        file       = file
-        content    = file("${path.module}/files/${dir}/${file}")
-      }
-    }
-  ]...)
-
-  repository          = each.value.repository
-  file                = each.value.file
-  content             = each.value.content
-  commit_message      = "seed: vulnerable fixture"
-  overwrite_on_create = true
-  depends_on          = [github_repository.seed]
-}
-
-# ---------------------------------------------------------------------------
-# Juice Shop fork (DAST target). The cross-scanner CI workflow itself
-# (scan.yml) is intentionally NOT committed here — it lives at
-# examples/end-to-end-demo/.github/workflows/scan.yml and is copied manually
-# by the operator after this module runs.
-# ---------------------------------------------------------------------------
-
-resource "github_repository" "juiceshop" {
-  name        = "juiceshop"
-  description = "OWASP Juice Shop — CI/CD-step pattern demonstrator"
-  visibility  = "private"
-  auto_init   = true
-}
-
-resource "github_branch_default" "juiceshop" {
-  repository = github_repository.juiceshop.name
-  branch     = "main"
-}
-
-resource "github_repository_file" "juiceshop_files" {
-  for_each = {
-    for f in fileset("${path.module}/files/juiceshop", "**") : f => f
-  }
-  repository          = github_repository.juiceshop.name
+  repository          = data.github_repository.juice_shop.name
   file                = each.value
-  content             = file("${path.module}/files/juiceshop/${each.value}")
-  commit_message      = "seed: juiceshop ${each.value}"
+  content             = file("${path.module}/files/juice-shop/${each.value}")
+  commit_message      = "appsec-mvp overlay: ${each.value}"
   overwrite_on_create = true
 }
 
@@ -298,14 +256,14 @@ locals {
 
 resource "github_actions_variable" "juiceshop_vars" {
   for_each      = local.juiceshop_vars_to_create
-  repository    = github_repository.juiceshop.name
+  repository    = data.github_repository.juice_shop.name
   variable_name = each.key
   value         = each.value
 }
 
 resource "github_actions_secret" "juiceshop_sonar_token" {
   count           = var.sonarqube_project_token == "" ? 0 : 1
-  repository      = github_repository.juiceshop.name
+  repository      = data.github_repository.juice_shop.name
   secret_name     = "SONARQUBE_TOKEN"
   plaintext_value = var.sonarqube_project_token
 }

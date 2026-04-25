@@ -36,7 +36,7 @@ variable "github_org" {
 variable "seed_repo_names" {
   description = "List of repo names to seed as CMDB application records. Default matches the github runtime's seeded repos *by coincidence* — there is no Terraform import between the two runtimes. The first two repos become children of the `AppSec Demo Frontend` business app; the third (if present) becomes a child of `AppSec Demo Backend`."
   type        = list(string)
-  default     = ["seed-python-a", "seed-javascript-b", "juiceshop"]
+  default     = ["BenchmarkJava", "BenchmarkPython", "juice-shop"]
 }
 
 variable "project_prefix" {

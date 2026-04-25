@@ -70,7 +70,7 @@ def test_issue_mapping(spark: SparkSession) -> None:
     assert row["tool_source"] == "sonarqube"
     assert row["category"] == "sast"
     assert row["rule_id_native"] == "java:S2259"
-    assert row["repository_id"] == "seed-python-a"
+    assert row["repository_id"] == "BenchmarkJava"
     assert row["file_path"] == "src/main/java/com/example/Service.java"
     assert row["start_line"] == 42
     # Envelope columns that carry semantics.
@@ -224,19 +224,19 @@ def test_dedup_links_against_semgrep_overlap() -> None:
     across overlapping SAST tools (SonarQube ↔ Semgrep).
     """
     issue_a = {
-        "component": "seed-python-a:src/main/java/com/example/Service.java",
+        "component": "BenchmarkJava:src/main/java/com/example/Service.java",
         "rule": "java:S2259",
     }
     issue_b_same_location = {
-        "component": "seed-python-a:src/main/java/com/example/Service.java",
+        "component": "BenchmarkJava:src/main/java/com/example/Service.java",
         "rule": "java:S2259",
     }
     issue_c_different_file = {
-        "component": "seed-python-a:src/main/java/com/example/Utils.java",
+        "component": "BenchmarkJava:src/main/java/com/example/Utils.java",
         "rule": "java:S2259",
     }
     issue_d_different_rule = {
-        "component": "seed-python-a:src/main/java/com/example/Service.java",
+        "component": "BenchmarkJava:src/main/java/com/example/Service.java",
         "rule": "java:S1488",
     }
 
@@ -250,7 +250,7 @@ def test_dedup_links_against_semgrep_overlap() -> None:
     assert key_a != key_d                # distinct rule -> distinct tuple
     # The tuple shape itself matches the SAST reference contract.
     assert key_a == (
-        "seed-python-a",
+        "BenchmarkJava",
         "src/main/java/com/example/Service.java",
         "java:S2259",
     )

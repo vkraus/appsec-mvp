@@ -24,7 +24,7 @@ GitHub App installations are preferred for production org-wide ingestion (rate l
 
 ## Optional source runtime
 
-If you want appsec-mvp to provision a *demo* GitHub setup (three deliberately-vulnerable seed repos, a Juice Shop fork, ECR for image pushes, the GitHub Actions OIDC IAM trust, and a Juice Shop k8s namespace), apply the optional runtime under `src/connectors/github/runtime/`. See [`src/connectors/github/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/github/runtime) for variables, apply order, and produced outputs.
+If you want appsec-mvp to provision a *demo* GitHub setup (references to two OWASP Benchmark forks `BenchmarkJava` and `BenchmarkPython` as SAST targets, a `juice-shop` fork as DAST target, ECR for image pushes, the GitHub Actions OIDC IAM trust, and a Juice Shop k8s namespace), apply the optional runtime under `src/connectors/github/runtime/`. The runtime references existing forks under your GitHub org rather than creating repos, so the operator must have already forked `OWASP-Benchmark/BenchmarkJava`, the upstream Benchmark Python project, and `juice-shop/juice-shop` under `var.github_org`. See [`src/connectors/github/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/github/runtime) for variables, apply order, and produced outputs.
 
 Operators with their own GitHub org skip the runtime — wire the existing org's slug + PAT directly into the secrets via the next section.
 
@@ -202,7 +202,7 @@ The job runs two tasks: `ingest` (PyGithub → `bronze_github` tables) and `tran
 
 Expected duration: ~1 minute for a small org (≤ 10 repos), longer for larger orgs.
 
-**Normalization spot-check.** GitHub `full_name = "<org>/seed-python-a"` is used verbatim as `silver.repositories.full_name`; `id` (integer) is stringified into `repository_id`.
+**Normalization spot-check.** GitHub `full_name = "<org>/BenchmarkJava"` is used verbatim as `silver.repositories.full_name`; `id` (integer) is stringified into `repository_id`.
 
 ## Verify
 
@@ -219,7 +219,7 @@ SELECT full_name, default_branch FROM appsec_dev.silver.repositories
   ORDER BY full_name;
 ```
 
-For an operator running the demo runtime, expect three rows: `seed-python-a`, `seed-javascript-b`, `juiceshop`. For an operator pointing at their own org, expect a row per ingested repo.
+For an operator running the demo runtime, expect three rows: `BenchmarkJava`, `BenchmarkPython`, `juice-shop`. For an operator pointing at their own org, expect a row per ingested repo.
 
 ## Troubleshooting
 

@@ -33,7 +33,7 @@ The runtime is pure HTTP — no AWS, no Kubernetes, no IRSA, no IAM. It uses HTT
 | Variable | Description | Default |
 |---|---|---|
 | `github_org` | GitHub org that owns the seeded repos. The source module declared this variable but did not consume it in the CMDB record bodies; preserved for forward-compatibility. | `appsec-mvp-demo` |
-| `seed_repo_names` | List of repo names to seed as CMDB application records. The first two become children of `AppSec Demo Frontend`; the third (if present) becomes a child of `AppSec Demo Backend`. | `["seed-python-a", "seed-javascript-b", "juiceshop"]` |
+| `seed_repo_names` | List of repo names to seed as CMDB application records. The first two become children of `AppSec Demo Frontend`; the third (if present) becomes a child of `AppSec Demo Backend`. | `["BenchmarkJava", "BenchmarkPython", "juice-shop"]` |
 | `project_prefix` | Tag/name prefix retained for parity with the other connector runtimes. Not currently consumed — CMDB record names are hardcoded. | `appsec-mvp` |
 
 > **Note on `seed_repo_names` default:** the values match the github runtime's seeded repos **by coincidence**, not by Terraform import. The two runtimes are independent — there is no module-level reference between them, per the redesign's no-inter-connector-dependency rule. If you change the names in one runtime, change them in the other; otherwise the cross-source `silver.app_repo` join in analytics will not resolve.

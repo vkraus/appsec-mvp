@@ -8,7 +8,7 @@ Three scenarios that exercise the end-to-end pipeline. Completing all three is y
 
 ### Setup
 
-You already have SAST seed repos (`seed-python-a`, `seed-javascript-b`) provisioned by the github runtime under `src/connectors/github/runtime/`, with four deliberately-planted vulnerabilities across them (CWE-89, CWE-78, CWE-79, CWE-22). Scan each repo with `sonar-scanner-cli` per the [SonarQube connector page → Run the job](../connectors/sast/sonarqube.md#run-the-job), then wait for the next semgrep CronJob (or trigger one manually per the [Semgrep connector page → Run the job](../connectors/sast/semgrep.md#run-the-job)). Run the ingest jobs for both connectors via `databricks bundle run sonarqube-connector` and `databricks bundle run semgrep-connector`.
+You already have SAST target repos (`BenchmarkJava`, `BenchmarkPython`) referenced by the github runtime under `src/connectors/github/runtime/` — these are forks of the OWASP Benchmark projects, which carry a curated catalogue of planted defects (CWE-89, CWE-78, CWE-79, CWE-22 among others). Scan each repo with `sonar-scanner-cli` per the [SonarQube connector page → Run the job](../connectors/sast/sonarqube.md#run-the-job), then wait for the next semgrep CronJob (or trigger one manually per the [Semgrep connector page → Run the job](../connectors/sast/semgrep.md#run-the-job)). Run the ingest jobs for both connectors via `databricks bundle run sonarqube-connector` and `databricks bundle run semgrep-connector`.
 
 ### Query
 

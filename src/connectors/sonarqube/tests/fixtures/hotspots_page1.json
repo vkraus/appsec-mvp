@@ -3,7 +3,7 @@
   "hotspots": [
     {
       "key": "HS1aaaaaaaaaaaaaaaaa",
-      "component": "seed-python-a:src/main/java/com/example/Auth.java",
+      "component": "BenchmarkJava:src/main/java/com/example/Auth.java",
       "line": 120,
       "status": "TO_REVIEW",
       "vulnerabilityProbability": "HIGH",

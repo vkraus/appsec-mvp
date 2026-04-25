@@ -1,19 +1,23 @@
-output "seed_repo_names" {
-  description = "List of seeded GitHub repository full names (org/repo)."
-  value = concat(
-    [for r in github_repository.seed : r.full_name],
-    [github_repository.juiceshop.full_name]
-  )
+output "seed_repo_full_names" {
+  description = "Full names (org/repo) of the SAST and DAST target repositories that the framework scans."
+  value = [
+    data.github_repository.benchmark_java.full_name,
+    data.github_repository.benchmark_python.full_name,
+    data.github_repository.juice_shop.full_name,
+  ]
 }
 
-output "sast_seed_repo_names" {
-  description = "Seeded SAST/SCA target repositories (deliberately-vulnerable fixtures)."
-  value       = [for r in github_repository.seed : r.full_name]
+output "sast_repo_full_names" {
+  description = "Full names (org/repo) of the SAST target forks (BenchmarkJava and BenchmarkPython)."
+  value = [
+    data.github_repository.benchmark_java.full_name,
+    data.github_repository.benchmark_python.full_name,
+  ]
 }
 
-output "juiceshop_repo_full_name" {
-  description = "Full name (org/repo) of the seeded Juice Shop fork."
-  value       = github_repository.juiceshop.full_name
+output "juice_shop_repo_full_name" {
+  description = "Full name (org/repo) of the Juice Shop fork."
+  value       = data.github_repository.juice_shop.full_name
 }
 
 output "ecr_registry_uri" {

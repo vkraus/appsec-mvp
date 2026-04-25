@@ -203,7 +203,7 @@ bash src/connectors/sonarqube/scripts/load-secrets.sh
 Before the connector ingests anything, the SonarQube server itself must have project-analysis results to expose. From any machine with Docker and network access to the SonarQube URL, scan each repo once:
 
 ```bash
-for repo in seed-python-a seed-javascript-b; do
+for repo in BenchmarkJava BenchmarkPython; do
   git clone "https://github.com/<org>/${repo}"
   docker run --rm -v "$PWD/${repo}:/usr/src" \
     -e SONAR_HOST_URL="$SONARQUBE_URL" -e SONAR_TOKEN="$SONARQUBE_TOKEN" \
