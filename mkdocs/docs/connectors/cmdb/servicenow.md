@@ -166,11 +166,11 @@ Expected: 2 rows in `silver.applications` matching the two business-app names se
 | `REQ-DQ` | `tests/connectors/servicenow/test_transform.py::test_business_app_expectation_quarantines_null_sys_id` | PASS |
 | `REQ-DEDUP` | — | N/A |
 
-Collected 7 requirement-bound tests via `pytest tests/connectors/servicenow/ -v --tb=short` (2026-04-22, 3.4 s wall-clock); 7 passed, 3 marked `N/A` because CMDB sources do not emit findings (no severity, status, or cross-tool deduplication apply).
+Collected 7 requirement-bound tests via `pytest tests/connectors/servicenow/ -v --tb=short` (2026-04-25, 18.65 s wall-clock); 7 passed, 0 failed; 3 marked N/A because CMDB sources do not emit findings (no severity, status, or cross-tool deduplication apply).
 
 ### Tests
 
-Tests live under [`tests/connectors/servicenow/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/servicenow). The report table above is the per-REQ outcome of running the bound tests in that directory.
+Tests live under [`tests/connectors/servicenow/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/servicenow). The report table above is the per-REQ outcome.
 
 ## Generation log
 
@@ -180,4 +180,4 @@ This connector page was reconciled by the connector-lifecycle skills under the r
 |--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (cmdb)            | name=ServiceNow; url=https://docs.servicenow.com/bundle/utah-application-development/page/integrate/inbound-rest/concept/c_TableAPI.html; category=cmdb | mkdocs/docs/connectors/cmdb/servicenow.md §1–§3                                    | 2026-04-25 | 2fa3e2d (retrofit-9-connectors)          |
 | Module generation  | `generate-connector` (cmdb)        | page hash=41debf8ae0c7                                                | src/connectors/servicenow/, tests/connectors/servicenow/, config/severity/servicenow.yml, config/status/servicenow.yml, resources/servicenow-job.yml | 2026-04-25 | 24c745f (retrofit-9-connectors)  |
-| Validation         | `validate-implementation` (cmdb)   | (pending)                                                             | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation         | `validate-implementation` (cmdb)   | module path=src/connectors/servicenow/                                | mkdocs/docs/connectors/cmdb/servicenow.md §5                                       | 2026-04-25 | 26a3f61 (retrofit-9-connectors)          |
