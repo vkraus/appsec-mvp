@@ -1,12 +1,5 @@
 # GitLab
 
-!!! info "Placeholder. Not implemented in MVP"
-    A reference GitLab connector is not part of the MVP. This page is a
-    scaffolding placeholder framing the intended runbook structure. The
-    Reference section below documents the integration per the category
-    capability contract. Follow the [SCM skills](skills.md) to generate the
-    connector when needed.
-
 ## What this connector ingests
 
 The GitLab connector plays a dual SCM and integrated security role analogous to GitHub, but reflects the GitLab architecture. As SCM source it populates `silver.repositories` from `/projects`, `silver.commits` from the commits endpoint for each project, `silver.pull_requests` from merge requests, and `silver.branch_policies` from protected branches. GitLab Secure (available on the Ultimate tier for both SaaS and self-managed) embeds SAST, Secret Detection, and Dependency Scanning in the CI pipeline and exposes results through a Vulnerabilities API. On Ultimate, the connector additionally writes into `silver.findings` with three category values (`sast`, `secret`, `sca`) from a single source. Without Ultimate, the same findings are available in SARIF or GitLab JSON format as CI pipeline artifacts, retrievable via the jobs artifacts endpoint.
@@ -17,6 +10,55 @@ The GitLab connector plays a dual SCM and integrated security role analogous to 
 
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md).
 - **No upstream connector dependency.** GitLab is an SCM connector. Like GitHub it is a source of truth for `silver.repositories`. Install at least one SCM connector (this one or [GitHub](github.md)) **before** any non-SCM connector.
+
+## User inputs
+
+| Input | Where to obtain | Used as |
+|---|---|---|
+| GitLab tenant URL | Use `https://gitlab.com` for SaaS, or the FQDN of a self-hosted instance. For a throw-away demo tenant, run `docker run -d --hostname gitlab.local -p 80:80 -p 443:443 -p 22:22 gitlab/gitlab-ce:latest` and use the resulting URL. | Env var `GITLAB_BASE_URL` consumed by `src/connectors/gitlab/scripts/load-secrets.sh`; persisted as the `gitlab_base_url` secret. Also passed as terraform var `gitlab_host` (host-only, no scheme) to the optional runtime module. |
+| GitLab group ID | On the GitLab UI, navigate to your target group, then **Settings → General**, and click the copy icon next to **"Group ID"** (numeric, e.g. `12345678`). | Env var `GITLAB_GROUP_ID`; terraform var `gitlab_group_id`. |
+| GitLab Personal Access Token | <https://gitlab.com/-/user_settings/personal_access_tokens> → **"Add new token"** with scopes `read_api`, `read_repository`, `read_user`, expiry 90 days. On self-hosted, use the equivalent path under your tenant. Group access tokens are accepted in place of personal tokens; on Ultimate, the same scopes also satisfy the Vulnerabilities API. | Env var `GITLAB_TOKEN` consumed by `load-secrets.sh`; stored under secret-scope key `gitlab_token`. |
+
+!!! warning "Ultimate tier and the Vulnerabilities API"
+    The connector emits `silver.findings` rows from `/projects/{id}/vulnerabilities`, which requires GitLab **Ultimate**. On Free or Premium tiers that endpoint returns `403 Forbidden`, the connector logs and skips it, and `bronze_gitlab.vulnerabilities` stays empty. Repository, commit, merge-request, and protected-branch ingestion (the SCM half of the dual role) work on every tier.
+
+## Optional source runtime
+
+The optional runtime under `src/connectors/gitlab/runtime/` is a **references-only** terraform module: it pins providers, declares the user inputs (`catalog`, `gitlab_group_id`, `gitlab_host`, `gitlab_token_secret_scope`, `gitlab_token_secret_key`), and exports the Bronze schema name and GitLab host as outputs for downstream bundle resolution. **It does not provision a GitLab tenant, group, projects, or seed data** — the GitLab side is user-provisioned (the GitLab Terraform provider supports group and project creation, but the MVP runtime intentionally stops short of that to avoid leaking demo data into the user's account).
+
+Apply only if you want the structural parity outputs registered in your terraform state:
+
+```bash
+cd src/connectors/gitlab/runtime
+terraform init
+terraform apply \
+  -var "catalog=appsec_dev" \
+  -var "gitlab_group_id=$GITLAB_GROUP_ID"
+```
+
+See [`src/connectors/gitlab/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/gitlab/runtime) for the full variable list and override flags. Users with an existing GitLab group skip this step entirely and proceed to **Secrets**.
+
+## Secrets
+
+Loaded into the `mvp-connectors` secret scope by `src/connectors/gitlab/scripts/load-secrets.sh`:
+
+| Secret key | Source env var | Purpose |
+|---|---|---|
+| `gitlab_base_url` | `GITLAB_BASE_URL` | Base URL of the GitLab API (`https://gitlab.com` or self-hosted FQDN). The ingest notebook reads this to construct request URLs. |
+| `gitlab_token` | `GITLAB_TOKEN` | Personal or group access token used for Bearer authentication on every REST call. |
+
+The bundle's `gitlab-connector` job resolves both at runtime via `dbutils.secrets.get`. Group ID is **not** stored in secrets; it is supplied to the job via the `target_catalog`/parameter wiring at deploy time and read from terraform state when the optional runtime is applied.
+
+Run from repo root after Phase 1 (platform install) completes:
+
+```bash
+export GITLAB_BASE_URL="https://gitlab.com"
+export GITLAB_TOKEN="glpat-..."
+bash src/connectors/gitlab/scripts/load-secrets.sh
+# OK: gitlab secrets loaded into scope mvp-connectors
+```
+
+The script is idempotent: re-running it overwrites existing values, which is the rotation procedure when the PAT is regenerated.
 
 ## Reference
 
@@ -134,14 +176,75 @@ The fields below are the subset consumed by the connector. Complete schemas are 
 
 **Keyset pagination cursor opacity.** Keyset cursors in GitLab are opaque and not interchangeable across `order_by` choices. The connector records the `order_by`/`sort` pair alongside the cursor in the high water mark state so a configuration change forces a fresh paginate from start rather than reusing an incompatible cursor.
 
-## Setup
+## Run the job
 
-!!! info "Not implemented in MVP"
-    A reference GitLab connector is not part of the MVP. The Reference
-    section above documents the intended integration so the
-    `generate-connector` skill can emit a connector module when the
-    source is scheduled for inclusion. This section will be filled
-    in by `generate-connector` at that point.
+GitLab ingestion runs as a **two-task notebook job** named `gitlab-connector` (declared in `src/connectors/gitlab/resources/job.yml`). Task one runs `ingest.py` (lists projects under the configured group, fans out to commits / merge-requests / protected-branches / vulnerabilities, and lands rows under `bronze_gitlab.*`); task two runs `transform.py` (projects bronze rows into `silver.repositories` and, on Ultimate, `silver.findings`).
+
+The bundle ships a 15-minute schedule, so once deployed the job runs automatically. Trigger an on-demand run from repo root:
+
+```bash
+databricks bundle run gitlab-connector --target dev
+```
+
+For a one-shot orchestration (load secrets + run + verify count), use the wrapper:
+
+```bash
+bash src/connectors/gitlab/scripts/install.sh
+```
+
+Wait time: ~3-5 minutes for a small group (a handful of projects, no Ultimate). Larger groups or Ultimate tenants with thousands of vulnerabilities take longer; the per-task `max_retries=3` plus the framework's `RateLimit-Remaining`-aware pacing keeps runtime within the 15-minute schedule budget for most tenants.
+
+Job status is visible under **Workflows → Jobs → gitlab-connector** in the Databricks UI.
+
+**Normalization spot check.**
+
+- Raw GitLab `severity = 'critical'` becomes silver `severity_canonical = 'critical'`.
+- Raw `severity = 'info'` and `severity = 'unknown'` fall through to the configured default in `src/connectors/gitlab/severity.yml` (typically `low`) per § Quirks.
+- Raw `state = 'detected'` or `'confirmed'` becomes silver `status_canonical = 'open'`; `'dismissed'` and `'resolved'` map to `'closed'` (see `src/connectors/gitlab/status.yml`).
+
+## Verify
+
+After the job finishes, run these from a Databricks SQL editor or `databricks sql query`:
+
+```sql
+-- Bronze: raw GitLab data landed by ingest.py.
+SELECT count(*) AS n_projects FROM appsec_dev.bronze_gitlab.projects;
+-- Expect: at least 1 row per project visible to the token under $GITLAB_GROUP_ID.
+
+SELECT count(*) AS n_vulns FROM appsec_dev.bronze_gitlab.vulnerabilities;
+-- Expect: >0 on Ultimate tenants with active scanners; 0 on Free/Premium (the
+-- ingest task skips that endpoint silently and the table stays empty).
+
+-- Silver: GitLab-sourced repository rows projected through transform.py.
+SELECT repository_id, full_name, default_branch
+  FROM appsec_dev.silver.repositories
+ WHERE source = 'gitlab'
+ ORDER BY full_name;
+-- Expect: one row per non-archived project under the configured group.
+
+-- Silver: canonical findings (Ultimate tier only).
+SELECT category, count(*) AS n
+  FROM appsec_dev.silver.findings
+ WHERE tool_source = 'gitlab'
+ GROUP BY category
+ ORDER BY category;
+-- Expect (Ultimate): rows in `sast`, `secret`, `sca`, plus `dast` / `container`
+-- if those scanners are enabled in the GitLab CI templates.
+-- Expect (Free/Premium): empty result.
+```
+
+If `silver.repositories` has zero `gitlab`-sourced rows after a successful job run, jump to Troubleshooting.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `401 Unauthorized` on the first REST call | Token expired or has wrong scopes. Regenerate the PAT with `read_api` + `read_repository` + `read_user`, re-export `GITLAB_TOKEN`, and re-run `bash src/connectors/gitlab/scripts/load-secrets.sh`. The job picks up the new value on the next run with no redeploy needed. |
+| 0 rows in `bronze_gitlab.projects` after a successful run | `GITLAB_GROUP_ID` is wrong or the token has no membership in that group. Verify with `curl -H "PRIVATE-TOKEN: $GITLAB_TOKEN" "$GITLAB_BASE_URL/api/v4/groups/$GITLAB_GROUP_ID"` — a successful response returns the group's JSON; `404 Not Found` means the ID is wrong or the token lacks access. |
+| `bronze_gitlab.vulnerabilities` empty despite Ultimate tenant | Confirm Ultimate is enabled on the *target group*, not just the personal namespace. Free-tier groups under an Ultimate-licensed account still hit `403 Forbidden`. The connector logs the skip at INFO level — check the task `ingest` driver logs in the Databricks UI. |
+| `403 Forbidden` from `/projects/{id}/vulnerabilities` | Expected behaviour on Free / Premium: the Vulnerabilities API is Ultimate-only. The connector swallows the 403 and continues. SCM ingestion (repositories / commits / MRs / protected branches) is unaffected. To capture findings on lower tiers, switch `gitlab_finding_path` to `pipeline-artifacts` (see § Quirks); that path is documented but not yet wired through the bundle as of this MVP. |
+| `HTTP 429` retry storm at job start | The token is being shared with another integration on the same `RateLimit-Remaining` budget. Use a dedicated group access token for appsec-mvp, or lower the `per_page` parameter via the job parameters in `resources/job.yml`. |
+| `Schema bronze_gitlab does not exist` at task start | Bundle was not deployed before the first run. Run `databricks bundle deploy --target dev` from repo root, then re-trigger the job. |
 
 ## Validation
 
