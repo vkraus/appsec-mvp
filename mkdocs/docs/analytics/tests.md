@@ -17,18 +17,18 @@ The marker string **SHALL** be one of the IDs in the [REQ catalog](../platform/r
 ## Suite layout
 
 ```
-tests/
-├── common/                 # Tests for the shared framework library
-│   ├── test_bronze.py      # HTTP client, pagination, HWM
-│   ├── test_severity.py    # Severity normalization (REQ-TRF-SEV)
-│   ├── test_status.py      # Status normalization (REQ-TRF-STS)
-│   └── test_dedup.py       # Deduplication (REQ-DEDUP)
+src/
+├── platform/tests/            # Tests for the shared framework library
+│   ├── test_bronze.py         # HTTP client, pagination, HWM
+│   ├── test_severity.py       # Severity normalization (REQ-TRF-SEV)
+│   ├── test_status.py         # Status normalization (REQ-TRF-STS)
+│   └── test_dedup.py          # Deduplication (REQ-DEDUP)
 └── connectors/
-    ├── servicenow/
-    │   ├── test_ingest.py  # REQ-ING-AUTH, REQ-ING-PAG, REQ-ING-RL, REQ-ING-HWM
+    ├── servicenow/tests/
+    │   ├── test_ingest.py     # REQ-ING-AUTH, REQ-ING-PAG, REQ-ING-RL, REQ-ING-HWM
     │   ├── test_transform.py  # REQ-TRF-MAP, REQ-TRF-TS
-    │   └── fixtures/       # JSON fixtures: {endpoint}_{scenario}.json
-    ├── github/
+    │   └── fixtures/          # JSON fixtures: {endpoint}_{scenario}.json
+    ├── github/tests/
     └── ...
 ```
 
