@@ -119,9 +119,26 @@ The `unknown` category matters: it covers secrets on isolated networks or agains
 
 ## Validation
 
-!!! info "Pending validation"
-    `validate-implementation` (secrets) populates this section once
-    the connector module is produced and exercised against fixtures.
+### Implementation report
+
+| Requirement | Bound test | Outcome |
+|---|---|---|
+| `REQ-ING-AUTH` | — | N/A |
+| `REQ-ING-PAG` | — | N/A |
+| `REQ-ING-RL` | — | N/A |
+| `REQ-ING-HWM` | — | N/A |
+| `REQ-TRF-MAP` | `tests/connectors/trufflehog/test_transform.py::test_record_to_silver_projects_every_consumed_field` | PASS |
+| `REQ-TRF-SEV` | `tests/connectors/trufflehog/test_transform.py::test_severity_is_hard_coded_high` | PASS |
+| `REQ-TRF-STS` | — | N/A |
+| `REQ-TRF-TS` | `tests/connectors/trufflehog/test_transform.py::test_source_timestamp_is_preserved_from_git_leaf` | PASS |
+| `REQ-DQ` | `tests/connectors/trufflehog/test_transform.py::test_missing_git_metadata_produces_well_formed_row` | PASS |
+| `REQ-DEDUP` | `tests/connectors/trufflehog/test_transform.py::test_dedup_key_is_four_tuple_per_secrets_reference` | PASS |
+
+Collected 26 requirement-bound tests via `pytest tests/connectors/trufflehog/ -v --tb=short` (2026-04-25, 0.31 s wall-clock); 26 passed, 0 failed, 4 skipped as documentation markers for the N/A rows. Five requirements are marked N/A: `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` because the CLI-artefact ingestion path has no API auth, pagination, or upstream rate limit (quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix"); `REQ-ING-HWM` because TruffleHog is full-reload only per the secrets capability surface and the commit SHA lives in the artefact key rather than as a record-level HWM column; `REQ-TRF-STS` because secret-detection sources expose no lifecycle vocabulary to normalise (references/secrets.md § Quirks).
+
+### Tests
+
+Tests live under [`tests/connectors/trufflehog/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/trufflehog). The report table above is the per-REQ outcome.
 
 ## Generation log
 
@@ -131,4 +148,4 @@ This connector page is produced by the connector-lifecycle skills. The Generatio
 |--------------------|------------------------------------|-------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (secrets)         | name=TruffleHog; url=https://github.com/trufflesecurity/trufflehog; category=secrets | mkdocs/docs/connectors/secrets/trufflehog.md §1–§3                                 | 2026-04-25 | b3af2e0 (retrofit-9-connectors)          |
 | Module generation  | `generate-connector` (secrets)     | page hash=5fc403d47499                                                              | src/connectors/trufflehog/, tests/connectors/trufflehog/, config/severity/trufflehog.yml, config/status/trufflehog.yml, resources/trufflehog-job.yml | 2026-04-25 | 783dbc1 (retrofit-9-connectors)          |
-| Validation         | `validate-implementation` (secrets)| (pending)                                                                           | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation         | `validate-implementation` (secrets)| module path=src/connectors/trufflehog/                                              | mkdocs/docs/connectors/secrets/trufflehog.md §5                                    | 2026-04-25 | 2f071b1 (retrofit-9-connectors)          |
