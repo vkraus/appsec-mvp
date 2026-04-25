@@ -1,0 +1,20 @@
+source: trufflehog
+category: secrets
+severity_map: config/severity/trufflehog.yml
+# Status lookup file exists for framework-contract parity (both lookup files
+# must be present for every connector). Secrets sources emit no status
+# transitions; the literal `open` constant in mapping.yml is authoritative.
+status_map:   config/status/trufflehog.yml
+bucket_secret_scope: mvp-connectors
+bronze_table: ${catalog}.bronze_trufflehog.findings
+# CLI-artefact path (the documented exception alongside Semgrep Docker per
+# CLAUDE.md and references/secrets.md). TruffleHog runs on CI/CD runners and
+# writes `--json` line-delimited output to a Databricks Volume; the connector
+# ingests those artefacts. Full-reload ingestion — no record-level update
+# column. HWM is the most recent commit SHA per (repository_id) for the
+# `git` source kind as an optimisation (`--since-commit=<sha>` on next run);
+# the Bronze-to-Silver dedup key enforces idempotence regardless.
+hwm:
+  strategy: commit_sha
+prefixes:
+  - trufflehog/
