@@ -22,7 +22,7 @@ From `mkdocs/docs/platform/reference/catalog.md`. Bind one test function per REQ
 
 ## Default severity
 
-`medium`. Generate `config/severity/{source}.yml` covering every documented source value (e.g. `BLOCKER`, `CRITICAL`, `MAJOR`, `MINOR`, `INFO` for SonarQube; `ERROR`, `WARNING`, `INFO` for Semgrep) mapped to the canonical four-level model (`critical`, `high`, `medium`, `low`). Undocumented values fall through to `medium` with a data-quality warning per the helper in `src/platform/`.
+`medium`. Generate `config/severity/{source}.yml` covering every documented source value (e.g. `BLOCKER`, `CRITICAL`, `MAJOR`, `MINOR`, `INFO` for SonarQube; `ERROR`, `WARNING`, `INFO` for Semgrep) mapped to the canonical four-level model (`critical`, `high`, `medium`, `low`). Undocumented values fall through to `medium` with a data-quality warning per the helper in `src/common/`.
 
 The `mapping.yml` `severity` field references the lookup file by path, NOT a hard-coded value:
 
@@ -56,7 +56,7 @@ The transform MUST also project `source_finding_id` (the source-side stable iden
 
 ## Authentication norms
 
-PAT or API-key based across all three deployment styles. `ingest.py` reads credentials via the helper in `src/platform/`; `config.yml` references the secret-scope key names only. For CLI-based connectors, no API auth applies — IAM on the artefact bucket governs access.
+PAT or API-key based across all three deployment styles. `ingest.py` reads credentials via the helper in `src/common/`; `config.yml` references the secret-scope key names only. For CLI-based connectors, no API auth applies — IAM on the artefact bucket governs access.
 
 ## Ingestion-tooling preference
 
@@ -71,5 +71,5 @@ Standard order: Lakeflow Connect → Databricks SDK → dlt.
 - **Operational pattern axis.** The `config.yml` HWM shape changes between CI/CD-step (commit SHA / run ID) and periodic-global (updated-since timestamp) modes. Encode the chosen mode explicitly; do not leave it inferred.
 - **CWE category.** Project the source's CWE identifier alongside `rule_id` in `mapping.yml`; downstream classification depends on it.
 - **Severity vocabulary breadth.** Some tools use BLOCKER … INFO; others use CRITICAL … LOW or numeric scales. The severity lookup MUST be exhaustive over the documented vocabulary; no gaps.
-- **CLI-artefact path.** When the source is CLI-based, `config.yml` encodes the object-storage prefix (or pipeline-artefact pattern) and the SARIF / JSON format flavour; `ingest.py` uses autoloader-style ingestion via `src/platform/` helpers.
+- **CLI-artefact path.** When the source is CLI-based, `config.yml` encodes the object-storage prefix (or pipeline-artefact pattern) and the SARIF / JSON format flavour; `ingest.py` uses autoloader-style ingestion via `src/common/` helpers.
 - **Rule-pack drift.** Rule IDs may shift across rule-pack versions; the dedup key embeds `rule_id` as-is. Document any source-side stability guarantees in a transform-level comment.

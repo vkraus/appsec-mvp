@@ -104,7 +104,7 @@ The transform MUST also project `package_version`, `ecosystem`, and (where prese
 
 ### Authentication norms
 
-PAT or API-key based, as for SAST. Platform-integrated SCA inherits the host SCM connector's auth (PAT or OAuth). `ingest.py` reads credentials via the helper in `src/platform/`; `config.yml` references the secret-scope key names only.
+PAT or API-key based, as for SAST. Platform-integrated SCA inherits the host SCM connector's auth (PAT or OAuth). `ingest.py` reads credentials via the helper in `src/common/`; `config.yml` references the secret-scope key names only.
 
 ### Ingestion-tooling preference
 

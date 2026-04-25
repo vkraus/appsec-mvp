@@ -95,7 +95,7 @@ Scan-id-based, NOT record-level `updated_at`. Encode in `config.yml` under a `hw
 - **Server-based** (ZAP daemon / API): the scan ID is the high-water mark. The connector orchestrates scans per deployment and reads alerts back after scan completion. Encode the scan-orchestration mode (`scan-and-read` vs `read-only`) explicitly in `config.yml`.
 - **CI/CD-step** (e.g. `zap-baseline.py`): the artefact file (object-storage prefix or pipeline artefact) is the high-water mark. Encode the prefix and report format (JSON / SARIF) in `config.yml`.
 
-The `src/platform/` HWM helpers expose a `scan_id` mode in addition to the column-based default; use it.
+The `src/common/` HWM helpers expose a `scan_id` mode in addition to the column-based default; use it.
 
 ### Deduplication key
 
@@ -129,7 +129,7 @@ The exact match expression depends on the source's `target` shape; the connector
 
 Style-dependent:
 
-- **Server-based**: API key (e.g. `X-ZAP-API-Key` header for ZAP). `ingest.py` reads it via the helper in `src/platform/`; `config.yml` references the secret-scope key name.
+- **Server-based**: API key (e.g. `X-ZAP-API-Key` header for ZAP). `ingest.py` reads it via the helper in `src/common/`; `config.yml` references the secret-scope key name.
 - **CI/CD-step / CLI-artefact**: no native auth on output files; access governed by object-storage IAM. `ingest.py` uses the autoloader / cloud-storage helpers; no auth code emitted.
 
 ### Ingestion-tooling preference
@@ -145,7 +145,7 @@ Standard order: Lakeflow Connect → Databricks SDK → dlt.
 - **Inventory-gap analysis.** Unmatched targets are emitted unchanged — this is intentional. Do NOT generate filter logic that drops them.
 - **Scan-scoped findings.** Each scan re-emits the full finding set within its scope. The connector treats scans as the unit of incremental work — record-level updates within a scan are not exposed by the source, so the transform MUST NOT attempt them.
 - **No record-level `updated_at`.** This is the headline DAST quirk. The HWM is `scan_id` (or artefact filename) — encode it explicitly; do not fall back to a column-based HWM.
-- **Scan orchestration vs report collection.** Server-based DAST connectors may need to drive scans (start, poll, read) rather than purely consume them. Encode the chosen mode in `config.yml`; emit the orchestration helpers from `src/platform/` in `ingest.py` only when the source is in scan-and-read mode.
+- **Scan orchestration vs report collection.** Server-based DAST connectors may need to drive scans (start, poll, read) rather than purely consume them. Encode the chosen mode in `config.yml`; emit the orchestration helpers from `src/common/` in `ingest.py` only when the source is in scan-and-read mode.
 
 *Rendered from `.claude/skills/generate-connector/references/dast.md`. Source-of-truth lives in the skill file.*
 

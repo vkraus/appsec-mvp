@@ -66,8 +66,8 @@ The status field is NOT projected — secrets emit no lifecycle.
 
 ## Authentication norms
 
-- **CLI-based** (the dominant style — TruffleHog, gitleaks): no API auth. Access is governed by the artefact bucket's IAM policy. `config.yml` encodes the bucket prefix; `ingest.py` uses the autoloader / cloud-storage helpers in `src/platform/`.
-- **Server-based** (rare): PAT or API-key, as for SAST. `ingest.py` reads credentials via the helper in `src/platform/`.
+- **CLI-based** (the dominant style — TruffleHog, gitleaks): no API auth. Access is governed by the artefact bucket's IAM policy. `config.yml` encodes the bucket prefix; `ingest.py` uses the autoloader / cloud-storage helpers in `src/common/`.
+- **Server-based** (rare): PAT or API-key, as for SAST. `ingest.py` reads credentials via the helper in `src/common/`.
 
 The connector page identifies which path the source takes; emit the matching auth code (or its absence).
 

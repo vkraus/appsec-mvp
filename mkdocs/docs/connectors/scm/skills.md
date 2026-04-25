@@ -82,7 +82,7 @@ For the finding role: derived from the platform's native field (`rule.security_s
 Three-option preference order; encode the chosen option in `config.yml`:
 
 1. **Webhook / event-stream** (preferred where exposed). The connector materialises events into Bronze in near-real-time. Emit subscription configuration, not polling.
-2. **Native `updated_at` (or equivalent) column** as the high-water mark, persisted via `src/platform/` HWM helpers.
+2. **Native `updated_at` (or equivalent) column** as the high-water mark, persisted via `src/common/` HWM helpers.
 3. **Full reload**, reserved for sources exposing neither.
 
 The selected mode MUST match the connector page's Incremental hook fact.
@@ -119,7 +119,7 @@ Pure-entity sources omit the `findings` block.
 
 ### Authentication norms
 
-Personal access token (PAT) or OAuth. `ingest.py` reads credentials via `src/platform/` from the secret scope; `config.yml` references the secret-scope key names only. For OAuth deployments, encode the token-refresh callback in the helper, not inline.
+Personal access token (PAT) or OAuth. `ingest.py` reads credentials via `src/common/` from the secret scope; `config.yml` references the secret-scope key names only. For OAuth deployments, encode the token-refresh callback in the helper, not inline.
 
 ### Ingestion-tooling preference
 
@@ -134,7 +134,7 @@ Justify the chosen tool with a one-line comment at the top of `ingest.py`.
 
 - **Two `mapping.yml` blocks.** A single SCM source typically populates entity tables AND `silver.findings`. Emit two clearly delimited blocks; do NOT collapse them. Pure-entity sources emit only the entity block.
 - **Plural Silver names are authoritative.** `silver.repositories`, `silver.pull_requests`, `silver.branch_policies`. Singular forms are wrong.
-- **Cursor vs keyset pagination.** GraphQL APIs typically use cursor pagination; REST APIs may use keyset. Encode the pagination strategy per endpoint in `config.yml`; `src/platform/` exposes both helpers.
+- **Cursor vs keyset pagination.** GraphQL APIs typically use cursor pagination; REST APIs may use keyset. Encode the pagination strategy per endpoint in `config.yml`; `src/common/` exposes both helpers.
 - **Webhook replay.** When webhook delivery is the chosen incremental hook, `config.yml` MUST also encode a fallback polling window (typically 24h) so missed deliveries are recovered on the next scheduled run.
 - **Finding-shape branch.** `transform.py` MUST handle each shape (code-scanning, secret-scanning, Dependabot) with the matching dedup-key tuple. Mis-branching corrupts `dedup_links`.
 

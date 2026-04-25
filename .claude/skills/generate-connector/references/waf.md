@@ -69,7 +69,7 @@ Account-scoped, NOT per-tenant:
 - **Cloud-native WAFs** (AWS WAF, Cloudflare, Azure Front Door WAF): IAM role or access key bound to the cloud account hosting the WebACLs.
 - **On-prem appliances** (F5 ASM, Imperva, ModSecurity): service credential bound to the log-aggregation tier.
 
-`ingest.py` reads credentials via the helper in `src/platform/`; `config.yml` references the secret-scope key names. There is no per-application authentication axis; do not generate one.
+`ingest.py` reads credentials via the helper in `src/common/`; `config.yml` references the secret-scope key names. There is no per-application authentication axis; do not generate one.
 
 ## Ingestion-tooling preference
 
