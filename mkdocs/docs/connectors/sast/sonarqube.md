@@ -21,32 +21,26 @@ The connector module at `src/connectors/sonarqube/` is present as a **structural
 
 | Input | Where to obtain | Used as |
 |---|---|---|
-| SonarQube server URL | Existing SonarQube instance run by the user, or the `sonarqube_url` output of the optional source runtime. | Env var `SONARQUBE_URL` consumed by `src/connectors/sonarqube/scripts/load-secrets.sh`; written to secret key `sonarqube_url`. |
-| SonarQube analysis token (or user token) | Generated in the SonarQube UI under **My Account → Security → Generate Tokens**. The connector accepts a project-analysis token or a user token; the user token type has broader scope and is recommended for cross-project enumeration. See [Bootstrapping the analysis token](#bootstrapping-the-analysis-token) for the demo runtime path. | Env var `SONARQUBE_TOKEN`; written to secret key `sonarqube_token`. |
+| SonarQube host | SonarCloud (free tier; sonarcloud.io) OR self-hosted SonarQube CE via Docker. For SonarCloud, sign up at [https://sonarcloud.io/sessions/new](https://sonarcloud.io/sessions/new). | Env var `SONARQUBE_HOST` consumed by `src/connectors/sonarqube/scripts/load-secrets.sh`; also passed as Terraform variable `sonarqube_host` when applying the optional runtime. |
+| SonarCloud organization key | After creating an org at SonarCloud, the key appears in the URL `https://sonarcloud.io/organizations/<key>/projects`. | Env var `SONARQUBE_ORG`; also passed as Terraform variable `sonarqube_organization`. |
+| SonarQube user token | At SonarCloud: **My Account → Security → Generate Tokens**. Required permissions: *Browse on All Projects* and *Execute Analysis on All Projects*. Recommended expiry: 90 days. | Env var `SONARQUBE_TOKEN`; written to secret-scope key `sonarqube_token`. |
+
+!!! tip "SonarCloud vs self-hosted"
+    SonarCloud is the recommended path for thesis demos: zero infra, the same REST API, and a free tier sufficient for the reference repos. Self-hosted SonarQube Server is supported via the optional runtime below — pick it when you need data residency or air-gapped operation.
 
 ## Optional source runtime
 
-If you want appsec-mvp to provision a SonarQube 10.6 Helm release on your EKS cluster (backed by an RDS Postgres instance the user supplies, exposed via LoadBalancer), apply the optional runtime under `src/connectors/sonarqube/runtime/`. See [`src/connectors/sonarqube/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/sonarqube/runtime) for variables, RDS endpoint preconditions, the admin password handling, and produced outputs.
+The Terraform module under `src/connectors/sonarqube/runtime/` provisions **SonarQube Server 10.6** as a Helm release on an existing EKS cluster, backed by an RDS Postgres 15 instance (`db.t3.small`, 20 GiB, encrypted at rest), and exposed via a LoadBalancer Service on port 9000. Users on SonarCloud skip this entirely. Users wanting self-hosted SonarQube apply the runtime — see [`src/connectors/sonarqube/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/sonarqube/runtime) for the full variable list, the RDS endpoint precondition, and the generated outputs (`sonarqube_url`, `sonarqube_project_token`, `rds_endpoint`).
 
-Users with their own SonarQube instance skip the runtime. Wire the URL and token of the existing instance directly via the next section.
-
-### Bootstrapping the analysis token
-
-The optional runtime mints a *random* project-analysis token in Terraform state but does not register it on the SonarQube side (the API for that requires a running server). After the runtime is applied and the SonarQube UI is reachable, register the token once:
+Required runtime inputs at a glance: `aws_region`, `aws_access_key_id`, `aws_secret_access_key`, `eks_cluster_name`, `sonarqube_admin_password`, plus `vpc_id` / `vpc_subnet_ids` / `vpc_cidr_block` when the module creates its own RDS. Apply with:
 
 ```bash
-SONAR_URL=$(terraform -chdir=src/connectors/sonarqube/runtime output -raw sonarqube_url)
-SONAR_TOKEN=$(terraform -chdir=src/connectors/sonarqube/runtime output -raw sonarqube_project_token)
-ADMIN_PWD=$(terraform -chdir=src/connectors/sonarqube/runtime output -raw sonarqube_admin_password)
-
-curl -X POST "$SONAR_URL/api/user_tokens/generate" \
-  -u "admin:$ADMIN_PWD" \
-  -d "name=appsec-mvp&login=admin&type=PROJECT_ANALYSIS_TOKEN"
+cd src/connectors/sonarqube/runtime
+terraform init
+terraform apply -var-file=terraform.tfvars
 ```
 
-Then load the value into the secret scope via `bash src/connectors/sonarqube/scripts/load-secrets.sh` (with `SONARQUBE_URL` + `SONARQUBE_TOKEN` exported).
-
-Users with their own SonarQube instance skip this step. The token already exists.
+The Helm chart does not support declarative token creation, so the module emits a random `sonarqube_project_token` value that you register against the running SonarQube via `POST /api/user_tokens/generate` after `terraform apply` completes. Once registered, feed `sonarqube_url` and the registered token into the next section as `SONARQUBE_HOST` / `SONARQUBE_TOKEN`.
 
 ## Reference
 
@@ -186,39 +180,44 @@ Loaded into the `mvp-connectors` secret scope by `src/connectors/sonarqube/scrip
 
 | Secret key | Source env var | Purpose |
 |---|---|---|
-| `sonarqube_url` | `SONARQUBE_URL` | Sonar server URL the connector calls. |
-| `sonarqube_token` | `SONARQUBE_TOKEN` | Analysis-token-style PAT used for `/api/issues/search`, `/api/hotspots/search`, `/api/rules/search`, `/api/projects/search`. |
+| `sonarqube_url` | `SONARQUBE_HOST` | Sonar host the connector calls (`sonarcloud.io` for SonarCloud, or the LoadBalancer hostname output by the optional runtime). |
+| `sonarqube_token` | `SONARQUBE_TOKEN` | User token used for `/api/issues/search`, `/api/hotspots/search`, `/api/rules/search`, `/api/projects/search`. |
 
 Run from repo root after Phase 1 completes:
 
 ```bash
-export SONARQUBE_URL="http://sonarqube.example.com"
+export SONARQUBE_HOST="sonarcloud.io"
+export SONARQUBE_ORG="<your-org-key>"
 export SONARQUBE_TOKEN="..."
 bash src/connectors/sonarqube/scripts/load-secrets.sh
-# OK: sonarqube secrets loaded into scope mvp-connectors
+# Expected: OK: sonarqube secrets loaded into scope mvp-connectors
 ```
+
+`SONARQUBE_ORG` is read by the connector at runtime as a job parameter; it is not currently written to the secret scope, but the variable must be exported before triggering the job so the bundle picks it up.
 
 ## Run the job
 
-Before the connector ingests anything, the SonarQube server itself must have project-analysis results to expose. From any machine with Docker and network access to the SonarQube URL, scan each repo once:
+Before the connector ingests anything, the SonarQube side must have analysis results to expose. On SonarCloud, an organization with at least one analyzed project is sufficient (use SonarCloud's own GitHub-based onboarding, or run `sonar-scanner-cli` against any local checkout). On a self-hosted instance, scan each target repository once with the official Docker image:
 
 ```bash
 for repo in BenchmarkJava BenchmarkPython; do
   git clone "https://github.com/<org>/${repo}"
   docker run --rm -v "$PWD/${repo}:/usr/src" \
-    -e SONAR_HOST_URL="$SONARQUBE_URL" -e SONAR_TOKEN="$SONARQUBE_TOKEN" \
+    -e SONAR_HOST_URL="https://${SONARQUBE_HOST}" \
+    -e SONAR_TOKEN="$SONARQUBE_TOKEN" \
     sonarsource/sonar-scanner-cli \
+    -Dsonar.organization="$SONARQUBE_ORG" \
     -Dsonar.projectKey="$repo" -Dsonar.sources=.
 done
 ```
 
-Then trigger the Databricks job for the connector:
+Then trigger the Databricks job:
 
 ```bash
 databricks bundle run sonarqube-connector --target dev
 ```
 
-The job is declared in `src/connectors/sonarqube/resources/job.yml`, runs on a 3-hour cron, and has two tasks: `ingest` (REST → Bronze) and `transform` (Bronze → `silver.findings`).
+The job is declared in `src/connectors/sonarqube/resources/job.yml` (job key `sonarqube-connector`), runs on a 30-minute cron once enabled, and has two tasks: `ingest` (REST → Bronze) and `transform` (Bronze → `silver.findings`). For a small SonarCloud organization expect end-to-end completion in ~5 minutes.
 
 !!! warning "Skeleton-only behaviour"
     The `ingest()` and `transform()` functions in the connector module raise `NotImplementedError`. Until the full implementation lands, the bundle deploys the job and the schema, but the first run of the job fails on the placeholder. Users wiring SonarQube can deploy the resources and validate the secret-loading flow end-to-end; functional ingest is future work.
@@ -231,32 +230,33 @@ The job is declared in `src/connectors/sonarqube/resources/job.yml`, runs on a 3
 ## Verify
 
 ```sql
--- Bronze: raw issues + hotspots from /api/issues/search and /api/hotspots/search.
+-- Bronze: raw issues from /api/issues/search.
 SELECT count(*) FROM appsec_dev.bronze_sonarqube.issues;
-SELECT count(*) FROM appsec_dev.bronze_sonarqube.hotspots;
 
--- Silver: cross-source canonical findings for sonarqube.
-SELECT count(*) FROM appsec_dev.silver.findings WHERE tool_source='sonarqube';
-SELECT rule_id_native, cwe_id, severity_canonical
-  FROM appsec_dev.silver.findings WHERE tool_source='sonarqube' LIMIT 5;
+-- Silver: canonical SAST findings projected from SonarQube issues + hotspots.
+SELECT severity_canonical, count(*)
+  FROM appsec_dev.silver.findings
+  WHERE source_tool = 'sonarqube'
+  GROUP BY severity_canonical;
 
 -- Cross-source dependency check — every sonarqube finding's repository_id
 -- should join to a silver.repositories row populated by an SCM connector.
 SELECT count(*) AS missing_repo
   FROM appsec_dev.silver.findings f
   LEFT JOIN appsec_dev.silver.repositories r USING (repository_id)
-  WHERE f.tool_source='sonarqube' AND r.repository_id IS NULL;
+  WHERE f.source_tool = 'sonarqube' AND r.repository_id IS NULL;
 ```
 
-A non-zero `missing_repo` count means SonarQube is reporting findings against repositories the SCM connector has not yet ingested. Run [GitHub](../scm/github.md) (or another SCM) before relying on the rollups in [Evidence scenarios](../../analytics/evidence.md).
+Expected outcome: at least one row in `bronze_sonarqube.issues` per analyzed project in the organization. The Silver row count is less than or equal to Bronze because the transform filters `type = CODE_SMELL` out (per the *CODE_SMELL filtering at the Silver layer* note in the connector reference). A non-zero `missing_repo` count means SonarQube is reporting findings against repositories the SCM connector has not yet ingested. Run [GitHub](../scm/github.md) (or another SCM) before relying on the rollups in [Evidence scenarios](../../analytics/evidence.md).
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
+| `401 Unauthorized` from the Databricks job | Token expired or wrong scope. Generate a new one at SonarCloud → **My Account → Security → Generate Tokens** (permissions: *Browse on All Projects* + *Execute Analysis on All Projects*); re-run `bash src/connectors/sonarqube/scripts/load-secrets.sh` with `SONARQUBE_HOST` and the new `SONARQUBE_TOKEN` exported. |
+| 0 rows in `bronze_sonarqube.issues` | The organization has no analyzed projects, or the API returned issues outside the connector's filters. Verify with `curl -u "$SONARQUBE_TOKEN:" "https://$SONARQUBE_HOST/api/issues/search?organization=$SONARQUBE_ORG&p=1&ps=10"`. |
+| Validation table shows `REQ-DEDUP` FAIL | Cross-tool dedup against semgrep depends on both connectors having ingested the same repository. Run the GitHub connector's seed first, then semgrep, then sonarqube. |
 | Helm release stuck on `pending-install` (when using the optional runtime) | RDS not ready. Wait ~5 min, run `helm status sonarqube -n sonarqube`, re-run `terraform apply` from `src/connectors/sonarqube/runtime/`. |
-| `/api/issues/search` returns empty | No SonarQube scans have completed yet; run the `sonar-scanner-cli` Docker invocation above against your target repos. |
-| `401` from the Databricks job | `sonarqube_token` secret not populated. Re-run `bash src/connectors/sonarqube/scripts/load-secrets.sh` with `SONARQUBE_URL` and `SONARQUBE_TOKEN` exported; see [Secrets bootstrap](../../platform/secrets-bootstrap.md). |
 | `NotImplementedError` from the job | Expected: connector module is a skeleton. Tracked in the "Out of scope" section of the redesign spec. |
 | No rows in `silver.repositories` | No SCM connector has run yet. Install [GitHub](../scm/github.md) or another SCM connector and trigger its job before relying on the cross-source join. |
 
