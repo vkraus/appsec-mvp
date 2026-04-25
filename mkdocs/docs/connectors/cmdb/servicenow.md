@@ -174,10 +174,10 @@ Tests live under [`tests/connectors/servicenow/`](https://github.com/vkraus/apps
 
 ## Generation log
 
-This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated generation log row is tracked as a deferred follow-up.
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work; the Reference and Validation sections preserve the original implementation-grounded prose, and the Generation log table records the actual skill runs that produced the reconciled artefacts.
 
-| Stage              | Skill                            | Inputs       | Outputs                                            | Run on     | Skills repo ref |
-|--------------------|----------------------------------|--------------|----------------------------------------------------|------------|-----------------|
-| Source analysis    | `analyze-source` (cmdb)          | (pre-skill)  | `mkdocs/docs/connectors/cmdb/servicenow.md` §1–§3  | (pre-skill) | (pre-skill)     |
-| Module generation  | `generate-connector` (cmdb)      | (pre-skill)  | `src/connectors/servicenow/`, `tests/connectors/servicenow/`         | (pre-skill) | (pre-skill)     |
-| Validation         | `validate-implementation` (cmdb) | (pre-skill)  | `mkdocs/docs/connectors/cmdb/servicenow.md` §5     | (pre-skill) | (pre-skill)     |
+| Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (cmdb)            | name=ServiceNow; url=https://docs.servicenow.com/bundle/utah-application-development/page/integrate/inbound-rest/concept/c_TableAPI.html; category=cmdb | mkdocs/docs/connectors/cmdb/servicenow.md §1–§3                                    | 2026-04-25 | 2fa3e2d (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (cmdb)        | (pending)                                                             | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation         | `validate-implementation` (cmdb)   | (pending)                                                             | (pending)                                                                          | (pending)  | (pending)                                |
