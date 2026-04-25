@@ -28,7 +28,7 @@ Apply (the test suite MUST have a `@pytest.mark.requirement("REQ-...")`-bound te
 
 Mark `N/A`:
 
-- `REQ-ING-AUTH` — N/A: quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix": "the CLI-artefact ingestion path used by OWASP ZAP has no API auth, pagination, or rate limit."
+- `REQ-ING-AUTH` — N/A: quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix": "the CLI-artifact ingestion path used by OWASP ZAP has no API auth, pagination, or rate limit."
 - `REQ-ING-PAG` — N/A: same rationale.
 - `REQ-ING-RL` — N/A: same rationale.
 

@@ -28,7 +28,7 @@ Apply (the test suite MUST have a `@pytest.mark.requirement("REQ-...")`-bound te
 
 Mark `N/A` (the Validation table row reads `N/A` with bound-test cell `—`):
 
-- `REQ-TRF-SEV` — N/A: CMDB sources emit no findings, so severity normalization is not exercised. Quoted from the matrix legend at `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix": "the category does not exercise the requirement (e.g. CMDB sources emit no findings, so severity/status/dedup do not apply)".
+- `REQ-TRF-SEV` — N/A: CMDB sources emit no findings, so severity normalization is not exercised. Per the matrix legend at `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix": "the category does not exercise the requirement (e.g. CMDB sources emit no findings, so severity/status/dedup do not apply)".
 - `REQ-TRF-STS` — N/A: same rationale; entities have no lifecycle status.
 - `REQ-DEDUP` — N/A: entity dedup is handled by the natural-key column at Bronze-to-Silver upsert; there are no `dedup_links` rows for this category.
 

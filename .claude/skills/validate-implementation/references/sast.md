@@ -31,7 +31,7 @@ Apply (all ten — the test suite MUST have a `@pytest.mark.requirement("REQ-...
 
 Mark `N/A`: none for the server-based deployment style.
 
-CLI-based SAST (artefact ingestion): `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` are N/A — quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix": "the CLI-artefact ingestion path used by OWASP ZAP has no API auth, pagination, or rate limit." The same rationale applies to CLI-based SAST. Apply this N/A profile when validating a CLI-only connector.
+CLI-based SAST (artefact ingestion): `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` are N/A — quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix": "the CLI-artifact ingestion path used by OWASP ZAP has no API auth, pagination, or rate limit." The same rationale applies to CLI-based SAST. Apply this N/A profile when validating a CLI-only connector.
 
 Platform-integrated SAST (hosted inside the SCM platform): inherits the SCM connector's auth, pagination, and rate-limit code; the SAST test suite binds only the transform / DQ / dedup REQ-IDs locally. The inherited bindings are documented in a comment, not retested.
 

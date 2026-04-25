@@ -31,7 +31,7 @@ Apply (all ten — the test suite MUST have a `@pytest.mark.requirement("REQ-...
 
 Mark `N/A`: none for the server-based deployment style.
 
-CLI-based SCA (package-manager audit artefacts): `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` are N/A — same rationale as the CLI-artefact SAST path quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix": "the CLI-artefact ingestion path … has no API auth, pagination, or rate limit." Apply this N/A profile when validating a CLI-only connector.
+CLI-based SCA (package-manager audit artefacts): `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` are N/A — same rationale as the CLI-artefact SAST path quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix": "the CLI-artifact ingestion path … has no API auth, pagination, or rate limit." Apply this N/A profile when validating a CLI-only connector.
 
 Platform-integrated SCA (Dependabot in GitHub) inherits the host SCM connector's auth / pagination / rate-limit code; the SCA test suite binds only the transform / DQ / dedup REQ-IDs locally.
 

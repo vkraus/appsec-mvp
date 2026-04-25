@@ -31,7 +31,7 @@ Apply (all ten — the test suite MUST have a `@pytest.mark.requirement("REQ-...
 
 Mark `N/A`: none.
 
-For pure-entity SCM sources (no platform-native findings consumed), the three finding-only REQ-IDs (`REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-DEDUP`) bind to entity-shape tests is not applicable — but the reference SCM connector (GitHub) consumes platform-native findings (Dependabot, code scanning, secret scanning), so the full ten apply. If validating a pure-entity variant, mark the finding-only REQ-IDs `N/A` with the rationale "pure-entity SCM source; no platform-native findings consumed".
+For pure-entity SCM sources (no platform-native findings consumed), the three finding-only REQ-IDs (`REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-DEDUP`) do not bind to entity-shape tests — but the reference SCM connector (GitHub) consumes platform-native findings (Dependabot, code scanning, secret scanning), so the full ten apply. If validating a pure-entity variant, mark the finding-only REQ-IDs `N/A` with the rationale "pure-entity SCM source; no platform-native findings consumed".
 
 ## Default severity
 

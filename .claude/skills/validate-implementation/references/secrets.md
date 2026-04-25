@@ -32,7 +32,7 @@ Mark `N/A`:
 - `REQ-ING-HWM` — N/A: full reload only. The secrets capability surface at `mkdocs/docs/connectors/secrets/index.md` § "Capability surface" states "Such tooling has no incremental hook and SHALL be treated under the full-reload strategy." There is no record-level update column to advance.
 - `REQ-TRF-STS` — N/A: secret-detection sources do not expose a status / lifecycle vocabulary. No status transitions exist to normalize.
 
-For CLI-based secret scanners (TruffleHog artefacts — the dominant deployment style), `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` are also N/A — quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix": "the CLI-artefact ingestion path … has no API auth, pagination, or rate limit." Apply this fuller N/A profile when validating a CLI-only connector.
+For CLI-based secret scanners (TruffleHog artefacts — the dominant deployment style), `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` are also N/A — quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix": "the CLI-artifact ingestion path … has no API auth, pagination, or rate limit." Apply this fuller N/A profile when validating a CLI-only connector.
 
 Note the discrepancy with the task spec's summary table (which lists `HWM` under "applies"): the catalog matrix and the secrets capability surface are authoritative, and both treat full reload as having no record-level HWM. The plan's `REQ-ING-HWM` could be read as the commit-SHA / scan-start-timestamp HWM for full-reload bootstrapping; if the connector encodes a commit-SHA HWM in `config.yml`, bind a test asserting commit-SHA advancement and mark `REQ-ING-HWM` as `PASS`. Otherwise mark it `N/A` with the rationale above.
 
