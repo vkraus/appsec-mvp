@@ -185,7 +185,7 @@ For the demo runtime, expect 2 rows in `business_applications` and 3 rows in `ap
 | Symptom | Fix |
 |---|---|
 | Pipeline stuck on schema inference | Open the connection definition in the Databricks UI (**Catalog → External Data → Connections → servicenow**) and verify the admin user has read access to `cmdb_ci_business_app`. |
-| `401 Unauthorized` from the pipeline | Rotate the password in ServiceNow, re-run `bash src/connectors/servicenow/scripts/load-secrets.sh` *and* re-deploy the bundle with the new `--var "servicenow_password=..."` value, then trigger a new pipeline run. |
+| `401 Unauthorized` from the pipeline | Rotate the password in ServiceNow, re-run `bash src/connectors/servicenow/scripts/load-secrets.sh`, *and* re-deploy the bundle so the UC connection picks up the new password. Pass it via env var rather than `--var` to keep the value off `argv`/history: `BUNDLE_VAR_servicenow_password="..." databricks bundle deploy --target dev --var "warehouse_id=$WAREHOUSE_ID" --var "artifact_bucket=$ARTIFACT_BUCKET" --var "servicenow_host=$SERVICENOW_HOST"`. Then trigger a new pipeline run. |
 | 0 rows in bronze after a successful run | PDI may not expose the CMDB tables. Confirm by hitting `https://<host>/api/now/table/cmdb_ci_business_app?sysparm_limit=1` with `curl -u $USER:$PASS`. If the call returns 404, fall back to a licensed tenant. |
 | `silver.app_repo_mapping` rows have `repository_id` values not present in `silver.repositories` | Install at least one SCM connector and run it before expecting the cross source join to resolve. See [SCM category](../scm/index.md). |
 

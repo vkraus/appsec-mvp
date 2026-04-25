@@ -60,12 +60,18 @@ databricks bundle deploy \
   --var "artifact_bucket=${ARTIFACT_BUCKET}"
 ```
 
-If you intend to deploy the Lakeflow pipeline and UC connection for the servicenow connector, also pass:
+If you intend to deploy the Lakeflow pipeline and UC connection for the servicenow connector, the host is non-sensitive configuration (pass as a flag), but the credentials should come from process env rather than `argv` so they don't land in `~/.bash_history` or `ps aux` output. The Databricks CLI resolves any DAB variable `<name>` from a process env var named `BUNDLE_VAR_<name>`:
 
 ```bash
-  --var "servicenow_host=${SERVICENOW_HOST}" \
-  --var "servicenow_username=${SERVICENOW_USERNAME}" \
-  --var "servicenow_password=${SERVICENOW_PASSWORD}"
+# Host: non-sensitive configuration; --var is fine.
+# Username + password: pass via env vars so the values stay off argv.
+BUNDLE_VAR_servicenow_username="${SERVICENOW_USERNAME}" \
+BUNDLE_VAR_servicenow_password="${SERVICENOW_PASSWORD}" \
+databricks bundle deploy \
+  --target dev \
+  --var "warehouse_id=${WAREHOUSE_ID}" \
+  --var "artifact_bucket=${ARTIFACT_BUCKET}" \
+  --var "servicenow_host=${SERVICENOW_HOST}"
 ```
 
 Subsequent connector deploys can reuse the same command. The bundle is

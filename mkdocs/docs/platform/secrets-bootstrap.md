@@ -150,8 +150,8 @@ The same applies to the AWS keys exported before applying connector runtimes tha
 
 The ServiceNow connector page documents a recovery path where you re-deploy the bundle with `--var "servicenow_password=..."`. That puts the password on the `databricks` CLI command line — visible in `ps aux` to any other user on the same machine, and recorded in shell history. Prefer one of:
 
-- a `.tfvars`-style approach: declare the variable in a `variables.yml` checked-in *without* the secret value, and resolve it from a Databricks secret reference (`{{secrets/mvp-connectors/servicenow_password}}`) in `databricks.yml`. The secret value never leaves the workspace.
-- pass via env var: `DATABRICKS_BUNDLE_VAR_servicenow_password="..." databricks bundle deploy ...`. Env-var passing keeps the value off `argv` (it lives in `/proc/<pid>/environ`, only readable by the same UID).
+- pass via env var: `BUNDLE_VAR_servicenow_password="..." databricks bundle deploy ...`. The Databricks CLI resolves any DAB variable `<name>` from a process env var named `BUNDLE_VAR_<name>`. Env-var passing keeps the value off `argv` (it lives in `/proc/<pid>/environ`, only readable by the same UID) and out of `~/.bash_history`. This is the pattern documented in [Bundle deploy](bundle-deploy.md) for the ServiceNow credentials.
+- where the underlying resource type accepts the Databricks secret-reference syntax (`{{secrets/scope/key}}`) — currently job parameters, cluster spark conf, and init scripts — wire the resource directly to the secret without a DAB variable in between. UC connection options (the path used by `servicenow`) do not yet accept this syntax in DAB yaml; the env-var pattern above is the supported workaround there.
 
 #### 3. Configure scope ACLs
 
