@@ -32,6 +32,30 @@ CREATE TABLE IF NOT EXISTS silver.hwm (
   updated_at TIMESTAMP NOT NULL
 ) USING DELTA;
 
+-- ----------------------------------------------------------------------------
+-- Note on connector-side population
+--
+-- The two tables below (silver.repositories and silver.app_repo) define the
+-- canonical schema required by the SCM-first data dependency. As of the
+-- Databricks-centric redesign, connector-side write logic is intentionally
+-- DEFERRED — see the redesign spec's "Out of scope" section.
+--
+-- Concretely, until that follow-on lands:
+--   * silver.repositories: existing code in src/connectors/github/transform.py
+--     projects to a narrower (repository_id, full_name, default_branch,
+--     updated_at) struct via src/platform/schemas.py. INSERTs to the 11-col
+--     table below will fail NOT NULL on scm_source/org/name/url/first_seen_at/
+--     last_seen_at until the github transform is extended to populate them.
+--   * silver.app_repo: existing CMDB transform in
+--     src/connectors/servicenow/transform.py writes to silver.app_repo_mapping
+--     with column application_id (not app_id). Until that transform is
+--     migrated, silver.app_repo will be empty and silver.app_repo_mapping
+--     will continue to receive writes.
+--
+-- The two tables below establish the target canonical schema; the connector
+-- migrations that populate them are tracked as a separate follow-on task.
+-- ----------------------------------------------------------------------------
+
 -- Canonical repository entity — populated by SCM connectors (github, gitlab).
 -- Required by the SCM-first data dependency: scanner findings reference
 -- repository_id values that resolve here.

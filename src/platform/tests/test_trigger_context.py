@@ -1,5 +1,6 @@
 """Trigger-context field in silver.findings schema."""
 
+import re
 from pathlib import Path
 
 from src.platform.schemas import silver_findings
@@ -22,5 +23,12 @@ def test_silver_findings_has_trigger_context_field():
 def test_bootstrap_sql_declares_trigger_context_on_findings():
     repo_root = Path(__file__).resolve().parents[3]
     sql = repo_root.joinpath("src/platform/sql/silver_tables.sql").read_text()
-    assert "trigger_context" in sql, \
+    findings_match = re.search(
+        r"CREATE TABLE IF NOT EXISTS silver\.findings.*?\) USING DELTA;",
+        sql,
+        re.DOTALL,
+    )
+    assert findings_match is not None, \
+        "silver.findings DDL block missing from silver_tables.sql"
+    assert "trigger_context" in findings_match.group(0), \
         "Bootstrap DDL for silver.findings must declare the trigger_context column."
