@@ -24,10 +24,63 @@ The platform ingests from AppSec sources via per-source connectors, normalizes f
 
 ```mermaid
 flowchart LR
-    src[Sources] --> bronze[(Bronze)]
-    bronze --> silver[(Silver)]
-    silver --> gold[(Gold)]
-    gold --> analytics[Analytics]
+  subgraph Sources["Sources"]
+    direction TB
+    GH[GitHub / GitLab]
+    SN[ServiceNow CMDB]
+    SQ[SonarQube]
+    SG[Semgrep]
+    DT[Dependency-Track]
+    TH[TruffleHog]
+    ZAP[OWASP ZAP]
+    WAF[AWS WAF]
+  end
+
+  subgraph Bronze["Bronze (raw)"]
+    direction TB
+    BG[bronze_github / _gitlab]
+    BSN[bronze_servicenow]
+    BSQ[bronze_sonarqube]
+    BSG[bronze_semgrep]
+    BDT[bronze_dependency_track]
+    BTH[bronze_trufflehog]
+    BZAP[bronze_owasp_zap]
+    BWAF[bronze_aws_waf]
+  end
+
+  subgraph Silver["Silver (canonical)"]
+    SR["silver.repositories"]
+    SAR["silver.app_repo"]
+    SF["silver.findings"]
+    SHW["silver.hwm"]
+  end
+
+  subgraph Gold["Gold (analytics)"]
+    GFD["gold.findings_summary
+(per-app, per-severity)"]
+  end
+
+  GH --> BG
+  SN --> BSN
+  SQ --> BSQ
+  SG --> BSG
+  DT --> BDT
+  TH --> BTH
+  ZAP --> BZAP
+  WAF --> BWAF
+
+  BG --> SR
+  BSN --> SAR
+  BSQ --> SF
+  BSG --> SF
+  BDT --> SF
+  BTH --> SF
+  BZAP --> SF
+  BWAF --> SF
+
+  SR --> SF
+  SAR --> SF
+  SF --> GFD
 ```
 
 </div>
