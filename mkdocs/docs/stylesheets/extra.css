@@ -67,14 +67,19 @@
 /* Overview block sits between hero and cards */
 
 .landing-overview {
-  max-width: 44rem;
+  max-width: 64rem;
   margin: 1rem auto 2rem;
   text-align: center;
 }
 
 .landing-overview .mermaid {
-  max-width: 32rem;
+  max-width: 60rem;
   margin: 1rem auto 0;
+}
+
+.landing-overview .mermaid svg {
+  width: 100%;
+  height: auto;
 }
 
 /* Tighten hero on small screens */
