@@ -13,3 +13,7 @@ Connectors ingest from AppSec source systems into the platform's Bronze layer, t
 7. **[WAF](waf/)** — edge-layer block events and rule logs (AWS WAF).
 
 Each category page documents the shared capability surface — authentication, pagination, incremental strategy — and lists the category's Claude Code skills.
+
+## How connectors are produced
+
+Connectors in this framework are produced by three category-aware skills: `analyze-source`, `generate-connector`, and `validate-implementation`. See [Connector skills](../platform/reference/connector-skills.md) for the canonical statement of the contract, the procedural body of each skill, and the per-connector generation aggregator.

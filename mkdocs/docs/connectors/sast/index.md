@@ -27,7 +27,7 @@ SAST sources populate the Silver `finding` table scoped by `(repository_id, file
 
 ## Skills
 
-Three category-specialized skills cover the connector lifecycle for SAST sources: `analyze-source-sast`, `generate-connector-sast`, `validate-implementation-sast`. See [Skills](skills.md) for the current unspecialized baselines.
+Three skills cover the connector lifecycle for SAST sources, with category-specific facts at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## Connectors in this category
 

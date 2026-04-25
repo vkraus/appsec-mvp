@@ -18,7 +18,7 @@ WAF sources populate the Silver `waf_event` table scoped by `(application_id, ru
 
 ## Skills
 
-Three category-specialized skills cover the connector lifecycle for WAF sources: `analyze-source-waf`, `generate-connector-waf`, `validate-implementation-waf`. See [Skills](skills.md) for the current unspecialized baselines.
+Three skills cover the connector lifecycle for WAF sources, with category-specific facts at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## Connectors in this category
 

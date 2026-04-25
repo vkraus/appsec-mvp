@@ -103,6 +103,7 @@ nav:
           - Single silver.findings rationale: platform/reference/single-silver-findings-rationale.md
           - Source characteristics: platform/reference/source-characteristics.md
           - Source capability matrix: platform/reference/source-capability-matrix.md
+          - Connector skills: platform/reference/connector-skills.md
   - Connectors:
       - connectors/index.md
       - CMDB:

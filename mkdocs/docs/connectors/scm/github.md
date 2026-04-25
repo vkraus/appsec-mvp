@@ -217,3 +217,13 @@ Collected 10 requirement-bound tests via `pytest tests/connectors/github/ -v --t
 ### Tests
 
 Tests live under [`tests/connectors/github/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/github). The report table above is the per-REQ outcome of running the bound tests in that directory.
+
+## Provenance
+
+This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated provenance row is tracked as a deferred follow-up.
+
+| Stage              | Skill                            | Inputs       | Outputs                                            | Run on     | Skills repo ref |
+|--------------------|----------------------------------|--------------|----------------------------------------------------|------------|-----------------|
+| Source analysis    | `analyze-source` (scm)           | (pre-skill)  | `mkdocs/docs/connectors/scm/github.md` §1–§3       | (pre-skill) | (pre-skill)     |
+| Module generation  | `generate-connector` (scm)       | (pre-skill)  | `src/connectors/github/`, `tests/connectors/github/` | (pre-skill) | (pre-skill)     |
+| Validation         | `validate-implementation` (scm)  | (pre-skill)  | `mkdocs/docs/connectors/scm/github.md` §5          | (pre-skill) | (pre-skill)     |
