@@ -1,7 +1,7 @@
 source: owasp_zap
 category: dast
-severity_map: config/severity/owasp-zap.yml
-status_map:   config/status/owasp-zap.yml
+severity_map: src/connectors/owasp_zap/severity.yml
+status_map:   src/connectors/owasp_zap/status.yml
 bucket_secret_scope: mvp-connectors
 bronze_table: ${catalog}.bronze_owasp_zap.findings
 cicd_prefix: cicd/zap/

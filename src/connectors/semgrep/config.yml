@@ -1,7 +1,7 @@
 source: semgrep
 category: sast
-severity_map: config/severity/semgrep-cli.yml
-status_map:   config/status/semgrep.yml
+severity_map: src/connectors/semgrep/severity.yml
+status_map:   src/connectors/semgrep/status.yml
 bucket_secret_scope: mvp-connectors
 bronze_table: ${catalog}.bronze_semgrep.findings
 prefixes:

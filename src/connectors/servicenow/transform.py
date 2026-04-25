@@ -11,7 +11,7 @@ from src.platform.config import SeverityMap, load_yaml
 from src.platform.schemas import silver_applications
 
 
-_SEVERITY_PATH = Path(__file__).parents[3] / "config" / "severity" / "servicenow.yml"
+_SEVERITY_PATH = Path(__file__).parent / "severity.yml"
 
 
 _OWNED_BY_SCHEMA = StructType([
@@ -35,7 +35,7 @@ def _parse_sn_ts(raw: str) -> datetime:
 def _criticality_mapping_expr(column):
     """Return a Spark column expression that maps ServiceNow u_criticality
     values onto the canonical severity set via the declarative lookup at
-    config/severity/servicenow.yml. Unknown inputs map to ``info``.
+    src/connectors/servicenow/severity.yml. Unknown inputs map to ``info``.
     """
     sev = load_yaml(SeverityMap, _SEVERITY_PATH)
     pairs = []
@@ -50,7 +50,7 @@ def transform(bronze_df: DataFrame) -> DataFrame:
     Parses the bronze envelope's ``_raw_payload`` against the cmdb fields
     consumed by the silver layer and projects onto
     ``silver_applications``. Criticality passes through the
-    declarative lookup at ``config/severity/servicenow.yml``. Assumes
+    declarative lookup at ``src/connectors/servicenow/severity.yml``. Assumes
     ``owned_by`` is serialized as a struct with an ``email`` member; the
     Lakeflow-managed bronze view emits that shape by default.
     """
