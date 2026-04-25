@@ -1,36 +1,41 @@
 #!/usr/bin/env bash
-# End-to-end installer for the SonarQube connector.
+# install.sh — end-to-end installer for the sonarqube connector.
 #
-# Runs after Phase 1 (catalog + secret scope + bundle deploy). It:
-#   1. Loads SONARQUBE_HOST + SONARQUBE_TOKEN into the mvp-connectors scope.
-#   2. Triggers the sonarqube-connector job in the dev target.
-#   3. Prints the Silver-layer verification query the user should run.
-#
-# Required environment variables:
-#   SONARQUBE_HOST   — sonarcloud.io OR self-hosted Sonar host (no scheme).
-#   SONARQUBE_ORG    — SonarCloud organization key. Read by the job at runtime.
-#   SONARQUBE_TOKEN  — User token with Browse + Execute Analysis on All Projects.
+# Step 1: load credentials into the mvp-connectors secret scope via load-secrets.sh.
+# Step 2: trigger the sonarqube-connector job in the configured target.
+# Step 3: print (or run, if WAREHOUSE_ID is set) Bronze + Silver verification queries.
 
 set -euo pipefail
 
-: "${SONARQUBE_HOST:?SONARQUBE_HOST is required (e.g. sonarcloud.io)}"
-: "${SONARQUBE_ORG:?SONARQUBE_ORG is required (SonarCloud organization key)}"
-: "${SONARQUBE_TOKEN:?SONARQUBE_TOKEN is required (user token)}"
+: "${SONARQUBE_URL:?SONARQUBE_URL is required}"
+: "${SONARQUBE_TOKEN:?SONARQUBE_TOKEN is required}"
+: "${SONARQUBE_HOST:?SONARQUBE_HOST is required}"
+: "${SONARQUBE_ORG:?SONARQUBE_ORG is required}"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET="${DATABRICKS_TARGET:-dev}"
+CATALOG="${CATALOG:-appsec_dev}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 
-echo "Step 1/3: Loading secrets into mvp-connectors..."
-SONARQUBE_URL="$SONARQUBE_HOST" \
-  bash "$SCRIPT_DIR/load-secrets.sh"
+echo "Step 1/3: Loading sonarqube secrets..."
+bash "${SCRIPT_DIR}/load-secrets.sh"
 
-echo "Step 2/3: Triggering sonarqube-connector job (target=dev)..."
-databricks bundle run sonarqube-connector --target dev
+echo "Step 2/3: Triggering the sonarqube-connector job (target=${TARGET})..."
+databricks bundle run sonarqube-connector --target "${TARGET}"
 
-echo "Step 3/3: Verifying rows..."
-echo "  Run the following from a Databricks SQL editor or via the CLI:"
-echo
-echo "    SELECT count(*) FROM appsec_dev.bronze_sonarqube.issues;"
-echo "    SELECT severity_canonical, count(*) FROM appsec_dev.silver.findings"
-echo "      WHERE source_tool = 'sonarqube' GROUP BY severity_canonical;"
-echo
-echo "OK: SonarQube connector install complete."
+echo "Step 3/3: Verifying row counts..."
+if [[ -z "${WAREHOUSE_ID:-}" ]]; then
+  echo "  WAREHOUSE_ID not set — skipping SQL verification."
+  echo "  To verify by hand:"
+  echo "    SELECT count(*) FROM ${CATALOG}.bronze_sonarqube.issues;"
+  echo "    SELECT count(*) FROM ${CATALOG}.bronze_sonarqube.findings_raw;"
+  echo "    SELECT count(*) FROM ${CATALOG}.silver.findings WHERE tool_source='sonarqube';"
+else
+  databricks sql query --warehouse-id "${WAREHOUSE_ID}" \
+    "SELECT count(*) AS n_bronze_issues FROM ${CATALOG}.bronze_sonarqube.issues"
+  databricks sql query --warehouse-id "${WAREHOUSE_ID}" \
+    "SELECT count(*) AS n_bronze_findings_raw FROM ${CATALOG}.bronze_sonarqube.findings_raw"
+  databricks sql query --warehouse-id "${WAREHOUSE_ID}" \
+    "SELECT count(*) AS n_findings FROM ${CATALOG}.silver.findings WHERE tool_source='sonarqube'"
+fi
+
+echo "OK: sonarqube connector install complete."

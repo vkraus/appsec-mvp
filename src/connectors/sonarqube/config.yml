@@ -19,7 +19,7 @@ hwm:
   column: updateDate
 hwm_column: updateDate
 # Bronze / Silver targets
-bronze_table: ${catalog}.bronze_sonarqube.findings_raw
+bronze_table: ${catalog}.bronze_sonarqube.issues
 # Declarative lookups
 severity_map: src/connectors/sonarqube/severity.yml
 status_map:   src/connectors/sonarqube/status.yml

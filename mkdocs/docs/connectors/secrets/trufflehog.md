@@ -121,30 +121,32 @@ TruffleHog is a CLI scanner, not a server. The user (typically CI/CD) runs `truf
 
 ## Optional source runtime
 
-`src/connectors/trufflehog/runtime/` provisions a Unity Catalog **External Volume** named `artefacts` under `<catalog>.bronze_trufflehog`, mapped onto a cloud bucket (S3 / ADLS / GCS) the user provisions in advance. The runtime declares a single `databricks_volume` resource. No IAM, no compute, no Kubernetes.
+The Terraform module under [`src/connectors/trufflehog/runtime/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/trufflehog/runtime) creates a **Unity Catalog `EXTERNAL` Volume** mapped to the cloud bucket where CI/CD runners drop `trufflehog --json` artefacts. The cloud bucket itself (S3 / ADLS / GCS) is **user-provisioned in advance**; the runtime does not create cloud buckets.
 
-Apply the runtime if you do **not** already have an S3 bucket configured for TruffleHog artefacts (the typical demo path). Skip it if you have an existing bucket: set `TRUFFLEHOG_ARTIFACT_BUCKET` directly to the `s3://...` URI and proceed to Secrets.
+This is the canonical CLI-artefact pattern (CLAUDE.md §"Ingestion tooling preference order"): trufflehog has no live API, so the connector ingests via autoloader from a UC Volume backed by a drop bucket.
+
+Required runtime inputs at a glance: `catalog`, `trufflehog_artifact_volume_path` (e.g. `/Volumes/appsec_dev/bronze_trufflehog/artefacts`).
+
+Apply with:
 
 ```bash
-# 1. Export AWS reader credentials (skip for UC-Volume-only deployments).
-export AWS_ACCESS_KEY_ID="AKIA..."
-export AWS_SECRET_ACCESS_KEY="..."
-export TRUFFLEHOG_ARTIFACT_BUCKET="/Volumes/appsec_dev/bronze_trufflehog/artefacts"
-
-# 2. Load secrets (writes the bucket / path into the mvp-connectors scope; also
-#    writes the AWS-creds JSON blob if those env vars are set).
-bash src/connectors/trufflehog/scripts/load-secrets.sh
-
-# 3. Apply the runtime (creates the UC Volume that maps to the bucket).
 cd src/connectors/trufflehog/runtime
 terraform init
 terraform apply \
   -var "catalog=appsec_dev" \
   -var "trufflehog_artifact_volume_path=/Volumes/appsec_dev/bronze_trufflehog/artefacts"
-cd -
 ```
 
-The runtime exposes three outputs (`bronze_schema_full_name`, `volume_path`, `volume_full_name`) you can wire into downstream `GRANT` statements. See [`src/connectors/trufflehog/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/trufflehog/runtime) for variable reference and teardown notes (`terraform destroy` removes the UC Volume only; the underlying cloud bucket and any artefacts already uploaded are not managed by this module).
+Override `trufflehog_artifact_volume_secret_scope` / `trufflehog_artifact_volume_secret_key` only if your org uses a Databricks secret layout different from the defaults (`mvp-connectors` / `trufflehog_aws_credentials`).
+
+The CI-side wiring is operator-authored. Example (S3):
+
+```bash
+trufflehog git --json https://github.com/<org>/<repo> > out.json
+aws s3 cp out.json s3://<bucket>/trufflehog/<repo>/$(date -u +%FT%TZ).json
+```
+
+A sanitised sample artefact lives at [`runtime/files/sample.json`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/trufflehog/runtime/files/sample.json). See [`runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/trufflehog/runtime) for the full variable list and override flags.
 
 ## Secrets
 
@@ -256,5 +258,5 @@ This connector page is produced by the connector lifecycle skills. The Generatio
 | Stage              | Skill                              | Inputs                                                                              | Outputs                                                                            | Run on     | Skills repo ref                          |
 |--------------------|------------------------------------|-------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (secrets)         | name=TruffleHog; url=https://github.com/trufflesecurity/trufflehog; category=secrets | mkdocs/docs/connectors/secrets/trufflehog.md §1–§3                                 | 2026-04-25 | 5b7fa80 (retrofit-9-connectors)          |
-| Module generation  | `generate-connector` (secrets)     | page hash=5fc403d47499                                                              | src/connectors/trufflehog/, src/connectors/trufflehog/tests/, src/connectors/trufflehog/severity.yml, src/connectors/trufflehog/status.yml, src/connectors/trufflehog/resources/job.yml | 2026-04-25 | 61e9510 (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (secrets)     | page hash=71fc4901be57                                                              | src/connectors/trufflehog/, src/connectors/trufflehog/tests/, src/connectors/trufflehog/severity.yml, src/connectors/trufflehog/status.yml, src/connectors/trufflehog/resources/job.yml | 2026-04-25 | 615e721 (split-source-and-databricks-skills) |
 | Validation         | `validate-implementation` (secrets)| module path=src/connectors/trufflehog/                                              | mkdocs/docs/connectors/secrets/trufflehog.md §5                                    | 2026-04-25 | 12f656a (retrofit-9-connectors)          |

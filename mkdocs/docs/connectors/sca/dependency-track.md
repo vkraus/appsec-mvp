@@ -112,9 +112,21 @@ The fields below are the subset consumed by the connector. Complete schemas are 
 
 ### Optional source runtime
 
-`src/connectors/dependency_track/runtime/` is a minimal terraform module that **references** (does not create) the Bronze schema and the secret holding the Dependency-Track API key. The Dependency-Track instance itself is operator-stood-up via docker (above) — the runtime does **not** provision the DT server. See [`src/connectors/dependency_track/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/dependency_track/runtime) for variables and apply notes.
+The optional Terraform module under [`src/connectors/dependency_track/runtime/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/dependency_track/runtime) is a **references-only** module: it pins the `databricks/databricks` provider, declares the user inputs (`catalog`, `dependency_track_host`, `dependency_track_apikey_secret_scope`, `dependency_track_apikey_secret_key`), and uses `data "databricks_schema"` + `data "databricks_secret"` to fail fast at plan time if the Bronze schema or API-key secret is missing. **It does not provision a Dependency-Track tenant** — that is user-provisioned via the community docker image, an existing tenant, or vendor SaaS.
 
-Users with an existing Dependency-Track tenant and a populated secret scope can skip this module and feed values directly into the bundle variables of the connector job via the next section.
+Apply only if you want plan-time validation of the Databricks-side preconditions:
+
+```bash
+cd src/connectors/dependency_track/runtime
+terraform init
+terraform apply \
+  -var "catalog=appsec_dev" \
+  -var "dependency_track_host=dt.example.com"
+```
+
+Defaults for `dependency_track_apikey_secret_scope` (`mvp-connectors`) and `dependency_track_apikey_secret_key` (`dependency_track_api_key`) match the layout the bundled `scripts/load-secrets.sh` writes into. Override only if your org uses a different secret layout.
+
+See [`src/connectors/dependency_track/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/dependency_track/runtime) for the full variable list. Users who validate Databricks preconditions out of band (e.g. via a CI smoke test) skip this step entirely and proceed to **Secrets**.
 
 ### Secrets
 

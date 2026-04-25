@@ -10,7 +10,7 @@ The connector also loads rule metadata from `/api/rules/search` for severity/sta
 
 Bronze schema: `bronze_sonarqube`. Cross-source contribution: `silver.findings` with `tool_source = 'sonarqube'`.
 
-The connector module at `src/connectors/sonarqube/` is present as a **structural skeleton**. Folder layout, DAB job and schema resources, secret-loader script, severity/status lookups, and notebook entry stubs are all in place, but `ingest()` and `transform()` raise `NotImplementedError`. The full implementation is tracked as a separate follow-on task (per the "Out of scope" section in the redesign spec). The runbook below describes the *intended* user flow; until the implementation lands, the job runs but produces no Bronze rows.
+The connector module at `src/connectors/sonarqube/` is functional. Folder layout, DAB job and schema resources, secret-loader script, severity/status lookups, notebook entry wrappers (`ingest_entry.py` / `transform_entry.py`), and the pure-Python `ingest()` / `transform()` modules are all in place. The notebook entry points fetch credentials via `dbutils.secrets` and delegate to the framework-contract wrappers per thesis §2.4.1.
 
 ## Dependencies
 
@@ -30,9 +30,11 @@ The connector module at `src/connectors/sonarqube/` is present as a **structural
 
 ## Optional source runtime
 
-The Terraform module under `src/connectors/sonarqube/runtime/` provisions **SonarQube Server 10.6** as a Helm release on an existing EKS cluster, backed by an RDS Postgres 15 instance (`db.t3.small`, 20 GiB, encrypted at rest), and exposed via a LoadBalancer Service on port 9000. Users on SonarCloud skip this entirely. Users wanting self-hosted SonarQube apply the runtime — see [`src/connectors/sonarqube/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/sonarqube/runtime) for the full variable list, the RDS endpoint precondition, and the generated outputs (`sonarqube_url`, `sonarqube_project_token`, `rds_endpoint`).
+The Terraform module under [`src/connectors/sonarqube/runtime/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/sonarqube/runtime) provisions **SonarQube Server** as a Helm release on an existing EKS cluster, optionally backed by an RDS Postgres 15 instance (`db.t3.small`, 20 GiB, encrypted at rest), and exposed via a LoadBalancer Service on port 9000. Users on the SaaS edition skip this entirely. Users wanting self-hosted apply the runtime — see [`src/connectors/sonarqube/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/sonarqube/runtime) for the full variable list, the RDS endpoint precondition, and the generated outputs.
 
-Required runtime inputs at a glance: `aws_region`, `aws_access_key_id`, `aws_secret_access_key`, `eks_cluster_name`, `sonarqube_admin_password`, plus `vpc_id` / `vpc_subnet_ids` / `vpc_cidr_block` when the module creates its own RDS. Apply with:
+Required runtime inputs at a glance: `aws_region`, `aws_access_key_id`, `aws_secret_access_key`, `eks_cluster_name`, `sonarqube_admin_password`, plus `vpc_id` / `vpc_subnet_ids` / `vpc_cidr_block` when the module creates its own RDS.
+
+Apply with:
 
 ```bash
 cd src/connectors/sonarqube/runtime
@@ -40,7 +42,9 @@ terraform init
 terraform apply -var-file=terraform.tfvars
 ```
 
-The Helm chart does not support declarative token creation, so the module emits a random `sonarqube_project_token` value that you register against the running SonarQube via `POST /api/user_tokens/generate` after `terraform apply` completes. Once registered, feed `sonarqube_url` and the registered token into the next section as `SONARQUBE_HOST` / `SONARQUBE_TOKEN`.
+Or use the bundled [`runtime/install.sh`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/sonarqube/runtime/install.sh) wrapper, which reads the required values from environment variables (`AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `EKS_CLUSTER_NAME`, `SONARQUBE_ADMIN_PASSWORD`, plus optional `RDS_ENDPOINT` / `VPC_*`) and runs `terraform init && terraform apply` in idempotent mode.
+
+The Helm chart does not support declarative token creation, so the module emits a random `sonarqube_project_token` value that you register against the running SonarQube via `POST /api/user_tokens/generate` after `terraform apply` completes. Once registered, feed the host and registered token into the next section as `SONARQUBE_HOST` / `SONARQUBE_TOKEN`.
 
 ## Reference
 
@@ -223,12 +227,9 @@ For a one-shot orchestration (load secrets + run + verify counts), use the wrapp
 bash src/connectors/sonarqube/scripts/install.sh
 ```
 
-The job is declared in `src/connectors/sonarqube/resources/job.yml` (job key `sonarqube-connector`), runs on a 30-minute cron once enabled, and has two tasks: `ingest` (REST → Bronze) and `transform` (Bronze → `silver.findings`). For a small SonarCloud organization expect end-to-end completion in ~5 minutes.
+The job is declared in `src/connectors/sonarqube/resources/job.yml` (job key `sonarqube-connector`), runs on a 30-minute cron once enabled, and has two tasks: `ingest` (REST → Bronze) and `transform` (Bronze → `silver.findings`). The notebook entry points (`ingest_entry.py`, `transform_entry.py`) read job parameters as widgets, fetch credentials from the `mvp-connectors` secret scope via `dbutils.secrets`, and delegate to `src.connectors.sonarqube.ingest.ingest` / `src.connectors.sonarqube.transform.transform` per the framework contract (thesis §2.4.1). For a small SonarCloud organization expect end-to-end completion in ~5 minutes.
 
-!!! warning "Skeleton-only behaviour"
-    The `ingest()` and `transform()` functions in the connector module raise `NotImplementedError`. Until the full implementation lands, the bundle deploys the job and the schema, but the first run of the job fails on the placeholder. Users wiring SonarQube can deploy the resources and validate the secret-loading flow end-to-end; functional ingest is future work.
-
-**Normalization spot-check (target behaviour).**
+**Normalization spot-check.**
 
 - SonarQube `severity = 'BLOCKER'` → `severity_canonical = 'critical'`.
 - SonarQube rule `python:S3649` → `cwe_id = 'CWE-89'` (via `src/platform/cwe.py`).
@@ -263,7 +264,6 @@ Expected outcome: at least one row in `bronze_sonarqube.issues` per analyzed pro
 | 0 rows in `bronze_sonarqube.issues` | The organization has no analyzed projects, or the API returned issues outside the connector's filters. Verify with `curl -u "$SONARQUBE_TOKEN:" "https://$SONARQUBE_HOST/api/issues/search?organization=$SONARQUBE_ORG&p=1&ps=10"`. |
 | Validation table shows `REQ-DEDUP` FAIL | Cross-tool dedup against semgrep depends on both connectors having ingested the same repository. Run the GitHub connector's seed first, then semgrep, then sonarqube. |
 | Helm release stuck on `pending-install` (when using the optional runtime) | RDS not ready. Wait ~5 min, run `helm status sonarqube -n sonarqube`, re-run `terraform apply` from `src/connectors/sonarqube/runtime/`. |
-| `NotImplementedError` from the job | Expected: connector module is a skeleton. Tracked in the "Out of scope" section of the redesign spec. |
 | No rows in `silver.repositories` | No SCM connector has run yet. Install [GitHub](../scm/github.md) or another SCM connector and trigger its job before relying on the cross-source join. |
 
 ## Validation
