@@ -1,12 +1,12 @@
 # TruffleHog connector, runtime for the source system
 
-This Terraform module provisions the **Unity Catalog Volume** that the TruffleHog connector reads from. TruffleHog itself is a CLI scanner that runs on CI/CD runners (or on the existing host scan infrastructure of the operator) and emits JSON with one record per line. The CI of the operator uploads those artefacts to a cloud bucket (S3, ADLS, or GCS). This module creates the UC Volume that maps onto that bucket so autoloader can ingest the JSON into `bronze_trufflehog.findings`.
+This Terraform module provisions the **Unity Catalog Volume** that the TruffleHog connector reads from. TruffleHog itself is a CLI scanner that runs on CI/CD runners (or on the existing host scan infrastructure of the user) and emits JSON with one record per line. The CI of the user uploads those artefacts to a cloud bucket (S3, ADLS, or GCS). This module creates the UC Volume that maps onto that bucket so autoloader can ingest the JSON into `bronze_trufflehog.findings`.
 
 It is the documented pattern for CLI artefacts (CLAUDE.md §"Ingestion tooling preference order"). TruffleHog has no live API to call, so a drop of artefacts backed by a Volume is the native fit.
 
 ## Prerequisites
 
-- A cloud storage bucket (S3, ADLS, or GCS) where CI runs drop TruffleHog `--json` output. **Provisioned by the operator in advance**. This module does not create cloud buckets.
+- A cloud storage bucket (S3, ADLS, or GCS) where CI runs drop TruffleHog `--json` output. **Provisioned by the user in advance**. This module does not create cloud buckets.
 - AWS credentials (or equivalent for ADLS or GCS) with read access to the bucket. Loaded into a Databricks secret scope via `scripts/load-secrets.sh` so Databricks Connect or autoloader can authenticate to the bucket.
 - The `bronze_trufflehog` schema in Unity Catalog. Declared by the Databricks Asset Bundle for this connector (`src/connectors/trufflehog/resources/schemas.yml`) and applied alongside the rest of the bundle. Apply that before this runtime, or in the same bundle deploy.
 
@@ -45,7 +45,7 @@ It is the documented pattern for CLI artefacts (CLAUDE.md §"Ingestion tooling p
 
 ## CI integration
 
-The CI of the operator configures TruffleHog to dump JSON to the artefact bucket. Example (S3):
+The CI of the user configures TruffleHog to dump JSON to the artefact bucket. Example (S3):
 
 ```bash
 trufflehog git --json https://github.com/<org>/<repo> > out.json
@@ -54,7 +54,7 @@ aws s3 cp out.json s3://<bucket>/trufflehog/<repo>/$(date -u +%FT%TZ).json
 
 The expected output structure is one TruffleHog finding per line. See `runtime/files/sample.json` for a sanitised reference record. The `Raw` field is intentionally redacted. The TruffleHog redaction rule is enforced at Bronze to Silver and the literal value never enters the pipeline of this connector.
 
-## Inputs supplied by the operator
+## Inputs supplied by the user
 
 ### Required
 
@@ -89,6 +89,6 @@ stub.
 
 ## Independence
 
-This module references only inputs supplied by the operator and the Databricks provider. It does not depend on the runtime of any other connector. This follows the rule from the redesign that connector runtimes must not depend on each other. The bronze schema it references is declared by the bundle of this connector (`resources/schemas.yml`), not by the runtime of another connector.
+This module references only inputs supplied by the user and the Databricks provider. It does not depend on the runtime of any other connector. This follows the rule from the redesign that connector runtimes must not depend on each other. The bronze schema it references is declared by the bundle of this connector (`resources/schemas.yml`), not by the runtime of another connector.
 
 This module is intended to be used as a **root** module. It declares its own `databricks` provider via `versions.tf`. Using it via `module "..."` from a parent module will collide with the providers of the parent.

@@ -1,5 +1,5 @@
 # AWS WAF connector — log-stream consumption from S3.
-# Operator provisions the WebACL + Firehose + S3 bucket externally;
+# User provisions the WebACL + Firehose + S3 bucket externally;
 # this module wires the S3 bucket policy to allow Firehose write
 # (assuming Firehose runs in the same account) and registers the
 # autoloader-friendly bucket prefix in the bronze schema.
@@ -8,7 +8,7 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Reference (do NOT create) the operator-supplied bucket.
+# Reference (do NOT create) the user-supplied bucket.
 data "aws_s3_bucket" "waf_logs" {
   bucket = element(split(":::", var.aws_waf_log_bucket_arn), 1)
 }

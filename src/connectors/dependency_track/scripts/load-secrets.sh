@@ -8,7 +8,7 @@
 #                VIEW_PORTFOLIO and VIEW_VULNERABILITY permissions.
 #
 # The Dependency-Track host is supplied via the `dependency_track_host`
-# terraform variable (operator runbook in runtime/README.md), not via the
+# terraform variable (user runbook in runtime/README.md), not via the
 # secret scope, so this script only loads the API key.
 #
 # Idempotent: re-runs update existing secret values.

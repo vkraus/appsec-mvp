@@ -4,6 +4,6 @@ output "bronze_schema_full_name" {
 }
 
 output "s3_bucket_arn" {
-  description = "Echo of the operator-supplied S3 bucket ARN holding Firehose-delivered WAF logs."
+  description = "Echo of the user-supplied S3 bucket ARN holding Firehose-delivered WAF logs."
   value       = var.aws_waf_log_bucket_arn
 }

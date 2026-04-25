@@ -13,22 +13,22 @@ Bronze schema: `bronze_servicenow`. Silver projection schema: `silver_servicenow
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, the `silver` schema, and the `servicenow` UC connection (deployed by `bundle deploy` from `src/connectors/servicenow/resources/connection.yml`) must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
 - **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** The CMDB connector populates `silver.app_repo` with `(app_id, repository_id)` rows that reference `silver.repositories.repository_id` populated by SCM. Without an SCM connector running first, the join from `silver.app_repo` to `silver.repositories` will not resolve and downstream gold layer rollups (e.g. business application rollup) will return empty results.
 
-## Operator inputs
+## User inputs
 
 | Input | Where to obtain | Used as |
 |---|---|---|
-| ServiceNow instance URL | The tenant for the operator. For demos, register a [Personal Developer Instance (PDI)](https://developer.servicenow.com/) and read the URL from the activation email. | Env var `SERVICENOW_URL` consumed by `src/connectors/servicenow/scripts/load-secrets.sh`. Also passed as DAB var `servicenow_host` (without scheme) at `bundle deploy`. |
+| ServiceNow instance URL | The tenant for the user. For demos, register a [Personal Developer Instance (PDI)](https://developer.servicenow.com/) and read the URL from the activation email. | Env var `SERVICENOW_URL` consumed by `src/connectors/servicenow/scripts/load-secrets.sh`. Also passed as DAB var `servicenow_host` (without scheme) at `bundle deploy`. |
 | ServiceNow service account username | A user granted the `rest_service` and `cmdb_read` roles. | Env var `SERVICENOW_USERNAME`; DAB var `servicenow_username`. |
 | ServiceNow service account password | The password for the same user. | Env var `SERVICENOW_PASSWORD`; DAB var `servicenow_password`. |
 
 !!! warning "ServiceNow PDI caveat"
-    The operator procedure assumes the ServiceNow tenant supports Databricks Lakeflow Connect. PDIs may or may not expose the necessary interfaces. If the pipeline fails to authenticate, fall back to a licensed tenant.
+    The user procedure assumes the ServiceNow tenant supports Databricks Lakeflow Connect. PDIs may or may not expose the necessary interfaces. If the pipeline fails to authenticate, fall back to a licensed tenant.
 
 ## Optional source runtime
 
-If you want appsec-mvp to seed *demo* CMDB business app records in your tenant (two `cmdb_ci_business_app` records, three `cmdb_ci_appl` records, plus relationship rows in `cmdb_rel_ci`), apply the optional runtime under `src/connectors/servicenow/runtime/`. See [`src/connectors/servicenow/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/servicenow/runtime) for variables and apply notes (the runtime requires `bash`, `curl`, and `jq` on the operator PATH).
+If you want appsec-mvp to seed *demo* CMDB business app records in your tenant (two `cmdb_ci_business_app` records, three `cmdb_ci_appl` records, plus relationship rows in `cmdb_rel_ci`), apply the optional runtime under `src/connectors/servicenow/runtime/`. See [`src/connectors/servicenow/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/servicenow/runtime) for variables and apply notes (the runtime requires `bash`, `curl`, and `jq` on the user PATH).
 
-Operators with a populated CMDB skip the runtime. Wire the existing instance URL and credentials directly via the next section.
+Users with a populated CMDB skip the runtime. Wire the existing instance URL and credentials directly via the next section.
 
 ## Secrets
 
@@ -66,7 +66,7 @@ Both APIs require authentication on every request. The connector supports Basic 
 
 The Table API uses offset based pagination. `sysparm_offset` is the zero based page start index. `sysparm_limit` is the page size. The default and maximum `sysparm_limit` on standard instances is 10,000 records. The connector uses this value for bulk backfill and exposes it as a configurable parameter. The total record count is returned in the `X-Total-Count` header when `sysparm_count=true`. The connector reads it on the first page to compute the total page count and detect mid run table mutations.
 
-ServiceNow does not publish a Table API rate limit per client on standard tiers. Throughput is governed by the transaction quota subsystem of the instance, which tracks concurrent sessions and cumulative processing time per 60 second window. Exceeding the quota returns `HTTP 429`. The connector applies exponential backoff with jitter and retries up to the limit configured in the connector job template. Operators seeing sustained 429s should review the transaction quota configuration and, if necessary, reduce `sysparm_limit`.
+ServiceNow does not publish a Table API rate limit per client on standard tiers. Throughput is governed by the transaction quota subsystem of the instance, which tracks concurrent sessions and cumulative processing time per 60 second window. Exceeding the quota returns `HTTP 429`. The connector applies exponential backoff with jitter and retries up to the limit configured in the connector job template. Users seeing sustained 429s should review the transaction quota configuration and, if necessary, reduce `sysparm_limit`.
 
 ### Incremental hook
 
@@ -129,7 +129,7 @@ The `operational_status` field uses a separate integer choice list. Default labe
 
 **Display value versus raw value.** `sysparm_display_value` accepts `false` (raw stored values; connector default), `true` (display strings), and `all` (both, nested). The connector always sets `false` so that reference fields contain stable `sys_id` GUIDs and choice fields contain integer codes. Display strings are locale dependent and change when administrators rename choices.
 
-**Time zone normalization.** `sys_updated_on` and `sys_created_on` are rendered in the display time zone of the calling user. The Bronze to Silver transform applies a `CONVERT_TIMEZONE` cast to UTC using the known offset of the instance, stored as a connector configuration parameter. Operators must set this correctly per instance.
+**Time zone normalization.** `sys_updated_on` and `sys_created_on` are rendered in the display time zone of the calling user. The Bronze to Silver transform applies a `CONVERT_TIMEZONE` cast to UTC using the known offset of the instance, stored as a connector configuration parameter. Users must set this correctly per instance.
 
 ## Run the job
 

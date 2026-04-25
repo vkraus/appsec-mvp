@@ -2,7 +2,7 @@
 
 This Terraform module sets up the **GitHub side** of the source data for the github connector. It references three existing OWASP fork repositories under your GitHub org and provisions the AWS infrastructure that the demo CI workflow needs (ECR for image pushes, GitHub Actions OIDC IAM role, Juice Shop k8s namespace).
 
-**It is optional.** The github connector itself only needs a GitHub org with target repositories the operator wants to ingest. It does not require these specific demo repos.
+**It is optional.** The github connector itself only needs a GitHub org with target repositories the user wants to ingest. It does not require these specific demo repos.
 
 ## When to apply
 
@@ -29,7 +29,7 @@ It **references** (does not create) three forks under `var.github_org`: `Benchma
 
 It does **not** install the cross scanner CI workflow (`scan.yml`). That workflow lives under `examples/end-to-end-demo/.github/workflows/scan.yml` and you copy it manually into the `juice-shop` fork if you want the end to end demo.
 
-## Operator supplied inputs
+## User supplied inputs
 
 ### Required
 
@@ -37,7 +37,7 @@ It does **not** install the cross scanner CI workflow (`scan.yml`). That workflo
 |---|---|
 | `aws_region` | AWS region for ECR and IAM. Must match the region of `eks_cluster_name`. |
 | `aws_access_key_id`, `aws_secret_access_key` | AWS credentials (sensitive). |
-| `eks_cluster_name` | EKS cluster where the Juice Shop namespace lives (supplied by the operator). |
+| `eks_cluster_name` | EKS cluster where the Juice Shop namespace lives (supplied by the user). |
 | `github_org` | GitHub organization for seed repos. |
 | `github_pat` | PAT with org and repo admin permissions (sensitive). |
 
@@ -60,11 +60,11 @@ terraform init
 terraform apply -var-file=terraform.tfvars
 ```
 
-Operators write their own `terraform.tfvars`. The legacy `infra/terraform/terraform.tfvars.example` can serve as a starting reference for the AWS / GitHub credentials block.
+Users write their own `terraform.tfvars`. The legacy `infra/terraform/terraform.tfvars.example` can serve as a starting reference for the AWS / GitHub credentials block.
 
 ## Outputs
 
-`seed_repo_full_names`, `sast_repo_full_names`, `juice_shop_repo_full_name`, `ecr_registry_uri`, `github_actions_role_arn`, `github_actions_role_name`, `juiceshop_namespace`, `juiceshop_ingress_host`. Useful as inputs to `examples/end-to-end-demo/` if you are wiring the full demo. `seed_repo_full_names` carries the full `org/repo` paths of all three referenced forks. `sast_repo_full_names` narrows to the two Benchmark forks. `juice_shop_repo_full_name` is the single Juice Shop path. `github_actions_role_name` is provided so operators can attach additional IAM policies via `aws_iam_role_policy_attachment` without re-deriving the name from the ARN.
+`seed_repo_full_names`, `sast_repo_full_names`, `juice_shop_repo_full_name`, `ecr_registry_uri`, `github_actions_role_arn`, `github_actions_role_name`, `juiceshop_namespace`, `juiceshop_ingress_host`. Useful as inputs to `examples/end-to-end-demo/` if you are wiring the full demo. `seed_repo_full_names` carries the full `org/repo` paths of all three referenced forks. `sast_repo_full_names` narrows to the two Benchmark forks. `juice_shop_repo_full_name` is the single Juice Shop path. `github_actions_role_name` is provided so users can attach additional IAM policies via `aws_iam_role_policy_attachment` without re-deriving the name from the ARN.
 
 ## Teardown
 
@@ -77,4 +77,4 @@ Caveat: EKS access entries can be order sensitive. If `terraform destroy` errors
 
 ## Independence
 
-This module references only operator supplied inputs and the GitHub, AWS, and Kubernetes provider APIs. It does not depend on the runtime of any other connector, per the no inter connector dependency rule of the redesign.
+This module references only user supplied inputs and the GitHub, AWS, and Kubernetes provider APIs. It does not depend on the runtime of any other connector, per the no inter connector dependency rule of the redesign.

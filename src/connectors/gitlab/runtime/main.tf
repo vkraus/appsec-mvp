@@ -3,7 +3,7 @@
 #
 # Unlike the github connector (which provisions ECR + IAM + a Juice Shop EKS
 # namespace for the end-to-end demo), the gitlab connector has no source-side
-# resources to manage: the GitLab tenant and target group are operator-
+# resources to manage: the GitLab tenant and target group are user-
 # provisioned out-of-band (gitlab.com SaaS or self-hosted).
 #
 # This module therefore contains no `resource` blocks. It exists for
@@ -11,7 +11,7 @@
 # Bronze schema name + GitLab host as outputs that downstream bundle
 # resources (job.yml, ingest pipelines) can resolve from terraform state.
 #
-# What the operator must provision before the bundle deploy:
+# What the user must provision before the bundle deploy:
 #
 #   1. The GitLab Personal Access Token, loaded into Databricks Secrets via
 #      `bash ../scripts/load-secrets.sh` (writes scope=mvp-connectors,

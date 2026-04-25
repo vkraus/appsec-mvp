@@ -2,12 +2,12 @@
 
 Phase 1 of the install flow. The platform layer is the Databricks-resident
 substrate that every connector lands data into and every analytics
-computation reads from. This section documents the four operator steps
+computation reads from. This section documents the four user steps
 needed to stand it up.
 
 !!! note "Platform name disambiguation"
     The word *platform* is used in two senses in this repository.
-    1. **Setup phase for operators** (this section): the workspace
+    1. **Setup phase for users** (this section): the workspace
        bootstrap that produces the catalog, schemas, jobs, and
        secret scope container deployed by DAB before any connector is installed.
     2. **`src/platform/` Python framework**: the shared library
@@ -20,7 +20,7 @@ needed to stand it up.
 ## Phase 1: four steps
 
 The redesigned platform is stood up in four sequential steps. Each page is
-self-sustained: an operator can finish the step from that page alone.
+self-sustained: an user can finish the step from that page alone.
 
 <div class="grid cards" markdown>
 
@@ -28,7 +28,7 @@ self-sustained: an operator can finish the step from that page alone.
 
     ---
 
-    Inputs supplied by the operator: AWS backbone (VPC, EKS, S3, IAM), Databricks
+    Inputs supplied by the user: AWS backbone (VPC, EKS, S3, IAM), Databricks
     workspace plus UC metastore, local CLI tooling, env var conventions.
 
 -   :material-package-down:{ .lg .middle } **2. [Bundle deploy](bundle-deploy.md)**

@@ -30,7 +30,7 @@ This repository stores the MVP implementation part of my master's thesis. The co
 
 **Why it exists.** Production AppSec stacks are a tangle of point integrations between scanner SaaS, CMDB, ticketing, and analytics. Each one comes with its own auth model, pagination contract, and severity vocabulary. This MVP is a thesis-grade reference for *how to ingest those tools systematically*. It provides a single framework primitive (HTTP client, paginator, HWM state, recommended normalization), a fixed connector contract (`ingest()`, `transform()`, `mapping.yml`, `config.yml`, `severity.yml`, `status.yml`), and a fixed deployment unit (DAB). Adding a tenth source is a fill-in-the-blanks exercise, not an integration project.
 
-**Where it runs.** Databricks (any workspace with a Unity Catalog metastore). Local Python is for unit tests only. Spark sessions never run on a developer workstation. Supporting infrastructure (the source systems themselves: SonarQube server, Semgrep CronJob, ZAP daemon, GitHub seed repos, ServiceNow CMDB seeds) is deployed via Terraform or k8s modules for each connector at `src/connectors/<source>/runtime/`. Each module is **optional** and self-contained. Operators with their own SonarQube, GitHub, ZAP, etc. skip it and feed URLs and tokens directly.
+**Where it runs.** Databricks (any workspace with a Unity Catalog metastore). Local Python is for unit tests only. Spark sessions never run on a developer workstation. Supporting infrastructure (the source systems themselves: SonarQube server, Semgrep CronJob, ZAP daemon, GitHub seed repos, ServiceNow CMDB seeds) is deployed via Terraform or k8s modules for each connector at `src/connectors/<source>/runtime/`. Each module is **optional** and self-contained. Users with their own SonarQube, GitHub, ZAP, etc. skip it and feed URLs and tokens directly.
 
 **Who it's for.** The thesis reviewer (Requirements Specification + traceability matrix at <https://vkraus.github.io/appsec-mvp/>) and engineers building or extending AppSec data integration on Databricks.
 
@@ -105,7 +105,7 @@ flowchart LR
 
 ## Quickstart
 
-The full operator runbook lives in the [docs site](https://vkraus.github.io/appsec-mvp/). What follows is the condensed flow for engineers.
+The full user runbook lives in the [docs site](https://vkraus.github.io/appsec-mvp/). What follows is the condensed flow for engineers.
 
 ### Prerequisites
 
@@ -220,12 +220,12 @@ Adoption order (SCM first per the layering rule):
 | Category | Source | Status | Implementation | Optional source-system runtime |
 |---|---|---|---|---|
 | **SCM** | GitHub | ✅ implemented | `src/connectors/github/` | Terraform: seed repos, Juice Shop fork, ECR, GitHub Actions OIDC IAM |
-| **SCM** | GitLab | ✅ skill-generated | `src/connectors/gitlab/` | (none; operator brings GitLab tenant) |
+| **SCM** | GitLab | ✅ skill-generated | `src/connectors/gitlab/` | (none; user brings GitLab tenant) |
 | **CMDB** | ServiceNow | ✅ implemented | `src/connectors/servicenow/` (Lakeflow Connect pipeline) | Terraform: seeds CMDB business-app records via REST |
 | **SAST** | SonarQube | ✅ skill-generated | `src/connectors/sonarqube/` | Terraform: Helm install plus RDS Postgres backing store |
 | **SAST** | Semgrep | ✅ implemented | `src/connectors/semgrep/` (CLI artifact path; reads from S3) | Terraform: k8s CronJob plus IRSA role |
-| **SCA** | Dependency-Track | ✅ skill-generated | `src/connectors/dependency_track/` | (none; operator brings DT instance) |
-| **Secrets** | TruffleHog | ✅ skill-generated | `src/connectors/trufflehog/` | (none; operator runs TruffleHog in CI) |
+| **SCA** | Dependency-Track | ✅ skill-generated | `src/connectors/dependency_track/` | (none; user brings DT instance) |
+| **Secrets** | TruffleHog | ✅ skill-generated | `src/connectors/trufflehog/` | (none; user runs TruffleHog in CI) |
 | **DAST** | OWASP ZAP | ✅ implemented | `src/connectors/owasp_zap/` (artifact path plus scan-and-read) | Terraform: k8s daemon plus LoadBalancer |
 | **WAF** | AWS WAF | ✅ skill-generated | `src/connectors/aws_waf/` | (none; AWS account WAF is the source) |
 
@@ -261,7 +261,7 @@ src/connectors/<source>/
 │
 ├── runtime/                      (optional) Terraform module for source-system bring-up
 │   ├── versions.tf
-│   ├── variables.tf              operator-supplied inputs only; no cross-runtime references
+│   ├── variables.tf              user-supplied inputs only; no cross-runtime references
 │   ├── main.tf
 │   ├── outputs.tf
 │   ├── README.md
@@ -347,9 +347,9 @@ databricks bundle deploy --target dev
 
 This README is the entry point for engineers. The deeper material lives in:
 
-- **<https://vkraus.github.io/appsec-mvp/>**, the docs site for operators:
+- **<https://vkraus.github.io/appsec-mvp/>**, the docs site for users:
   - **Setup platform**: prerequisites, bundle deploy, secrets bootstrap, platform bootstrap job
-  - **Install connectors**: 8-section runbooks for each connector (What it ingests, Dependencies, Operator inputs, Optional source runtime, Secrets, Run, Verify, Troubleshooting)
+  - **Install connectors**: 8-section runbooks for each connector (What it ingests, Dependencies, User inputs, Optional source runtime, Secrets, Run, Verify, Troubleshooting)
   - **Build analytics**: silver to gold computation model, evidence scenarios, dashboards
   - **Reference**: REQ catalog, project layout, source capability matrix, recommended mapping, connector skills chain, silver table ownership
 - **`mkdocs/docs/`**: same content, source form
@@ -384,7 +384,7 @@ This is a thesis-grade reference implementation, not a community project. Direct
 
 If you're a thesis reviewer or external reader, the right starting points are:
 
-1. **<https://vkraus.github.io/appsec-mvp/>**, the operator narrative.
+1. **<https://vkraus.github.io/appsec-mvp/>**, the user narrative.
 2. **`mkdocs/docs/platform/reference/catalog.md`**, the REQ catalog and traceability matrix (anchored by `@pytest.mark.requirement` markers).
 3. **One connector end-to-end**: pick `src/connectors/servicenow/` (Lakeflow Connect path) or `src/connectors/github/` (notebook job plus SCM standard entity) and read the implementation alongside the corresponding `mkdocs/docs/connectors/<category>/<source>.md` runbook.
 

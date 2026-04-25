@@ -1,8 +1,8 @@
 # Semgrep connector: source system runtime (optional)
 
-This Terraform module deploys the **Semgrep CronJob** that periodically clones a list of git repositories, runs `semgrep scan`, and writes JSON findings to an operator supplied S3 bucket. The Semgrep connector then ingests those findings from S3.
+This Terraform module deploys the **Semgrep CronJob** that periodically clones a list of git repositories, runs `semgrep scan`, and writes JSON findings to an user supplied S3 bucket. The Semgrep connector then ingests those findings from S3.
 
-**It is optional.** The Semgrep connector itself only needs an S3 prefix to read findings from. Operators with their own Semgrep deployment skip this module entirely.
+**It is optional.** The Semgrep connector itself only needs an S3 prefix to read findings from. Users with their own Semgrep deployment skip this module entirely.
 
 ## When to apply
 
@@ -16,7 +16,7 @@ Apply this module if you want appsec-mvp to provision a periodic Semgrep scan ru
 - A Secret holding the runtime env vars (`ARTIFACT_BUCKET`, `SEMGREP_REPO_LIST`, `AWS_REGION`, `GH_PAT`).
 - A CronJob that runs the script on a fixed schedule (default: every 6 hours, configurable via `var.cron_schedule`).
 
-## Operator supplied inputs
+## User supplied inputs
 
 ### Required
 
@@ -49,7 +49,7 @@ terraform init
 terraform apply -var-file=terraform.tfvars
 ```
 
-Operators write their own `terraform.tfvars`. The legacy `infra/terraform/terraform.tfvars.example` can serve as a starting reference for the AWS credentials block.
+Users write their own `terraform.tfvars`. The legacy `infra/terraform/terraform.tfvars.example` can serve as a starting reference for the AWS credentials block.
 
 ## Outputs
 
@@ -69,6 +69,6 @@ Caveats:
 
 ## Independence
 
-This module references only operator supplied inputs and the AWS and Kubernetes provider APIs. It does not depend on the runtime of any other connector, per the no inter connector dependency rule of the redesign. Cross-runtime references that previously came from `aws-foundation` outputs (`eks_cluster_name`, `eks_cluster_oidc_provider_arn`, `artifact_bucket`) become operator supplied variables. The repo list (previously sourced from `github_seed.seed_repo_names`) becomes the `repo_urls` variable.
+This module references only user supplied inputs and the AWS and Kubernetes provider APIs. It does not depend on the runtime of any other connector, per the no inter connector dependency rule of the redesign. Cross-runtime references that previously came from `aws-foundation` outputs (`eks_cluster_name`, `eks_cluster_oidc_provider_arn`, `artifact_bucket`) become user supplied variables. The repo list (previously sourced from `github_seed.seed_repo_names`) becomes the `repo_urls` variable.
 
 This module is intended to be used as a **root** module, not a child module. It declares its own `aws` and `kubernetes` provider blocks. Using it via `module "..."` from a parent module will collide with the providers of the parent.

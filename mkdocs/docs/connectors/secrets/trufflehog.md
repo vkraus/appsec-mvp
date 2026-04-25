@@ -106,12 +106,125 @@ The `unknown` category matters. It covers secrets on isolated networks or agains
 
 **`--results=verified,unknown` is recommended.** `--only-verified` reduces false positives but silently discards secrets the verifier cannot reach (isolated networks, deprecated provider APIs). The reference implementation uses `--results=verified,unknown` to retain confirmed (`Verified=true`) and undeterminable (non-empty `VerificationError`) findings, leaving filtering to Silver. Definitively `inactive` findings (`Verified=false`, no error) are retained in Bronze for audit but excluded from the gold layer active threat view by default.
 
-## Setup
+## User inputs
 
-!!! info "Not implemented in MVP"
-    See the Overview admonition. Setup steps will be populated by
-    `generate-connector` (secrets) and `validate-implementation`
-    (secrets) when the connector module is produced.
+TruffleHog is a CLI scanner, not a server. The user (typically CI/CD) runs `trufflehog ... --json` and drops the line-delimited JSON artefacts in either an S3 bucket or a Databricks Unity Catalog Volume. The connector ingests those artefacts; it does not invoke `trufflehog` itself.
+
+| Input | Where to obtain | Used as |
+|---|---|---|
+| TruffleHog artefact bucket / volume path | Choice of an existing S3 bucket the user controls **or** a Databricks UC Volume managed by this connector. For demos, use the UC Volume `/Volumes/appsec_dev/bronze_trufflehog/artefacts` provisioned by the optional source runtime below. | Env var `TRUFFLEHOG_ARTIFACT_BUCKET` consumed by `src/connectors/trufflehog/scripts/load-secrets.sh`. Also passed as terraform var `trufflehog_artifact_volume_path` if the source runtime is applied. |
+| AWS credentials for the artefact bucket reader | Required only if the artefact location is S3: an IAM user or role with `s3:GetObject` and `s3:ListBucket` on the bucket. **Not needed** if using a Databricks UC Volume (Databricks-internal storage, authenticated by the workspace). | Env vars `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` exported before running `load-secrets.sh`; packed by the script as JSON `{access_key_id, secret_access_key}` into secret-scope key `trufflehog_aws_credentials`. |
+| At least one TruffleHog `--json` scan artefact | Run TruffleHog locally to seed the location: `docker run --rm -v $(pwd):/repo trufflesecurity/trufflehog:latest filesystem /repo --json > scan.json`. Then upload via `databricks fs cp scan.json dbfs:/Volumes/appsec_dev/bronze_trufflehog/artefacts/` (UC Volume) or `aws s3 cp scan.json s3://<bucket>/trufflehog/<repo>/$(date -u +%FT%TZ).json` (S3). For continuous scans, configure a GitHub Actions workflow to run TruffleHog on every push and upload the artefact. | The connector has nothing to ingest until at least one artefact lands at the configured location. |
+
+!!! warning "Repository identity must already exist in `silver.repositories`"
+    TruffleHog findings are keyed by `(repository_id, commit_sha, secret_type, file_path)`. The `repository_id` derives from `SourceMetadata.Data.Git.repository` and must resolve to a row populated by an SCM connector. Install [GitHub](../scm/github.md) (or another SCM) first, otherwise findings will land in Bronze but fail to attribute in Silver/Gold rollups.
+
+## Optional source runtime
+
+`src/connectors/trufflehog/runtime/` provisions a Unity Catalog **External Volume** named `artefacts` under `<catalog>.bronze_trufflehog`, mapped onto a cloud bucket (S3 / ADLS / GCS) the user provisions in advance. The runtime declares a single `databricks_volume` resource. No IAM, no compute, no Kubernetes.
+
+Apply the runtime if you do **not** already have an S3 bucket configured for TruffleHog artefacts (the typical demo path). Skip it if you have an existing bucket: set `TRUFFLEHOG_ARTIFACT_BUCKET` directly to the `s3://...` URI and proceed to Secrets.
+
+```bash
+# 1. Export AWS reader credentials (skip for UC-Volume-only deployments).
+export AWS_ACCESS_KEY_ID="AKIA..."
+export AWS_SECRET_ACCESS_KEY="..."
+export TRUFFLEHOG_ARTIFACT_BUCKET="/Volumes/appsec_dev/bronze_trufflehog/artefacts"
+
+# 2. Load secrets (writes the bucket / path into the mvp-connectors scope; also
+#    writes the AWS-creds JSON blob if those env vars are set).
+bash src/connectors/trufflehog/scripts/load-secrets.sh
+
+# 3. Apply the runtime (creates the UC Volume that maps to the bucket).
+cd src/connectors/trufflehog/runtime
+terraform init
+terraform apply \
+  -var "catalog=appsec_dev" \
+  -var "trufflehog_artifact_volume_path=/Volumes/appsec_dev/bronze_trufflehog/artefacts"
+cd -
+```
+
+The runtime exposes three outputs (`bronze_schema_full_name`, `volume_path`, `volume_full_name`) you can wire into downstream `GRANT` statements. See [`src/connectors/trufflehog/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/trufflehog/runtime) for variable reference and teardown notes (`terraform destroy` removes the UC Volume only; the underlying cloud bucket and any artefacts already uploaded are not managed by this module).
+
+## Secrets
+
+Loaded into the `mvp-connectors` secret scope by `src/connectors/trufflehog/scripts/load-secrets.sh`:
+
+| Secret key | Source env var(s) | Purpose |
+|---|---|---|
+| `trufflehog_artifact_bucket` | `TRUFFLEHOG_ARTIFACT_BUCKET` | S3 URI or UC Volume path the autoloader pipeline reads from. |
+| `trufflehog_aws_credentials` | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` | JSON-packed reader credentials for the S3 bucket. **Skip both env vars if the artefact location is a UC Volume** — the workspace-internal credential is sufficient. |
+
+Run from repo root after Phase 1 completes:
+
+```bash
+export TRUFFLEHOG_ARTIFACT_BUCKET="/Volumes/appsec_dev/bronze_trufflehog/artefacts"
+# Skip the next two lines if using a UC Volume only (no S3).
+export AWS_ACCESS_KEY_ID="AKIA..."
+export AWS_SECRET_ACCESS_KEY="..."
+
+bash src/connectors/trufflehog/scripts/load-secrets.sh
+# Expected: OK: trufflehog secrets loaded into scope mvp-connectors
+```
+
+The script is idempotent: re-runs replace the existing values. Rotating credentials is `export ...; bash ... load-secrets.sh; databricks bundle deploy --target dev` so the pipeline picks up the new secret on its next run.
+
+## Run the job
+
+The TruffleHog ingestion is a notebook job named `trufflehog-connector` (declared in `src/connectors/trufflehog/resources/job.yml`). It runs hourly on its built-in schedule once deployed. Trigger an on-demand run:
+
+```bash
+databricks bundle run trufflehog-connector --target dev
+```
+
+The pipeline reads new line-delimited JSON files from the configured artefact location autoloader-style (one file per scan) and lands them into `bronze_trufflehog.findings` (envelope schema in `src/connectors/trufflehog/sql/artefact_envelope.sql`). The follow-on `transform` task projects the envelope into `silver.findings`, dropping `Raw` and `RawV2` per the redaction rule.
+
+Wait approximately 2 minutes after dropping a sample artefact before checking Bronze. Job status is visible under **Workflows → Jobs → trufflehog-connector** in the Databricks UI.
+
+For a fully scripted install (load-secrets + run), use the orchestrator:
+
+```bash
+bash src/connectors/trufflehog/scripts/install.sh
+```
+
+## Verify
+
+```sql
+-- Bronze: raw envelope rows landed by the autoloader (one per artefact).
+SELECT count(*) FROM appsec_dev.bronze_trufflehog.findings;
+
+-- Silver: per-finding projection. Includes the detector breakdown.
+SELECT detector_type, count(*)
+  FROM appsec_dev.silver.findings
+ WHERE source_tool = 'trufflehog'
+ GROUP BY detector_type
+ ORDER BY 2 DESC;
+
+-- Severity is hard-coded high for every TruffleHog finding (REQ-TRF-SEV).
+-- This count should equal the silver count above.
+SELECT count(*)
+  FROM appsec_dev.silver.findings
+ WHERE source_tool = 'trufflehog'
+   AND severity_canonical = 'high';
+
+-- Validity status derives from Verified / VerificationError. Spot-check the mix.
+SELECT validity_status, count(*)
+  FROM appsec_dev.silver.findings
+ WHERE source_tool = 'trufflehog'
+ GROUP BY validity_status;
+```
+
+Expected: bronze count equals the number of artefact files dropped at the location; silver count equals the number of TruffleHog finding lines across those files (no filtering occurs between Bronze and Silver for secrets); every silver row has `severity_canonical = 'high'` (literal mapping). For the sanitised reference record at `runtime/files/sample.json`, expect one bronze envelope row and one silver finding row with `validity_status = 'active'` (because `Verified=true`).
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| 0 rows in `bronze_trufflehog.findings` after a run | Either no artefacts have been dropped at the configured location, or the autoloader checkpoint is stale. List the location: `databricks fs ls dbfs:/Volumes/appsec_dev/bronze_trufflehog/artefacts/`. If files are present but bronze is empty, re-run with a full refresh: `databricks bundle run trufflehog-connector --target dev --refresh-all`. |
+| AWS auth error in the ingest task log (`AccessDenied`, `InvalidAccessKeyId`) | The reader credentials in the secret scope are missing or expired. Re-export `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`, re-run `bash src/connectors/trufflehog/scripts/load-secrets.sh`, then re-deploy the bundle (`databricks bundle deploy --target dev`) so the job picks up the rotated secret on its next run. |
+| `validity_status` always null in silver | Older TruffleHog versions (< 3.50) emit no `Verified` field. Upgrade the CI/CD scanner to `>= 3.50` and re-scan; also confirm the scan was invoked with `--results=verified,unknown` rather than `--no-verification`. |
+| Silver rows have `repository_id` but no matching row in `silver.repositories` | Install at least one SCM connector and run it before the cross-source join can resolve. See [GitHub](../scm/github.md) or the [SCM category](../scm/index.md). |
+| Optional runtime: `terraform apply` fails with `schema not found: bronze_trufflehog` | The connector bundle declares the schema (`src/connectors/trufflehog/resources/schemas.yml`). Run `databricks bundle deploy --target dev` first, then re-apply the runtime — or apply both in the same operator session. |
 
 ## Validation
 

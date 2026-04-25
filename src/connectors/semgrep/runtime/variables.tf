@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# AWS-side inputs (operator-supplied; what aws-foundation used to produce
+# AWS-side inputs (user-supplied; what aws-foundation used to produce
 # internally before the redesign).
 # ---------------------------------------------------------------------------
 
@@ -9,13 +9,13 @@ variable "aws_region" {
 }
 
 variable "aws_access_key_id" {
-  description = "AWS access key ID (operator-supplied)."
+  description = "AWS access key ID (user-supplied)."
   type        = string
   sensitive   = true
 }
 
 variable "aws_secret_access_key" {
-  description = "AWS secret access key (operator-supplied)."
+  description = "AWS secret access key (user-supplied)."
   type        = string
   sensitive   = true
 }
@@ -31,7 +31,7 @@ variable "project_prefix" {
 # ---------------------------------------------------------------------------
 
 variable "eks_cluster_name" {
-  description = "Operator-supplied EKS cluster name. The Semgrep namespace, service account, ConfigMap, Secret, and CronJob are created in this cluster. Must be in `var.aws_region` — the kubernetes provider's auth flow resolves the cluster endpoint via the AWS provider's region."
+  description = "User-supplied EKS cluster name. The Semgrep namespace, service account, ConfigMap, Secret, and CronJob are created in this cluster. Must be in `var.aws_region` — the kubernetes provider's auth flow resolves the cluster endpoint via the AWS provider's region."
   type        = string
 }
 
@@ -55,11 +55,11 @@ variable "artifact_bucket" {
 # Repo list to scan + the PAT used to clone them. The bundled
 # `files/semgrep-scan.sh` reads `SEMGREP_REPO_LIST` (comma-separated `org/repo`
 # slugs) and clones each via `https://x-access-token:${GH_PAT}@github.com/...`.
-# Operators with arbitrary git URLs / non-GitHub hosts must replace the script.
+# Users with arbitrary git URLs / non-GitHub hosts must replace the script.
 # ---------------------------------------------------------------------------
 
 variable "repo_urls" {
-  description = "Non-empty list of repositories the Semgrep CronJob clones and scans. The bundled `files/semgrep-scan.sh` expects `org/repo` slugs (e.g. `[\"owasp/juice-shop\"]`); the script joins them with commas into the `SEMGREP_REPO_LIST` env var, then clones each via `https://x-access-token:$${GH_PAT}@github.com/$${slug}.git`. Operators with arbitrary git URLs or non-GitHub hosts must override the script."
+  description = "Non-empty list of repositories the Semgrep CronJob clones and scans. The bundled `files/semgrep-scan.sh` expects `org/repo` slugs (e.g. `[\"owasp/juice-shop\"]`); the script joins them with commas into the `SEMGREP_REPO_LIST` env var, then clones each via `https://x-access-token:$${GH_PAT}@github.com/$${slug}.git`. Users with arbitrary git URLs or non-GitHub hosts must override the script."
   type        = list(string)
   default     = ["owasp/juice-shop"]
 }

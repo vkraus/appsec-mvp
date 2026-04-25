@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# AWS-side inputs (operator-supplied; what aws-foundation used to produce
+# AWS-side inputs (user-supplied; what aws-foundation used to produce
 # internally before the redesign).
 # ---------------------------------------------------------------------------
 
@@ -9,13 +9,13 @@ variable "aws_region" {
 }
 
 variable "aws_access_key_id" {
-  description = "AWS access key ID (operator-supplied)."
+  description = "AWS access key ID (user-supplied)."
   type        = string
   sensitive   = true
 }
 
 variable "aws_secret_access_key" {
-  description = "AWS secret access key (operator-supplied)."
+  description = "AWS secret access key (user-supplied)."
   type        = string
   sensitive   = true
 }
@@ -31,7 +31,7 @@ variable "project_prefix" {
 # ---------------------------------------------------------------------------
 
 variable "eks_cluster_name" {
-  description = "Operator-supplied EKS cluster name. The SonarQube namespace, Helm release, and JDBC secret are created in this cluster. Must be in `var.aws_region` — the kubernetes provider's auth flow resolves the cluster endpoint via the AWS provider's region."
+  description = "User-supplied EKS cluster name. The SonarQube namespace, Helm release, and JDBC secret are created in this cluster. Must be in `var.aws_region` — the kubernetes provider's auth flow resolves the cluster endpoint via the AWS provider's region."
   type        = string
 }
 
@@ -47,7 +47,7 @@ variable "sonarqube_admin_password" {
 
 # ---------------------------------------------------------------------------
 # RDS Postgres backing store. By default the module creates its own RDS
-# instance for SonarQube. Operators with an existing Postgres database can
+# instance for SonarQube. Users with an existing Postgres database can
 # set `rds_endpoint` (plus credentials) to skip RDS creation.
 # ---------------------------------------------------------------------------
 
@@ -58,13 +58,13 @@ variable "rds_endpoint" {
 }
 
 variable "rds_db_name" {
-  description = "Postgres database name SonarQube uses. Used both when creating RDS and when targeting an operator-supplied endpoint."
+  description = "Postgres database name SonarQube uses. Used both when creating RDS and when targeting an user-supplied endpoint."
   type        = string
   default     = "sonar"
 }
 
 variable "rds_username" {
-  description = "(Optional) Postgres username — used both when creating RDS (master username) and when targeting an operator-supplied endpoint."
+  description = "(Optional) Postgres username — used both when creating RDS (master username) and when targeting an user-supplied endpoint."
   type        = string
   default     = "sonar"
 }

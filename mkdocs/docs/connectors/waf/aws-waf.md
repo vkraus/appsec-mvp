@@ -1,12 +1,5 @@
 # AWS WAF
 
-!!! info "Placeholder, not implemented in MVP"
-    A reference AWS WAF connector is not part of the MVP. This page is a
-    scaffolding placeholder framing the intended runbook structure. The
-    Reference section below documents the integration per the category
-    capability scope. Follow the [WAF skills](skills.md) to generate the
-    connector when needed.
-
 ## What this connector ingests
 
 AWS WAF is the reference runtime-security source, representing the third detection tier (distinct from static and dynamic testing). Each record is an **event record, not a finding record**: a single request observed at the edge with a WAF action attached, not a triaged vulnerability. Records populate `silver.waf_events`, linked to applications through the resource ARN associated with the WebACL (ALB, CloudFront distribution, API Gateway stage) joined against `silver.deployments` at transform time.
@@ -19,6 +12,67 @@ The WAF reference profile prefers **log-stream consumption** (CloudWatch Logs / 
 
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md).
 - **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** WAF events resolve to applications through the associated resource ARN, then to repositories via `silver.app_repo`. The chain requires an SCM connector to populate `silver.repositories` upstream.
+
+## User inputs
+
+AWS WAF is event-shaped: each Bronze row is an edge log record (a request observed at the WebACL with an action attached), not a triaged finding. The reference profile ingests via S3 autoloader over Firehose-delivered logs, so the runbook below assumes the log-stream path. The SDK fallback is a separate code path documented in Reference; it is not covered in this install runbook.
+
+| Input | Where to obtain | Used as |
+|---|---|---|
+| AWS account ID | The dev account ID hosting the WebACL. Find via `aws sts get-caller-identity --query Account --output text`. | Env var `AWS_WAF_ACCOUNT_ID`; terraform var `aws_waf_account_id`. |
+| AWS region | The WebACL region. CloudFront-scoped WebACLs are always `us-east-1`; regional WebACLs match the application's region. | Env var `AWS_REGION`; terraform var `aws_region`. |
+| WAF log S3 bucket ARN | Pre-existing bucket where Firehose drops logs. Create one with `aws s3 mb s3://my-waf-logs-bucket` (the connector does not create the bucket — it only attaches a write policy for the Firehose service principal). | Env var `AWS_WAF_LOG_BUCKET_ARN` (e.g. `arn:aws:s3:::my-waf-logs-bucket`); terraform var `aws_waf_log_bucket_arn`; secret-scope key `waf_log_bucket`. |
+| Configured WebACL with logging enabled | An AWS WAFv2 WebACL with at least one rule (`AWSManagedRulesCommonRuleSet` is a good starter) and **logging configured** to deliver to a Kinesis Data Firehose stream that writes to the S3 bucket above. The WebACL, the Firehose stream, and the S3 bucket are operator prerequisites — the connector does not provision them. See the AWS docs at <https://docs.aws.amazon.com/waf/latest/developerguide/logging.html> for the wiring. The optional source runtime below automates the S3 bucket policy step. | Operator standup; the connector reads the bucket. |
+| AWS access keys for the log-bucket reader | IAM user with `s3:GetObject` and `s3:ListBucket` on the log bucket. Programmatic access key + secret pair. | Env vars `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`; secret-scope key `aws_waf_iam_role_arn` is also populated by `load-secrets.sh` for the SDK fallback path. |
+
+!!! warning "Log-stream mode only in this runbook"
+    The instructions below are scoped to `ingestion_mode: log_stream` (the default in `src/connectors/aws_waf/config.yml`). Operators on the `sdk_sampled` fallback should use the SDK-credential variant in Reference instead — they need a `wafv2:GetSampledRequests` IAM principal rather than an S3 reader.
+
+## Optional source runtime
+
+`src/connectors/aws_waf/runtime/` is a Terraform module that wires an **operator-supplied** S3 bucket into the connector. Specifically it:
+
+- References (does **not** create) the bucket at `var.aws_waf_log_bucket_arn`.
+- Attaches `aws_s3_bucket_policy.waf_logs_firehose` granting the `firehose.amazonaws.com` service principal `s3:PutObject` and `s3:PutObjectAcl`, conditioned on `aws:SourceAccount = var.aws_waf_account_id`.
+- Outputs `bronze_schema_full_name` (`${catalog}.bronze_aws_waf`) and an echo of `s3_bucket_arn` for downstream wiring.
+
+It does **not** provision the WebACL, the Firehose delivery stream, or the S3 bucket itself — those are operator prerequisites (see the AWS WAF logging docs linked above). Operators with an existing bucket policy that already allows Firehose writes can skip the runtime entirely and just supply the bucket ARN to the connector via secrets.
+
+Apply (from repo root) once the prerequisites are in place:
+
+```bash
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+cd src/connectors/aws_waf/runtime
+terraform init
+terraform apply \
+  -var="catalog=appsec_dev" \
+  -var="aws_region=us-east-1" \
+  -var="aws_waf_account_id=000000000000" \
+  -var="aws_waf_log_bucket_arn=arn:aws:s3:::my-waf-logs-bucket"
+```
+
+## Secrets
+
+Loaded into the `mvp-connectors` secret scope by `src/connectors/aws_waf/scripts/load-secrets.sh`:
+
+| Secret key | Source env var | Purpose |
+|---|---|---|
+| `waf_log_bucket` | `WAF_LOG_BUCKET` | S3 bucket name the autoloader reads Firehose-delivered logs from. |
+| `aws_waf_iam_role_arn` | `AWS_WAF_IAM_ROLE_ARN` | IAM role ARN used by the SDK fallback (`GetSampledRequests`). Populated even in log-stream mode so the connector can switch modes without rerunning the loader. |
+
+The Databricks workspace's AWS service credential (configured at platform setup) is what the autoloader uses to read S3. The IAM access keys exported below are read by `load-secrets.sh` and any direct boto3 calls; they should map to a principal with `s3:GetObject` + `s3:ListBucket` on the log bucket.
+
+Run from repo root after Phase 1 completes:
+
+```bash
+export AWS_ACCESS_KEY_ID="..."
+export AWS_SECRET_ACCESS_KEY="..."
+export WAF_LOG_BUCKET="my-waf-logs-bucket"
+export AWS_WAF_IAM_ROLE_ARN="arn:aws:iam::000000000000:role/appsec-mvp-waf-reader"
+bash src/connectors/aws_waf/scripts/load-secrets.sh
+# Expected: OK: aws_waf secrets loaded into scope mvp-connectors
+```
 
 ## Reference
 
@@ -115,10 +169,67 @@ The lookup MUST cover every documented action; undocumented values fall through 
 - **Log-stream over SDK.** The reference profile prefers log-stream consumption. The SDK path (`GetSampledRequests`) is permitted only as a fallback when full-log delivery is not yet provisioned. The chosen mode MUST be recorded in `config.yml` for the connector so that REQ-applicability can be evaluated correctly.
 - **CloudFront endpoint constraint (SDK only).** CloudFront-scoped WebACLs require the `us-east-1` regional endpoint regardless of where the Databricks workspace runs. Regional WebACLs use the home region of the resource. The connector enumerates both scopes when iterating over `ListWebACLs`.
 
-## Setup
+## Run the job
 
-!!! info "Not implemented in MVP"
-    See the Prerequisites admonition above.
+The AWS WAF ingestion is a notebook job named `aws_waf_ingest` (declared in `src/connectors/aws_waf/resources/job.yml`) that runs every 15 minutes once enabled. Trigger an on-demand run:
+
+```bash
+databricks bundle run aws_waf_ingest --target dev
+```
+
+Wait time depends on traffic volume. For a smoke test, generate a few blockable requests against the WebACL-fronted distribution:
+
+```bash
+for i in {1..5}; do
+  curl "https://your-cloudfront-distribution.cloudfront.net/?id=' OR 1=1--"
+done
+```
+
+Then wait ~5 minutes for Firehose to flush the buffered batch to S3 (Firehose buffers up to 5 minutes or 5 MiB, whichever comes first) before the autoloader picks the records up on the next 15-minute pipeline tick.
+
+Alternatively, the orchestrator script runs `load-secrets.sh` and triggers the bundle in one shot:
+
+```bash
+bash src/connectors/aws_waf/scripts/install.sh
+```
+
+**Normalization spot check.**
+
+- Raw `action = "BLOCK"` on a managed-rule-group match → silver `severity_canonical = 'high'`.
+- Raw `action = "COUNT"` → silver `severity_canonical = 'medium'`.
+- Raw `action = "CAPTCHA"` or `"CHALLENGE"` → silver `severity_canonical = 'low'`.
+
+## Verify
+
+```sql
+-- Bronze: raw WAF log envelopes landed by the autoloader.
+SELECT count(*) FROM appsec_dev.bronze_aws_waf.event_envelope;
+
+-- Top terminating rules (sanity-check the rule inventory).
+SELECT terminating_rule_id, count(*)
+  FROM appsec_dev.silver.waf_events
+  GROUP BY terminating_rule_id
+  ORDER BY 2 DESC
+  LIMIT 10;
+
+-- Severity distribution for a specific WebACL — confirms the action-keyed
+-- severity lookup is firing correctly.
+SELECT severity_canonical, count(*)
+  FROM appsec_dev.silver.waf_events
+  WHERE webacl_id = '<your-webacl-arn>'
+  GROUP BY severity_canonical;
+```
+
+Expected: bronze count > 0 after the Firehose buffer flushes; events grouped by `terminating_rule_id`; `severity_canonical` derived from `action` (`BLOCK` → `high`, `COUNT` → `medium`, `ALLOW` / `CAPTCHA` / `CHALLENGE` → `low`).
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Bronze table empty after a successful job run | The Firehose buffer has not flushed yet (up to 5 minutes), or log delivery is not configured. Verify the bucket has objects with `aws s3 ls s3://your-bucket/AWSLogs/ --recursive`. If the bucket is empty, recheck the WebACL logging configuration in the AWS console. |
+| `AccessDenied` on S3 read in the job log | The IAM principal behind `AWS_ACCESS_KEY_ID` is missing `s3:GetObject` (or `s3:ListBucket`) on the log bucket. Update the IAM policy, then re-run `bash src/connectors/aws_waf/scripts/load-secrets.sh` and re-deploy the bundle. |
+| All `severity_canonical` values land on `medium` | The action-keyed lookup at `src/connectors/aws_waf/severity.yml` fell through to the default for an unknown `action`. Inspect the actual values landing in bronze: `SELECT DISTINCT raw_payload:action FROM appsec_dev.bronze_aws_waf.event_envelope` and add the missing key to `severity.yml`. |
+| Firehose objects present but no rows in bronze | Autoloader has not picked up the prefix yet. Confirm the connector's `log_stream.prefix` in `src/connectors/aws_waf/config.yml` (default `waf/firehose/`) matches the actual S3 layout, and trigger another run. |
 
 ## Validation
 

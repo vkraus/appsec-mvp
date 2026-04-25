@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------
-# Provider configuration. Operator credentials are passed in as variables; the
-# kubernetes provider relies on the operator's local kubeconfig context (the
+# Provider configuration. User credentials are passed in as variables; the
+# kubernetes provider relies on the user's local kubeconfig context (the
 # original aws-foundation/scanners-eks split derived this from EKS data
 # sources, which we replicate here so the github runtime is self-contained).
 # ---------------------------------------------------------------------------
@@ -185,7 +185,7 @@ data "kubernetes_service" "juiceshop" {
 }
 
 # ---------------------------------------------------------------------------
-# SAST/SCA target repositories. The forks already exist under the operator's
+# SAST/SCA target repositories. The forks already exist under the user's
 # GitHub organization. This module references them as data sources rather
 # than creating fresh repositories or pushing fixture code.
 # ---------------------------------------------------------------------------
@@ -204,7 +204,7 @@ data "github_repository" "benchmark_python" {
 # writes only the appsec-mvp overlays (.sonarcloud.properties and the
 # Kubernetes deployment manifest) into it. The cross-scanner CI workflow
 # (scan.yml) lives at examples/end-to-end-demo/.github/workflows/scan.yml and
-# is copied into the fork manually by the operator.
+# is copied into the fork manually by the user.
 # ---------------------------------------------------------------------------
 
 data "github_repository" "juice_shop" {
@@ -231,9 +231,9 @@ resource "github_repository_file" "juice_shop_overlays" {
 # ---------------------------------------------------------------------------
 # GitHub Actions variables / secrets consumed by the cross-scanner CI workflow.
 # Values that depend on other connectors' runtimes (sonarqube_url, zap_url,
-# sonarqube_project_token, artifact_bucket) are operator-supplied optional
+# sonarqube_project_token, artifact_bucket) are user-supplied optional
 # inputs. Each variable / secret is created only when its value is non-empty,
-# so this module remains usable when the operator is not running the full
+# so this module remains usable when the user is not running the full
 # end-to-end demo.
 # ---------------------------------------------------------------------------
 

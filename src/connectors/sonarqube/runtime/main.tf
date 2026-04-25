@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Provider configuration. Operator credentials are passed in as variables;
+# Provider configuration. User credentials are passed in as variables;
 # Kubernetes / Helm auth is derived from EKS data sources (the original
 # aws-foundation/scanners-eks split derived this from EKS data sources via
 # module outputs, which we replicate here so the sonarqube runtime is
@@ -47,7 +47,7 @@ resource "terraform_data" "input_validation" {
   lifecycle {
     precondition {
       condition     = var.rds_endpoint == "" || (var.rds_password != "" && var.rds_username != "")
-      error_message = "When rds_endpoint is set (operator-supplied Postgres path), rds_username and rds_password are required."
+      error_message = "When rds_endpoint is set (user-supplied Postgres path), rds_username and rds_password are required."
     }
     precondition {
       condition     = var.rds_endpoint != "" || (var.vpc_id != "" && length(var.vpc_subnet_ids) > 0 && var.vpc_cidr_block != "")
@@ -58,7 +58,7 @@ resource "terraform_data" "input_validation" {
 
 # ---------------------------------------------------------------------------
 # RDS Postgres backing store for SonarQube. Conditional: created only when
-# the operator did not supply a pre-existing `rds_endpoint`.
+# the user did not supply a pre-existing `rds_endpoint`.
 # (Migrated from infra/terraform/modules/aws-foundation/main.tf — the
 # `rds_sonarqube` module + supporting subnet group + security group + random
 # password.)
@@ -216,7 +216,7 @@ data "kubernetes_service" "sonarqube" {
 # ---------------------------------------------------------------------------
 # Long-lived project analysis token. The Sonar Helm chart does not support
 # declarative token creation, so this module emits a random opaque value
-# that operators register with SonarQube post-install (or surface to the
+# that users register with SonarQube post-install (or surface to the
 # cross-scanner CI workflow as `sonarqube_project_token`). Preserved
 # verbatim from the source module.
 # ---------------------------------------------------------------------------

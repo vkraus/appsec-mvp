@@ -1,8 +1,8 @@
 # ServiceNow connector: source system runtime (optional)
 
-This Terraform module seeds **demo CMDB business app records** in the ServiceNow tenant of the operator via the ServiceNow REST API. The ServiceNow connector then ingests those records (the documented CMDB representation of business applications and their repository links).
+This Terraform module seeds **demo CMDB business app records** in the ServiceNow tenant of the user via the ServiceNow REST API. The ServiceNow connector then ingests those records (the documented CMDB representation of business applications and their repository links).
 
-**It is optional.** The ServiceNow connector itself only needs a ServiceNow URL and service account credentials. Operators with a populated CMDB skip this module entirely.
+**It is optional.** The ServiceNow connector itself only needs a ServiceNow URL and service account credentials. Users with a populated CMDB skip this module entirely.
 
 ## When to apply
 
@@ -16,9 +16,9 @@ Apply this module if you want appsec-mvp to populate your ServiceNow tenant with
 
 The runtime is pure HTTP. No AWS, no Kubernetes, no IRSA, no IAM. It uses HTTP Basic auth (`var.admin_username` and `var.admin_password`) on every call. Reads (sys_id lookups) go through the `http` provider. Writes (POSTs to the table API) go through `terraform_data` and `local-exec curl` because the ServiceNow table API does not have a first class Terraform provider. `curl` is the native pattern for seeding records.
 
-> **Apply prerequisites:** the `local-exec` provisioners shell out to `bash`, `curl`, and `jq`. All three must be on the PATH of the operator at apply time. On Windows hosts, run from WSL or Git Bash.
+> **Apply prerequisites:** the `local-exec` provisioners shell out to `bash`, `curl`, and `jq`. All three must be on the PATH of the user at apply time. On Windows hosts, run from WSL or Git Bash.
 
-## Operator supplied inputs
+## User supplied inputs
 
 ### Required
 
@@ -46,7 +46,7 @@ terraform init
 terraform apply -var-file=terraform.tfvars
 ```
 
-Operators write their own `terraform.tfvars`. The legacy `infra/terraform/terraform.tfvars.example` can serve as a starting reference for the ServiceNow credentials block.
+Users write their own `terraform.tfvars`. The legacy `infra/terraform/terraform.tfvars.example` can serve as a starting reference for the ServiceNow credentials block.
 
 > **Note:** the apply is not idempotent against an already populated CMDB. Re-running `terraform apply` against the same tenant will not re-POST records whose `triggers_replace` keys are unchanged (Terraform skips them), but it also does not detect drift if records were deleted or edited in the ServiceNow UI between applies. The `data "http"` sys_id lookup will surface a stale state. If the seeded records were modified manually, taint the relevant `terraform_data.business_app` and `terraform_data.app_ci` resources before re-applying.
 
@@ -65,6 +65,6 @@ terraform destroy
 
 ## Independence
 
-This module references only operator supplied inputs and the ServiceNow REST API. It does not depend on the runtime of any other connector, per the no inter connector dependency rule of the redesign. The cross-runtime reference that previously came from `github_seed.seed_repo_names` (in the pre-redesign root module under `infra/terraform/main.tf`) becomes the operator supplied `var.seed_repo_names`. Specifically, the `seed_repo_names` default is **hardcoded demo data** that matches the github runtime defaults by coincidence. There is no Terraform level import.
+This module references only user supplied inputs and the ServiceNow REST API. It does not depend on the runtime of any other connector, per the no inter connector dependency rule of the redesign. The cross-runtime reference that previously came from `github_seed.seed_repo_names` (in the pre-redesign root module under `infra/terraform/main.tf`) becomes the user supplied `var.seed_repo_names`. Specifically, the `seed_repo_names` default is **hardcoded demo data** that matches the github runtime defaults by coincidence. There is no Terraform level import.
 
 This module is intended to be used as a **root** module, not a child module. It declares its own provider block(s). Using it via `module "..."` from a parent module will collide with the providers of the parent.

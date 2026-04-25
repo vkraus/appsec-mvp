@@ -82,7 +82,7 @@ The `src/connectors/{source}/severity.yml` file MUST still exist (every connecto
 # default high; per-deployment override permitted for low-entropy detector classes
 ```
 
-The lookup is consulted only when an operator deploys a detector level override. The default code path uses the literal `high` from `mapping.yml`.
+The lookup is consulted only when an user deploys a detector level override. The default code path uses the literal `high` from `mapping.yml`.
 
 ### Incremental strategy
 

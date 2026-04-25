@@ -1,8 +1,8 @@
 # Dependency-Track connector, runtime for the source system (reference only)
 
-This Terraform module wires the Dependency-Track connector into the environment of the operator by **referencing** (not creating) the Dependency-Track instance on the source side and the Bronze schema and API key secret on the Databricks side. The Dependency-Track tenant itself is provisioned by the operator.
+This Terraform module wires the Dependency-Track connector into the environment of the user by **referencing** (not creating) the Dependency-Track instance on the source side and the Bronze schema and API key secret on the Databricks side. The Dependency-Track tenant itself is provisioned by the user.
 
-**It is optional.** The Dependency-Track connector itself only needs a host, an API key in the Databricks secret scope, and the Unity Catalog Bronze schema. Operators with an existing Dependency-Track tenant and a populated secret scope can skip this module and feed values directly into the bundle variables of the connector job.
+**It is optional.** The Dependency-Track connector itself only needs a host, an API key in the Databricks secret scope, and the Unity Catalog Bronze schema. Users with an existing Dependency-Track tenant and a populated secret scope can skip this module and feed values directly into the bundle variables of the connector job.
 
 ## When to apply
 
@@ -17,7 +17,7 @@ Skip this module if you prefer to validate those preconditions out of band (e.g.
 
 - **Dependency-Track instance**, version 4.10 or newer. Easiest provisioning paths:
   - Run the [community docker image](https://docs.dependencytrack.org/getting-started/deploy-docker/) on a dev VPC. The compose stack ships with a default admin account. Rotate it immediately.
-  - Or point at an existing instance run by the operator. Only the host (FQDN, no protocol) and an API key are needed.
+  - Or point at an existing instance run by the user. Only the host (FQDN, no protocol) and an API key are needed.
 - **API key** with read access to projects, components, and findings.
   - In the Dependency-Track UI, go to **Administration → Access Management → Teams**.
   - Either select the built in `Automation` team or create a dedicated team for the connector.
@@ -50,7 +50,7 @@ dependency_track_host = "dt.example.com"
 # fall through to defaults (mvp-connectors / dependency_track_apikey).
 ```
 
-## Inputs supplied by the operator
+## Inputs supplied by the user
 
 ### Required
 
@@ -77,10 +77,10 @@ cd src/connectors/dependency_track/runtime
 terraform destroy
 ```
 
-> **Caveat:** this module references but does not own the Bronze schema or the API key secret. `terraform destroy` removes only the references from local state. To actually delete the schema or rotate the secret, drop the schema via SQL (`DROP SCHEMA IF EXISTS ${catalog}.bronze_dependency_track CASCADE`) and delete the secret via `databricks secrets delete-secret <scope> <key>`. The Dependency-Track instance itself is owned by the operator and not touched by Terraform.
+> **Caveat:** this module references but does not own the Bronze schema or the API key secret. `terraform destroy` removes only the references from local state. To actually delete the schema or rotate the secret, drop the schema via SQL (`DROP SCHEMA IF EXISTS ${catalog}.bronze_dependency_track CASCADE`) and delete the secret via `databricks secrets delete-secret <scope> <key>`. The Dependency-Track instance itself is owned by the user and not touched by Terraform.
 
 ## Independence
 
-This module references only inputs supplied by the operator and the Databricks provider API. It does not depend on the runtime of any other connector. This follows the rule from the redesign that connector runtimes must not depend on each other.
+This module references only inputs supplied by the user and the Databricks provider API. It does not depend on the runtime of any other connector. This follows the rule from the redesign that connector runtimes must not depend on each other.
 
 This module is intended to be used as a **root** module, not a child module. It declares its own `databricks` provider block via `versions.tf`. Using it via `module "..."` from a parent module will collide with the providers of the parent.

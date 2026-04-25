@@ -70,8 +70,8 @@ revisions.
     The folder `src/platform/` holds the **Python framework library**
     (HTTP client, pagination, severity/status normalization, dedup) plus
     cross cutting Databricks resources. The phrase **"setup platform"** in
-    the operator docs ([Setup platform](../index.md)) is a different sense
-    of the word. It refers to the workspace bootstrap operator phase, not
+    the user docs ([Setup platform](../index.md)) is a different sense
+    of the word. It refers to the workspace bootstrap user phase, not
     to this Python module. Both senses appear throughout the docs.
 
 ## Connector module layout
@@ -103,8 +103,8 @@ Optional artifacts (per connector):
 
 - **`runtime/`**: Terraform / Kubernetes manifests that stand up the
   *source system* (e.g. SonarQube Helm release, Semgrep CronJob, ZAP
-  daemon) on the existing AWS account belonging to the operator. Documented at
-  `src/connectors/<source>/runtime/README.md`. Optional. Operators with an
+  daemon) on the existing AWS account belonging to the user. Documented at
+  `src/connectors/<source>/runtime/README.md`. Optional. Users with an
   existing source system deployment skip the runtime entirely.
 - **`sql/`**: SQL views for each connector (e.g. the CMDB envelope view for ServiceNow).
 

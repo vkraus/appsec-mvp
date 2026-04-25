@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------
-# Operator-supplied inputs for the GitLab connector runtime.
+# User-supplied inputs for the GitLab connector runtime.
 #
-# The GitLab tenant itself (gitlab.com or self-hosted) is operator-provisioned.
+# The GitLab tenant itself (gitlab.com or self-hosted) is user-provisioned.
 # This module references — but does not create — the Bronze schema and the
 # Databricks secret holding the GitLab Personal Access Token.
 # ---------------------------------------------------------------------------

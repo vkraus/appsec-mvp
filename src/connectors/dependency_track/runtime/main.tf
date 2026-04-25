@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------
 # Provider configuration. The Dependency-Track runtime references — but does
 # not create — source-side resources. The Dependency-Track instance itself
-# is operator-provisioned (community-edition docker container on a dev VPC,
-# or an existing operator-run tenant). This module only resolves Databricks
+# is user-provisioned (community-edition docker container on a dev VPC,
+# or an existing user-run tenant). This module only resolves Databricks
 # references the connector job consumes at run time:
 #
 #   - the bronze_dependency_track Unity Catalog schema (created by the
@@ -19,7 +19,7 @@ data "databricks_schema" "bronze_dependency_track" {
 }
 
 # API-key secret reference. The secret is populated by scripts/load-secrets.sh
-# (run by the operator with $DT_APIKEY in the environment); `data` proves
+# (run by the user with $DT_APIKEY in the environment); `data` proves
 # the scope+key pair exists at plan time so the connector job will not
 # fail at ingestion start.
 data "databricks_secret" "dependency_track_apikey" {

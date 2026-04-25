@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# ServiceNow tenant — operator-supplied connection details. These are the
+# ServiceNow tenant — user-supplied connection details. These are the
 # only inputs strictly required to seed the demo CMDB business-app records.
 # ---------------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ variable "admin_password" {
 # ---------------------------------------------------------------------------
 
 variable "github_org" {
-  description = "GitHub org that owns the seeded repos. The source module declared this variable but did not consume it in the CMDB record bodies; it is preserved here for forward-compatibility (operators wiring richer CMDB metadata may want it)."
+  description = "GitHub org that owns the seeded repos. The source module declared this variable but did not consume it in the CMDB record bodies; it is preserved here for forward-compatibility (users wiring richer CMDB metadata may want it)."
   type        = string
   default     = "appsec-mvp-demo"
 }
@@ -40,7 +40,7 @@ variable "seed_repo_names" {
 }
 
 variable "project_prefix" {
-  description = "Short slug retained for parity with the other connector runtimes. The ServiceNow runtime does not currently use it — CMDB record names are hardcoded (`AppSec Demo Frontend`, `AppSec Demo Backend`) — but operators forking this module to namespace their seeded records will want it."
+  description = "Short slug retained for parity with the other connector runtimes. The ServiceNow runtime does not currently use it — CMDB record names are hardcoded (`AppSec Demo Frontend`, `AppSec Demo Backend`) — but users forking this module to namespace their seeded records will want it."
   type        = string
   default     = "appsec-mvp"
 }

@@ -1,8 +1,8 @@
 # SonarQube connector: source system runtime (optional)
 
-This Terraform module deploys the **SonarQube server** that the SonarQube connector ingests from. It runs SonarQube on the operator supplied EKS cluster and either creates a dedicated RDS Postgres database for the SonarQube backing store or uses an operator supplied one.
+This Terraform module deploys the **SonarQube server** that the SonarQube connector ingests from. It runs SonarQube on the user supplied EKS cluster and either creates a dedicated RDS Postgres database for the SonarQube backing store or uses an user supplied one.
 
-**It is optional.** The SonarQube connector itself only needs a SonarQube URL and analysis token. Operators with their own SonarQube instance skip this module entirely.
+**It is optional.** The SonarQube connector itself only needs a SonarQube URL and analysis token. Users with their own SonarQube instance skip this module entirely.
 
 ## When to apply
 
@@ -13,9 +13,9 @@ Apply this module if you want appsec-mvp to provision SonarQube end to end (Helm
 - A SonarQube Helm release in the `sonarqube` Kubernetes namespace on your EKS cluster, exposed via a LoadBalancer Service on port 9000.
 - A `sonarqube-db` Kubernetes Secret holding the JDBC connection string Sonar reads at boot.
 - (Optional, when `rds_endpoint` is empty) A dedicated RDS Postgres instance (`db.t3.small`, 20 GiB, Postgres 15, encrypted at rest, no PITR backups, `skip_final_snapshot = true`), a custom DB parameter group (family `postgres15`, tunable), a DB subnet group, a security group allowing port 5432 from the supplied VPC CIDR, and a random 32 character password.
-- A 40 character random opaque value emitted as `sonarqube_project_token` for use as the project analysis token (the Helm chart does not support declarative token creation, so the operator registers it with SonarQube after install).
+- A 40 character random opaque value emitted as `sonarqube_project_token` for use as the project analysis token (the Helm chart does not support declarative token creation, so the user registers it with SonarQube after install).
 
-## Operator supplied inputs
+## User supplied inputs
 
 ### Required
 
@@ -48,7 +48,7 @@ terraform init
 terraform apply -var-file=terraform.tfvars
 ```
 
-Operators write their own `terraform.tfvars`. The legacy `infra/terraform/terraform.tfvars.example` can serve as a starting reference.
+Users write their own `terraform.tfvars`. The legacy `infra/terraform/terraform.tfvars.example` can serve as a starting reference.
 
 ## Outputs
 
@@ -70,6 +70,6 @@ Caveats:
 
 ## Independence
 
-This module references only operator supplied inputs and the AWS, Kubernetes, and Helm provider APIs. It does not depend on the runtime of any other connector, per the no inter connector dependency rule of the redesign. Cross-runtime references that previously came from `aws-foundation` outputs (`eks_cluster_name`, `vpc_id`, `vpc_subnet_ids`, `vpc_cidr_block`) become operator supplied variables.
+This module references only user supplied inputs and the AWS, Kubernetes, and Helm provider APIs. It does not depend on the runtime of any other connector, per the no inter connector dependency rule of the redesign. Cross-runtime references that previously came from `aws-foundation` outputs (`eks_cluster_name`, `vpc_id`, `vpc_subnet_ids`, `vpc_cidr_block`) become user supplied variables.
 
 This module is intended to be used as a **root** module, not a child module. It declares its own `aws`, `kubernetes`, and `helm` provider blocks. Using it via `module "..."` from a parent module will collide with the providers of the parent.
