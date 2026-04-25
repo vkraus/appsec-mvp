@@ -15,7 +15,7 @@ dashboards.
     follow-on work.
 
     Until that lands, the [Evidence scenarios](evidence.md) page documents
-    queries that read directly from `silver.findings`, `silver.app_repo`,
+    queries that read directly from `silver.findings`, `silver.app_repo_mapping`,
     and `silver.repositories`. Operators can run those queries by hand
     in a SQL editor against the warehouse to validate the end-to-end
     pipeline.
@@ -26,7 +26,7 @@ dashboards.
 flowchart LR
     silver_findings[(silver.findings)] --> gold_findings[(gold.findings_per_app)]
     silver_repos[(silver.repositories)] --> gold_findings
-    silver_app_repo[(silver.app_repo)] --> gold_findings
+    silver_app_repo[(silver.app_repo_mapping)] --> gold_findings
     gold_findings --> dashboards[Lakeview dashboards]
     silver_findings --> evidence[Evidence queries]
     silver_app_repo --> evidence
@@ -62,7 +62,7 @@ Analytics queries assume the install order with SCM first has been respected:
 
 - `silver.repositories` populated by an SCM connector
   ([GitHub](../connectors/scm/github.md) or [GitLab](../connectors/scm/gitlab.md)).
-- `silver.app_repo` populated by the [ServiceNow connector](../connectors/cmdb/servicenow.md).
+- `silver.app_repo_mapping` populated by the [ServiceNow connector](../connectors/cmdb/servicenow.md).
 - `silver.findings` populated by at least one scanner connector
   ([SonarQube](../connectors/sast/sonarqube.md), [Semgrep](../connectors/sast/semgrep.md),
   [OWASP ZAP](../connectors/dast/owasp-zap.md)).

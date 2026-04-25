@@ -11,7 +11,7 @@ The WAF reference profile prefers **log-stream consumption** (CloudWatch Logs / 
 ## Dependencies
 
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md).
-- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** WAF events resolve to applications through the associated resource ARN, then to repositories via `silver.app_repo`. The chain requires an SCM connector to populate `silver.repositories` upstream.
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** WAF events resolve to applications through the associated resource ARN, then to repositories via `silver.app_repo_mapping`. The chain requires an SCM connector to populate `silver.repositories` upstream.
 
 ## User inputs
 

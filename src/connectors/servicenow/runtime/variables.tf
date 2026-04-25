@@ -23,7 +23,7 @@ variable "admin_password" {
 # Demo seed data. The defaults match the github runtime's seeded repos
 # *by coincidence* — there is no Terraform-level reference between the two
 # runtimes, per the redesign's no-inter-connector-dependency rule. If you
-# change one, change the other, or the cross-source `silver.app_repo` join
+# change one, change the other, or the cross-source `silver.app_repo_mapping` join
 # in analytics will not resolve.
 # ---------------------------------------------------------------------------
 

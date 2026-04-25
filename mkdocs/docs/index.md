@@ -50,7 +50,7 @@ flowchart LR
 
   subgraph Silver["Silver (standard)"]
     SR["silver.repositories"]
-    SAR["silver.app_repo"]
+    SAR["silver.app_repo_mapping"]
     SF["silver.findings"]
     SHW["silver.hwm"]
   end

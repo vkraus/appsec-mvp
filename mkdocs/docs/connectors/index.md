@@ -20,7 +20,7 @@ Walk the categories in this order. Each category page repeats the
 SCM first dependency note for context:
 
 1. **[SCM](scm/index.md)**: repositories, pull requests, branch policies (GitHub, GitLab). **Install first.** Populates `silver.repositories`.
-2. **[CMDB](cmdb/index.md)**: authoritative application inventory and team ownership (ServiceNow). Populates `silver.app_repo`, joining business applications to repositories.
+2. **[CMDB](cmdb/index.md)**: authoritative application inventory and team ownership (ServiceNow). Populates `silver.app_repo_mapping`, joining business applications to repositories.
 3. **[SAST](sast/index.md)**: static analysis findings keyed by file and rule (SonarQube, Semgrep).
 4. **[SCA](sca/index.md)**: dependency keyed findings with CVE correlation (Dependency-Track).
 5. **[Secrets](secrets/index.md)**: credential leak detections from pipelines and history (TruffleHog).

@@ -16,7 +16,7 @@ The Dependency-Track connector is the dedicated SCA source for organizations ope
 ## Dependencies
 
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md).
-- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** Dependency-Track findings carry a project that maps to a `repository_id`. The value must resolve to a row in `silver.repositories` for downstream rollups to attribute findings to a repository (and through `silver.app_repo`, to a business application).
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** Dependency-Track findings carry a project that maps to a `repository_id`. The value must resolve to a row in `silver.repositories` for downstream rollups to attribute findings to a repository (and through `silver.app_repo_mapping`, to a business application).
 
 ## Reference
 

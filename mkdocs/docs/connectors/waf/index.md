@@ -5,7 +5,7 @@ WAF connectors ingest edge-layer block and allow events from web application fir
 !!! note "SCM-first dependency"
     Connectors in this category depend on at least one SCM connector being
     installed first. Their findings resolve to applications via the resource
-    ARN associated with the WebACL, then to repositories via `silver.app_repo`
+    ARN associated with the WebACL, then to repositories via `silver.app_repo_mapping`
     and `silver.repositories` populated by SCM. Walk the
     [SCM category](../scm/index.md) before installing a WAF connector.
 

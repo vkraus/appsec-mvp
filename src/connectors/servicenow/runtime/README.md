@@ -36,7 +36,7 @@ The runtime is pure HTTP. No AWS, no Kubernetes, no IRSA, no IAM. It uses HTTP B
 | `seed_repo_names` | List of repo names to seed as CMDB application records. The first two become children of `AppSec Demo Frontend`. The third (if present) becomes a child of `AppSec Demo Backend`. | `["BenchmarkJava", "BenchmarkPython", "juice-shop"]` |
 | `project_prefix` | Tag and name prefix retained for parity with the other connector runtimes. Not currently consumed. CMDB record names are hardcoded. | `appsec-mvp` |
 
-> **Note on `seed_repo_names` default:** the values match the seeded repos of the github runtime **by coincidence**, not by Terraform import. The two runtimes are independent. There is no module level reference between them, per the no inter connector dependency rule of the redesign. If you change the names in one runtime, change them in the other. Otherwise the cross-source `silver.app_repo` join in analytics will not resolve.
+> **Note on `seed_repo_names` default:** the values match the seeded repos of the github runtime **by coincidence**, not by Terraform import. The two runtimes are independent. There is no module level reference between them, per the no inter connector dependency rule of the redesign. If you change the names in one runtime, change them in the other. Otherwise the cross-source `silver.app_repo_mapping` join in analytics will not resolve.
 
 ## Apply
 

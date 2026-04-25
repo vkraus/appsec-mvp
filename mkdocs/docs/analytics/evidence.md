@@ -45,7 +45,7 @@ SELECT
   app.name AS business_app,
   count(DISTINCT f.finding_id) AS critical_findings
 FROM appsec_dev.silver_servicenow.applications app
-JOIN appsec_dev.silver.app_repo ar USING (app_id)
+JOIN appsec_dev.silver.app_repo_mapping ar USING (application_id)
 JOIN appsec_dev.silver.repositories r ON r.repository_id = ar.repository_id
 JOIN appsec_dev.silver.findings f ON f.repository_id = r.repository_id
 WHERE f.severity_canonical IN ('critical', 'high')

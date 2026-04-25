@@ -12,19 +12,16 @@ Silver tables and connectors do not line up one to one. Each table can be fed by
 
 | Silver Table | Populated By |
 |---|---|
-| applications | CMDB |
-| repositories | SCM (standard entity in `silver.repositories`; DDL at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql)) |
-| teams | CMDB; SCM |
-| commits | SCM |
-| pull_requests | SCM |
-| pipeline_runs | CI/CD; SCM for platform integrated pipelines |
-| dependencies | SCA scanner; SCM for dependency graph APIs |
-| branch_policies | SCM |
-| findings | all scanner categories: SAST, SCA, secret, DAST, container, IaC; also SCM for platform integrated code/dependency/secret scanning. Records are discriminated by the `category` column. (`silver.findings`; DDL at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql)) |
-| vulnerabilities | NVD enrichment connector |
-| epss_scores | EPSS enrichment connector |
-| kev_entries | CISA KEV enrichment connector |
-| app_repo | CMDB (standard mapping in `silver.app_repo`; supersedes the prior `silver.app_repo_mapping` table) |
-| finding_cve_mapping | derived in the transformation layer |
-| dedup_links | derived in the transformation layer |
-| hwm | every connector (`silver.hwm`; cross connector high water mark state) |
+| `silver.applications` | CMDB. DDL at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql); struct `silver_applications` in [`src/platform/schemas.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/schemas.py). |
+| `silver.repositories` | SCM. DDL at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql); struct `silver_repositories` in [`schemas.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/schemas.py). MVP shape is narrow (`repository_id`, `full_name`, `default_branch`, `updated_at`); the per-source connector pages describe a wider target (`scm_source` / `org` / `name` / `url` / `archived` / `visibility`) that lands when the github transform is extended. |
+| `silver.findings` | all scanner categories — SAST, SCA, secret, DAST — and SCM for platform-integrated code/dependency/secret scanning. Records are discriminated by the `category` column. DDL at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql); struct `silver_findings` in [`schemas.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/schemas.py). |
+| `silver.finding_location` | derived alongside `silver.findings` when a finding has location detail richer than the projection that lands on `silver.findings` (e.g. `commit_sha`, `end_line`). |
+| `silver.app_repo_mapping` | CMDB. Joins `silver.applications` to `silver.repositories` via `(application_id, repository_id, linked_at)`. **Note:** earlier iterations of the redesign called this `silver.app_repo` with range columns (`first_seen_at` / `last_seen_at` / `source`); that rename is on the backlog but the current runtime, DDL, and `schemas.py` all use `silver.app_repo_mapping`. |
+| `silver.waf_events` | WAF (AWS WAF). Event-shape, NOT finding-shape — deliberately separate from `silver.findings`. DDL at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql); schema `silver_waf_events` declared inline in [`src/connectors/aws_waf/transform.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/connectors/aws_waf/transform.py). |
+| `silver.hwm` | every connector. Cross-connector high-water-mark state (`(key, subkey, value, updated_at)`). DDL only — not modeled as a PySpark struct. |
+| Out-of-MVP: `silver.teams` | CMDB; SCM |
+| Out-of-MVP: `silver.commits`, `silver.pull_requests`, `silver.branch_policies` | SCM |
+| Out-of-MVP: `silver.pipeline_runs` | CI/CD; SCM for platform-integrated pipelines |
+| Out-of-MVP: `silver.dependencies` | SCA scanner; SCM for dependency-graph APIs |
+| Out-of-MVP: `silver.vulnerabilities`, `silver.epss_scores`, `silver.kev_entries` | enrichment connectors (NVD / EPSS / CISA KEV) |
+| Out-of-MVP: `silver.finding_cve_mapping`, `silver.dedup_links` | derived in the transformation layer |

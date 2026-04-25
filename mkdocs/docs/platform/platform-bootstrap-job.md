@@ -11,7 +11,7 @@ standard Silver tables every connector reads or writes:
 - `silver.findings`: the cross-scanner findings table.
 - `silver.hwm`: high water mark state for incremental ingestion.
 - `silver.repositories`: standard repository entity (populated by SCM connectors).
-- `silver.app_repo`: mapping from application to repository (populated by the CMDB connector).
+- `silver.app_repo_mapping`: mapping from application to repository (populated by the CMDB connector).
 
 The job is intentionally separate from `databricks bundle deploy` because
 DAB has no native `tables` resource type. A table cannot be declared inline
@@ -55,7 +55,7 @@ Expected rows: `findings`, `hwm`, `repositories`, `app_repo`.
 -- first runs.
 SELECT count(*) FROM appsec_dev.silver.findings;       -- 0
 SELECT count(*) FROM appsec_dev.silver.repositories;   -- 0
-SELECT count(*) FROM appsec_dev.silver.app_repo;       -- 0
+SELECT count(*) FROM appsec_dev.silver.app_repo_mapping;       -- 0
 SELECT count(*) FROM appsec_dev.silver.hwm;            -- 0
 ```
 
@@ -70,12 +70,12 @@ SELECT count(*) FROM appsec_dev.silver.hwm;            -- 0
 
 ## Note on connector-side population
 
-`silver.repositories` and `silver.app_repo` define the standard schema
+`silver.repositories` and `silver.app_repo_mapping` define the standard schema
 required by the data dependency that puts SCM first. Connector-side write logic for
 both tables is intentionally deferred. See the "Out of scope" section
 of the redesign spec. Until the GitHub transform is extended to populate
 `silver.repositories` and the ServiceNow transform is migrated to
-`silver.app_repo`, both tables exist but stay empty.
+`silver.app_repo_mapping`, both tables exist but stay empty.
 
 This is by design: the platform layer establishes the target schema so
 downstream analytics can compile against it. The connector follow-on work

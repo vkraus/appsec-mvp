@@ -13,7 +13,7 @@ The MVP connector implements the CI/CD step artifact path mode. The bronze reade
 ## Dependencies
 
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, the `silver` schema, and the UC external location pointing at `s3://${ARTIFACT_BUCKET}/` (created by [Secrets bootstrap](../../platform/secrets-bootstrap.md)) must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
-- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** ZAP findings carry a target URL rather than a repository directly. The documented join goes URL to `silver.deployments` to application to `silver.app_repo` to `silver.repositories`. Without an SCM connector first, the cross-source rollups in [Evidence scenarios](../../analytics/evidence.md) cannot resolve.
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** ZAP findings carry a target URL rather than a repository directly. The documented join goes URL to `silver.deployments` to application to `silver.app_repo_mapping` to `silver.repositories`. Without an SCM connector first, the cross-source rollups in [Evidence scenarios](../../analytics/evidence.md) cannot resolve.
 
 ## User inputs
 

@@ -13,7 +13,7 @@ Unity Catalog layout under each catalog for each environment (`appsec_dev`, `app
 | `silver_<source>` | per connector | projection schemas for each source where applicable (`silver_github`, `silver_servicenow`) |
 | `gold` | analytics | cross source aggregations (placeholder; full analytics implementation is future work) |
 
-The cross source `silver` schema contains the standard entities and findings every connector reads or writes. `silver.repositories` is populated by SCM connectors (the SCM first data dependency). `silver.app_repo` is populated by the CMDB connector. Both table structures live at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql) and are applied by the `platform-bootstrap` job described at [Platform bootstrap job](../platform-bootstrap-job.md).
+The cross source `silver` schema contains the standard entities and findings every connector reads or writes. `silver.repositories` is populated by SCM connectors (the SCM first data dependency). `silver.app_repo_mapping` is populated by the CMDB connector. Both table structures live at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql) and are applied by the `platform-bootstrap` job described at [Platform bootstrap job](../platform-bootstrap-job.md).
 
 ## Requirement catalog
 

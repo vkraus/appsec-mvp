@@ -2,16 +2,16 @@
 
 ## What this connector ingests
 
-The ServiceNow connector is the authoritative source for application inventory. It ingests `cmdb_ci_business_app` (business applications), `cmdb_rel_ci` (CI relationships), and optionally `sys_user_group` (owning teams) into Bronze via Lakeflow Connect, then projects to `silver.app_repo` (application to repository mapping) and `silver_servicenow.applications`. These CMDB objects provide the application to team ownership graph and the application to repository linkage the framework needs to attribute findings to accountable teams.
+The ServiceNow connector is the authoritative source for application inventory. It ingests `cmdb_ci_business_app` (business applications), `cmdb_rel_ci` (CI relationships), and optionally `sys_user_group` (owning teams) into Bronze via Lakeflow Connect, then projects to `silver.app_repo_mapping` (application to repository mapping) and `silver_servicenow.applications`. These CMDB objects provide the application to team ownership graph and the application to repository linkage the framework needs to attribute findings to accountable teams.
 
 **Category:** CMDB · **Integration pattern:** Lakeflow Connect (ServiceNow adapter)
 
-Bronze schema: `bronze_servicenow`. Silver projection schema: `silver_servicenow`. Cross source contribution: `silver.app_repo`.
+Bronze schema: `bronze_servicenow`. Silver projection schema: `silver_servicenow`. Cross source contribution: `silver.app_repo_mapping`.
 
 ## Dependencies
 
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, the `silver` schema, and the `servicenow` UC connection (deployed by `bundle deploy` from `src/connectors/servicenow/resources/connection.yml`) must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
-- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** The CMDB connector populates `silver.app_repo` with `(app_id, repository_id)` rows that reference `silver.repositories.repository_id` populated by SCM. Without an SCM connector running first, the join from `silver.app_repo` to `silver.repositories` will not resolve and downstream gold layer rollups (e.g. business application rollup) will return empty results.
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** The CMDB connector populates `silver.app_repo_mapping` with `(application_id, repository_id, linked_at)` rows that reference `silver.repositories.repository_id` populated by SCM. Without an SCM connector running first, the join from `silver.app_repo_mapping` to `silver.repositories` will not resolve and downstream gold layer rollups (e.g. business application rollup) will return empty results.
 
 ## User inputs
 
@@ -166,18 +166,19 @@ Wait ~2 minutes. Pipeline status is visible under **Workflows → Lakeflow Pipel
 SELECT count(*) FROM appsec_dev.bronze_servicenow.business_applications;
 SELECT count(*) FROM appsec_dev.bronze_servicenow.app_cis;
 
--- Cross-source canonical app_repo — joins app_id (CMDB) to repository_id (SCM).
-SELECT app_id, repository_id, source FROM appsec_dev.silver.app_repo;
+-- Cross-source canonical app↔repo mapping — joins application_id (CMDB) to
+-- repository_id (SCM). Schema: src/platform/sql/silver_tables.sql.
+SELECT application_id, repository_id, linked_at FROM appsec_dev.silver.app_repo_mapping;
 
--- Cross-source dependency check — every silver.app_repo row should join to a
--- silver.repositories row populated by an SCM connector.
-SELECT ar.app_id, ar.repository_id, r.full_name
-  FROM appsec_dev.silver.app_repo ar
+-- Cross-source dependency check — every silver.app_repo_mapping row should
+-- join to a silver.repositories row populated by an SCM connector.
+SELECT ar.application_id, ar.repository_id, r.full_name
+  FROM appsec_dev.silver.app_repo_mapping ar
   LEFT JOIN appsec_dev.silver.repositories r USING (repository_id)
-  ORDER BY ar.app_id;
+  ORDER BY ar.application_id;
 ```
 
-For the demo runtime, expect 2 rows in `business_applications` and 3 rows in `app_cis`. Rows in `silver.app_repo` whose `r.full_name` is `NULL` indicate the SCM connector has not yet ingested the referenced repositories. Install [GitHub](../scm/github.md) (or another SCM) first.
+For the demo runtime, expect 2 rows in `business_applications` and 3 rows in `app_cis`. Rows in `silver.app_repo_mapping` whose `r.full_name` is `NULL` indicate the SCM connector has not yet ingested the referenced repositories. Install [GitHub](../scm/github.md) (or another SCM) first.
 
 ## Troubleshooting
 
@@ -186,8 +187,7 @@ For the demo runtime, expect 2 rows in `business_applications` and 3 rows in `ap
 | Pipeline stuck on schema inference | Open the connection definition in the Databricks UI (**Catalog → External Data → Connections → servicenow**) and verify the admin user has read access to `cmdb_ci_business_app`. |
 | `401 Unauthorized` from the pipeline | Rotate the password in ServiceNow, re-run `bash src/connectors/servicenow/scripts/load-secrets.sh` *and* re-deploy the bundle with the new `--var "servicenow_password=..."` value, then trigger a new pipeline run. |
 | 0 rows in bronze after a successful run | PDI may not expose the CMDB tables. Confirm by hitting `https://<host>/api/now/table/cmdb_ci_business_app?sysparm_limit=1` with `curl -u $USER:$PASS`. If the call returns 404, fall back to a licensed tenant. |
-| `silver.app_repo` empty | Population of `silver.app_repo` from the connector is deferred. The existing transform writes to `silver.app_repo_mapping`. See [Platform bootstrap job → connector-side population](../../platform/platform-bootstrap-job.md#note-on-connector-side-population). |
-| `silver.app_repo` rows have `repository_id` values not present in `silver.repositories` | Install at least one SCM connector and run it before expecting the cross source join to resolve. See [SCM category](../scm/index.md). |
+| `silver.app_repo_mapping` rows have `repository_id` values not present in `silver.repositories` | Install at least one SCM connector and run it before expecting the cross source join to resolve. See [SCM category](../scm/index.md). |
 
 ## Validation
 
