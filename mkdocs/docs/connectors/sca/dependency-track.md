@@ -102,8 +102,73 @@ The fields below are the subset consumed by the connector. Complete schemas are 
 
 ## Setup
 
-!!! info "Not implemented in MVP"
-    See the Prerequisites admonition above.
+### User inputs
+
+| Input | Where to obtain | Used as |
+|---|---|---|
+| Dependency-Track host | Self-hosted via docker: `docker run -d -p 8080:8080 dependencytrack/bundled`. Wait approximately 2 minutes for the first time DB schema bootstrap. Default admin login: `admin/admin` (change immediately). | Env var `DT_HOST`; terraform var `dependency_track_host`. |
+| Dependency-Track API key | In the DT UI: **Administration → Access Management → Teams → Automation**. Default permissions cover read access. Generate a new API key under that team. | Env var `DT_APIKEY`; secret-scope key `dependency_track_api_key`. |
+| At least one project with findings | Upload an SBOM via the DT UI (**Projects → Create → Upload BOM**) or via API: `curl -X POST -H "X-Api-Key: $DT_APIKEY" -F "bom=@sample.cdx.json" https://$DT_HOST/api/v1/bom`. SBOM samples available at [github.com/CycloneDX/sbom-examples](https://github.com/CycloneDX/sbom-examples). | Required for verification; the pipeline ingests projects + findings. |
+
+### Optional source runtime
+
+`src/connectors/dependency_track/runtime/` is a minimal terraform module that **references** (does not create) the Bronze schema and the secret holding the Dependency-Track API key. The Dependency-Track instance itself is operator-stood-up via docker (above) — the runtime does **not** provision the DT server. See [`src/connectors/dependency_track/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/dependency_track/runtime) for variables and apply notes.
+
+Users with an existing Dependency-Track tenant and a populated secret scope can skip this module and feed values directly into the bundle variables of the connector job via the next section.
+
+### Secrets
+
+Loaded into the `mvp-connectors` secret scope by `src/connectors/dependency_track/scripts/load-secrets.sh`:
+
+| Secret key | Source env var | Purpose |
+|---|---|---|
+| `dependency_track_api_key` | `DT_APIKEY` | Team API key sent as the `X-Api-Key` header on every Dependency-Track REST call. |
+
+The Dependency-Track host is supplied via the `dependency_track_host` terraform variable / DAB variable rather than the secret scope. Loading the API key into the secret scope lets the connector job and ad hoc notebooks read it via `dbutils.secrets`.
+
+Run from repo root after Phase 1 completes:
+
+```bash
+export DT_APIKEY="odt_..."
+bash src/connectors/dependency_track/scripts/load-secrets.sh
+# OK: dependency_track secrets loaded into scope mvp-connectors
+```
+
+### Run the job
+
+The Dependency-Track ingestion is a notebook job declared in `src/connectors/dependency_track/resources/job.yml` as `dependency-track-connector`. Trigger an on demand run:
+
+```bash
+databricks bundle run dependency_track_ingest --target dev
+```
+
+Wait approximately 3 minutes for a project with around 100 findings. Job status is visible under **Workflows → Jobs** in the Databricks UI.
+
+### Verify
+
+```sql
+-- Bronze: raw envelope rows from /api/v1/finding/project/{uuid}.
+SELECT count(*) FROM appsec_dev.bronze_dependency_track.findings_envelope;
+
+-- Silver: severity distribution after canonical mapping.
+SELECT severity_canonical, count(*) FROM appsec_dev.silver.findings
+WHERE source_tool = 'dependency_track' GROUP BY severity_canonical;
+
+-- Silver: CVE-bearing findings. SCA findings carry cve_id (NOT cwe_id),
+-- per the canonical schema split between SCA (CVE-keyed) and SAST (CWE-keyed).
+SELECT count(*) FROM appsec_dev.silver.findings
+WHERE source_tool = 'dependency_track' AND cve_id IS NOT NULL;
+```
+
+Expected: bronze count > 0 if an SBOM has been uploaded; silver counts include CVE-bearing rows (`cve_id` populated, `cwe_id` null, per the canonical schema split between SCA and SAST findings).
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `401`/`403` from the Dependency-Track API | Verify the team's Automation permissions include `VIEW_PORTFOLIO` and `VIEW_VULNERABILITY`. Re-generate the API key if permissions changed and re-run `bash src/connectors/dependency_track/scripts/load-secrets.sh`. |
+| 0 rows in bronze | No projects with findings yet. Upload an SBOM via the UI (**Projects → Create → Upload BOM**) or the `/api/v1/bom` endpoint, then re-run the job. |
+| Pipeline OOMs on large SBOMs | Increase the Databricks cluster size in `src/connectors/dependency_track/resources/job.yml` (`job_clusters[].new_cluster.node_type_id` / `num_workers`); the default sizing is for small workloads. |
 
 ## Validation
 
