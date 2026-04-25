@@ -20,7 +20,7 @@ hide:
 
 <div class="landing-overview" markdown>
 
-The platform ingests from AppSec sources via per-source connectors, normalizes findings to canonical schemas, and exposes analytics over them. The reference implementation runs on Databricks and is packaged as an Asset Bundle.
+The platform ingests from AppSec sources via a connector for each source, normalizes findings to recommended schemas, and exposes analytics over them. The reference implementation runs on Databricks and is packaged as an Asset Bundle.
 
 ```mermaid
 flowchart LR
@@ -48,7 +48,7 @@ flowchart LR
     BWAF[bronze_aws_waf]
   end
 
-  subgraph Silver["Silver (canonical)"]
+  subgraph Silver["Silver (standard)"]
     SR["silver.repositories"]
     SAR["silver.app_repo"]
     SF["silver.findings"]

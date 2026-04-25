@@ -2,7 +2,7 @@
 
 > **A reference implementation of a data integration framework for application security, built on Databricks.**
 
-The platform ingests AppSec findings from heterogeneous sources (CMDB, SCM, SAST, SCA, Secrets, DAST, WAF), normalizes them to a canonical Bronze → Silver → Gold lakehouse, and surfaces evidence for analytics and compliance reviews. Python connectors run on Databricks (Unity Catalog) and are packaged as a Databricks Asset Bundle (DAB).
+The platform ingests AppSec findings from heterogeneous sources (CMDB, SCM, SAST, SCA, Secrets, DAST, WAF), normalizes them to a standard Bronze, Silver, Gold lakehouse, and exposes evidence for analytics and compliance reviews. Python connectors run on Databricks (Unity Catalog) and are packaged as a Databricks Asset Bundle (DAB).
 
 This repository stores the MVP implementation part of my master's thesis. The companion docs site at <https://vkraus.github.io/appsec-mvp/> is the product documentation and the implementation guide; this README is the engineer-facing entry point.
 
@@ -15,7 +15,7 @@ This repository stores the MVP implementation part of my master's thesis. The co
 - [Quickstart](#quickstart)
 - [Repository layout](#repository-layout)
 - [Connector inventory](#connector-inventory)
-- [Per-connector module shape](#per-connector-module-shape)
+- [Connector module structure](#connector-module-structure)
 - [Architectural rules](#architectural-rules)
 - [Development](#development)
 - [Documentation](#documentation)
@@ -26,11 +26,11 @@ This repository stores the MVP implementation part of my master's thesis. The co
 
 ## Overview
 
-**What it does.** Pulls findings, asset data, and CMDB records from up to nine AppSec sources into a Databricks lakehouse, normalizes severity / status / dedup tuples per a published mapping contract, and exposes joinable Silver entities (`silver.findings`, `silver.repositories`, `silver.app_repo`, `silver.hwm`) plus per-connector projections (`silver_<source>.*`).
+**What it does.** Pulls findings, asset data, and CMDB records from up to nine AppSec sources into a Databricks lakehouse, normalizes severity, status, and dedup tuples per a published mapping contract, and exposes joinable Silver entities (`silver.findings`, `silver.repositories`, `silver.app_repo`, `silver.hwm`) plus projections for each connector (`silver_<source>.*`).
 
-**Why it exists.** Production AppSec stacks are a tangle of point integrations between scanner SaaS, CMDB, ticketing, and analytics — each with its own auth model, pagination contract, and severity vocabulary. This MVP is a thesis-grade reference for *how to ingest those tools systematically*: a single framework primitive (HTTP client + paginator + HWM state + canonical normalization), a fixed connector contract (`ingest()` / `transform()` / `mapping.yml` / `config.yml` / `severity.yml` / `status.yml`), and a fixed deployment unit (DAB). Adding a tenth source is a fill-in-the-blanks exercise, not an integration project.
+**Why it exists.** Production AppSec stacks are a tangle of point integrations between scanner SaaS, CMDB, ticketing, and analytics. Each one comes with its own auth model, pagination contract, and severity vocabulary. This MVP is a thesis-grade reference for *how to ingest those tools systematically*. It provides a single framework primitive (HTTP client, paginator, HWM state, recommended normalization), a fixed connector contract (`ingest()`, `transform()`, `mapping.yml`, `config.yml`, `severity.yml`, `status.yml`), and a fixed deployment unit (DAB). Adding a tenth source is a fill-in-the-blanks exercise, not an integration project.
 
-**Where it runs.** Databricks (any workspace with a Unity Catalog metastore). Local Python is unit-test-only — Spark sessions never run on a developer workstation. Supporting infrastructure (the source systems themselves: SonarQube server, Semgrep CronJob, ZAP daemon, GitHub seed repos, ServiceNow CMDB seeds) is deployed via per-connector Terraform/k8s modules at `src/connectors/<source>/runtime/` — each module is **optional** and self-contained: operators with their own SonarQube / GitHub / ZAP / etc. skip it and feed URLs + tokens directly.
+**Where it runs.** Databricks (any workspace with a Unity Catalog metastore). Local Python is for unit tests only. Spark sessions never run on a developer workstation. Supporting infrastructure (the source systems themselves: SonarQube server, Semgrep CronJob, ZAP daemon, GitHub seed repos, ServiceNow CMDB seeds) is deployed via Terraform or k8s modules for each connector at `src/connectors/<source>/runtime/`. Each module is **optional** and self-contained. Operators with their own SonarQube, GitHub, ZAP, etc. skip it and feed URLs and tokens directly.
 
 **Who it's for.** The thesis reviewer (Requirements Specification + traceability matrix at <https://vkraus.github.io/appsec-mvp/>) and engineers building or extending AppSec data integration on Databricks.
 
@@ -64,7 +64,7 @@ flowchart LR
     BWAF[bronze_aws_waf]
   end
 
-  subgraph Silver["Silver (canonical)"]
+  subgraph Silver["Silver (standard)"]
     SR["silver.repositories"]
     SAR["silver.app_repo"]
     SF["silver.findings"]
@@ -99,13 +99,13 @@ flowchart LR
   SF --> GFD
 ```
 
-**Layering principle (data-level dependency).** Within Phase 2 (connectors), an SCM connector (GitHub or GitLab) must be installed *first* because non-SCM connector findings reference `silver.repositories.repository_id` populated by SCM. This is a job-run-time ordering — connector setup code remains independent. See [Architectural rules](#architectural-rules).
+**Layering principle (data-level dependency).** Within Phase 2 (connectors), an SCM connector (GitHub or GitLab) must be installed *first* because non-SCM connector findings reference `silver.repositories.repository_id` populated by SCM. This is an ordering at job-run time. Connector setup code remains independent. See [Architectural rules](#architectural-rules).
 
 ---
 
 ## Quickstart
 
-The full operator runbook lives in the [docs site](https://vkraus.github.io/appsec-mvp/). What follows is the engineer-facing condensed flow.
+The full operator runbook lives in the [docs site](https://vkraus.github.io/appsec-mvp/). What follows is the condensed flow for engineers.
 
 ### Prerequisites
 
@@ -115,13 +115,13 @@ You bring:
 |---|---|---|
 | 1 | **Databricks workspace** (any cloud) with a Unity Catalog metastore | every job and resource |
 | 2 | A **SQL warehouse ID** | the platform-bootstrap job (silver-table DDL) |
-| 3 | An **S3 bucket** for scanner artifacts | external location for Semgrep / ZAP findings |
+| 3 | An **S3 bucket** for scanner artifacts | external location for Semgrep and ZAP findings |
 | 4 | An **AWS IAM role ARN** for the UC external location | storage credential the bundle declares |
-| 5 | Per-source URLs + tokens / credentials | secrets the connectors read |
+| 5 | URLs and tokens or credentials for each source | secrets the connectors read |
 
-The full prerequisites breakdown — including the AWS backbone you bring (VPC / EKS / RDS / ECR / IAM-for-IRSA) if you also want this repo to stand up the source systems — is at <https://vkraus.github.io/appsec-mvp/platform/prerequisites/>.
+The full prerequisites breakdown is at <https://vkraus.github.io/appsec-mvp/platform/prerequisites/>. It includes the AWS backbone you bring (VPC, EKS, RDS, ECR, IAM for IRSA) if you also want this repo to stand up the source systems.
 
-### Phase 1 — Setup platform
+### Phase 1: Setup platform
 
 ```bash
 # 1. Validate + deploy the bundle
@@ -138,7 +138,7 @@ bash src/platform/scripts/bootstrap.sh
 databricks bundle run platform-bootstrap
 ```
 
-### Phase 2 — Install connectors (any order; SCM first per layering rule)
+### Phase 2: Install connectors (any order; SCM first per layering rule)
 
 For each connector:
 
@@ -146,7 +146,7 @@ For each connector:
 # (Optional) provision the source-system itself if you want this repo to stand it up:
 cd src/connectors/<source>/runtime && terraform init && terraform apply
 
-# Populate this connector's secrets into the mvp-connectors scope:
+# Populate the secrets for this connector into the mvp-connectors scope:
 bash src/connectors/<source>/scripts/load-secrets.sh
 
 # Trigger the connector job:
@@ -155,9 +155,9 @@ databricks bundle run <source>-connector
 databricks bundle run servicenow-ingest
 ```
 
-### Phase 3 — Build analytics
+### Phase 3: Build analytics
 
-`src/analytics/` is currently scaffolding (gold-layer DDL + a placeholder job). Full analytics implementation is future work; the silver layer is connector-agnostic and ready to read from.
+`src/analytics/` is currently scaffolding (gold layer DDL plus a placeholder job). Full analytics implementation is future work. The silver layer is connector agnostic and ready to read from.
 
 ---
 
@@ -166,26 +166,26 @@ databricks bundle run servicenow-ingest
 ```
 appsec-mvp/
 ├── README.md                         this file
-├── CLAUDE.md                         agent instructions (private/local — gitignored)
+├── CLAUDE.md                         agent instructions (private and local, gitignored)
 ├── pyproject.toml                    Python deps, pytest config, wheel packaging
 ├── ruff.toml                         lint config
 ├── conftest.py                       global PYSPARK_* env setup
 ├── databricks.yml                    DAB bundle root: targets, variables, include glob
 │
 ├── src/
-│   ├── platform/                     framework + cross-source silver layer
+│   ├── platform/                     framework plus cross-source silver layer
 │   │   ├── http.py, pagination.py, hwm.py, contract.py, …  framework primitives
-│   │   ├── silver.py                 severity / status normalization, dedup
+│   │   ├── silver.py                 severity and status normalization, dedup
 │   │   ├── resources/
-│   │   │   ├── platform.yml          catalog + cross-source `silver` schema
+│   │   │   ├── platform.yml          catalog plus cross-source `silver` schema
 │   │   │   └── bootstrap-job.yml     one-time silver_tables.sql job
 │   │   ├── sql/
-│   │   │   └── silver_tables.sql     silver.findings / hwm / repositories / app_repo
+│   │   │   └── silver_tables.sql     silver.findings, hwm, repositories, app_repo
 │   │   ├── scripts/
-│   │   │   └── bootstrap.sh          post-deploy: scope + storage credential + external location
+│   │   │   └── bootstrap.sh          post-deploy: scope, storage credential, external location
 │   │   └── tests/                    framework tests
 │   │
-│   ├── connectors/                   one folder per source — see "Per-connector module shape" below
+│   ├── connectors/                   one folder per source. See "Connector module structure" below.
 │   │   ├── github/
 │   │   ├── gitlab/
 │   │   ├── servicenow/
@@ -196,19 +196,19 @@ appsec-mvp/
 │   │   ├── dependency_track/
 │   │   └── aws_waf/
 │   │
-│   └── analytics/                    Phase 3 scaffolding (silver → gold)
+│   └── analytics/                    Phase 3 scaffolding (silver to gold)
 │       ├── resources/{schemas,job}.yml
-│       └── sql/                      gold table DDL + materializations (placeholder)
+│       └── sql/                      gold table DDL plus materializations (placeholder)
 │
 ├── examples/
-│   └── end-to-end-demo/              cross-scanner CI workflow recipe (Sonar/Semgrep/ZAP)
-│                                     intentionally outside src/ — consumes URLs + tokens
+│   └── end-to-end-demo/              cross-scanner CI workflow recipe (Sonar, Semgrep, ZAP)
+│                                     intentionally outside src/. It consumes URLs and tokens
 │                                     from MULTIPLE connectors, violating the no-inter-connector
 │                                     dependency rule by design.
 │
 ├── mkdocs/                           docs site (published to vkraus.github.io/appsec-mvp/)
 └── .claude/skills/                   skill specializations (analyze-source, generate-connector,
-                                      validate-implementation) — used by the connector skill chain
+                                      validate-implementation), used by the connector skill chain
 ```
 
 ---
@@ -219,49 +219,49 @@ Adoption order (SCM first per the layering rule):
 
 | Category | Source | Status | Implementation | Optional source-system runtime |
 |---|---|---|---|---|
-| **SCM** | GitHub | ✅ implemented | `src/connectors/github/` | Terraform — seed repos + Juice Shop fork + ECR + GitHub Actions OIDC IAM |
-| **SCM** | GitLab | ✅ skill-generated | `src/connectors/gitlab/` | (none — operator brings GitLab tenant) |
-| **CMDB** | ServiceNow | ✅ implemented | `src/connectors/servicenow/` (Lakeflow Connect pipeline) | Terraform — seeds CMDB business-app records via REST |
-| **SAST** | SonarQube | ✅ skill-generated | `src/connectors/sonarqube/` | Terraform — Helm install + RDS Postgres backing store |
-| **SAST** | Semgrep | ✅ implemented | `src/connectors/semgrep/` (CLI-artifact path; reads from S3) | Terraform — k8s CronJob + IRSA role |
-| **SCA** | Dependency-Track | ✅ skill-generated | `src/connectors/dependency_track/` | (none — operator brings DT instance) |
-| **Secrets** | TruffleHog | ✅ skill-generated | `src/connectors/trufflehog/` | (none — operator runs TruffleHog in CI) |
-| **DAST** | OWASP ZAP | ✅ implemented | `src/connectors/owasp_zap/` (artifact path + scan-and-read) | Terraform — k8s daemon + LoadBalancer |
-| **WAF** | AWS WAF | ✅ skill-generated | `src/connectors/aws_waf/` | (none — AWS account WAF is the source) |
+| **SCM** | GitHub | ✅ implemented | `src/connectors/github/` | Terraform: seed repos, Juice Shop fork, ECR, GitHub Actions OIDC IAM |
+| **SCM** | GitLab | ✅ skill-generated | `src/connectors/gitlab/` | (none; operator brings GitLab tenant) |
+| **CMDB** | ServiceNow | ✅ implemented | `src/connectors/servicenow/` (Lakeflow Connect pipeline) | Terraform: seeds CMDB business-app records via REST |
+| **SAST** | SonarQube | ✅ skill-generated | `src/connectors/sonarqube/` | Terraform: Helm install plus RDS Postgres backing store |
+| **SAST** | Semgrep | ✅ implemented | `src/connectors/semgrep/` (CLI artifact path; reads from S3) | Terraform: k8s CronJob plus IRSA role |
+| **SCA** | Dependency-Track | ✅ skill-generated | `src/connectors/dependency_track/` | (none; operator brings DT instance) |
+| **Secrets** | TruffleHog | ✅ skill-generated | `src/connectors/trufflehog/` | (none; operator runs TruffleHog in CI) |
+| **DAST** | OWASP ZAP | ✅ implemented | `src/connectors/owasp_zap/` (artifact path plus scan-and-read) | Terraform: k8s daemon plus LoadBalancer |
+| **WAF** | AWS WAF | ✅ skill-generated | `src/connectors/aws_waf/` | (none; AWS account WAF is the source) |
 
-**Skill-generated** connectors were produced by the `analyze-source` → `generate-connector` → `validate-implementation` skill chain at `.claude/skills/`. See [`mkdocs/docs/platform/reference/connector-skills.md`](mkdocs/docs/platform/reference/connector-skills.md) for the chain and per-connector Generation logs.
+**Skill-generated** connectors were produced by the skill chain at `.claude/skills/` (`analyze-source`, then `generate-connector`, then `validate-implementation`). See [`mkdocs/docs/platform/reference/connector-skills.md`](mkdocs/docs/platform/reference/connector-skills.md) for the chain and Generation logs for each connector.
 
 ---
 
-## Per-connector module shape
+## Connector module structure
 
-Every connector at `src/connectors/<source>/` carries the same shape, so adding a tenth source is mechanical:
+Every connector at `src/connectors/<source>/` carries the same structure, so adding a tenth source is mechanical:
 
 ```
 src/connectors/<source>/
 ├── __init__.py
 ├── ingest.py                     ingest(run_id, state) -> BatchDescriptor
 ├── transform.py                  transform(bronze_df) -> silver_df
-├── mapping.yml                   bronze-to-silver column expressions
+├── mapping.yml                   bronze to silver column expressions
 ├── config.yml                    base URL, pagination, HWM column, secret refs
-├── severity.yml                  native-severity → canonical-severity lookup
-├── status.yml                    native-status → canonical-status lookup
+├── severity.yml                  native severity to standard severity lookup
+├── status.yml                    native status to standard status lookup
 ├── ingest_entry.py               (optional) Databricks notebook entry for the ingest task
 ├── transform_entry.py            (optional) Databricks notebook entry for the transform task
 │
 ├── resources/                    DAB resources for this connector
 │   ├── schemas.yml               bronze_<source> (and silver_<source> if applicable)
-│   ├── job.yml                   ingest → transform job declaration
+│   ├── job.yml                   ingest then transform job declaration
 │   ├── volumes.yml               (scanner connectors only) external volume for S3 artifacts
 │   ├── connection.yml            (Lakeflow connectors only) UC connection
 │   └── pipeline.yml              (Lakeflow connectors only) ingestion pipeline
 │
 ├── scripts/
-│   └── load-secrets.sh           populates this connector's keys into the `mvp-connectors` scope
+│   └── load-secrets.sh           populates the keys for this connector into the `mvp-connectors` scope
 │
 ├── runtime/                      (optional) Terraform module for source-system bring-up
 │   ├── versions.tf
-│   ├── variables.tf              operator-supplied inputs only — no cross-runtime references
+│   ├── variables.tf              operator-supplied inputs only; no cross-runtime references
 │   ├── main.tf
 │   ├── outputs.tf
 │   ├── README.md
@@ -269,38 +269,38 @@ src/connectors/<source>/
 │
 └── tests/                        co-located pytest suite
     ├── test_*.py
-    └── fixtures/                 per-endpoint JSON fixtures
+    └── fixtures/                 JSON fixtures for each endpoint
 ```
 
 ---
 
 ## Architectural rules
 
-These are enforced by code review, not by the runtime. Violating them breaks either the layering rule, the deployment story, or the thesis's reproducibility claim.
+These are enforced by code review, not by the runtime. Violating them breaks either the layering rule, the deployment story, or the reproducibility claim of the thesis.
 
-1. **No local Spark.** Pure-Python logic (parsing, mapping, dedup, normalization) is unit-tested locally. Anything that touches `SparkSession` runs via Databricks Connect or a remote job — never a `local[*]` session. `conftest.py` only aligns `PYSPARK_PYTHON`/`PYSPARK_DRIVER_PYTHON` in case Spark gets imported accidentally; it is not a license to write local-Spark tests.
+1. **No local Spark.** Pure Python logic (parsing, mapping, dedup, normalization) is unit-tested locally. Anything that touches `SparkSession` runs via Databricks Connect or a remote job. Never a `local[*]` session. `conftest.py` only aligns `PYSPARK_PYTHON` and `PYSPARK_DRIVER_PYTHON` in case Spark gets imported accidentally. It is not a license to write local Spark tests.
 
-2. **Ingestion tooling preference order.** Lakeflow Connect → Databricks SDK → `dlt` (dltHub REST source). Pick the highest-level tool that covers the source's contract. Raw `httpx` / `requests` is off-limits for new connectors unless none of the three apply. CLI-artifact connectors (Semgrep Docker, TruffleHog) are the documented exception.
+2. **Ingestion tooling preference order.** Lakeflow Connect, then Databricks SDK, then `dlt` (dltHub REST source). Pick the highest-level tool that covers the contract for the source. Raw `httpx` or `requests` is off-limits for new connectors unless none of the three apply. CLI artifact connectors (Semgrep Docker, TruffleHog) are the documented exception.
 
-3. **Mapping, severity, and status are declarative.** Add fields to `mapping.yml` or `<connector>/{severity,status}.yml`. Do not move that logic into `transform.py` — transforms are generic applicators driven by YAML.
+3. **Mapping, severity, and status are declarative.** Add fields to `mapping.yml` or `<connector>/{severity,status}.yml`. Do not move that logic into `transform.py`. Transforms are generic applicators driven by YAML.
 
-4. **Requirement markers.** Framework-contract tests carry `@pytest.mark.requirement("REQ-...")`. IDs match the REQ catalog at [`mkdocs/docs/platform/reference/catalog.md`](mkdocs/docs/platform/reference/catalog.md); this is how the traceability matrix is built.
+4. **Requirement markers.** Framework contract tests carry `@pytest.mark.requirement("REQ-...")`. IDs match the REQ catalog at [`mkdocs/docs/platform/reference/catalog.md`](mkdocs/docs/platform/reference/catalog.md). This is how the traceability matrix is built.
 
-5. **Layering rule.** Three install layers with no upward or sideways setup-code dependencies:
-   - **Platform first → connectors next → analytics last.**
-   - Within Phase 2, an SCM connector (GitHub or GitLab) must be **run** first because non-SCM connectors map findings to repository entities populated by SCM. This is a *data-level* dependency at job-run time only — connector setup code remains fully independent.
-   - The platform layer must not pre-declare connector-specific resources (no per-source schemas, volumes, connections, or secrets in `src/platform/resources/`). Each connector declares its own under `src/connectors/<source>/resources/`.
-   - No `module {}` blocks across connector runtimes; no shared scripts; no cross-connector references in YAML.
+5. **Layering rule.** Three install layers with no upward or sideways dependencies in setup code:
+   - **Platform first, connectors next, analytics last.**
+   - Within Phase 2, an SCM connector (GitHub or GitLab) must be **run** first because non-SCM connectors map findings to repository entities populated by SCM. This is a *data-level* dependency at job-run time only. Connector setup code remains fully independent.
+   - The platform layer must not pre-declare resources for individual connectors (no schemas, volumes, connections, or secrets for any source in `src/platform/resources/`). Each connector declares its own under `src/connectors/<source>/resources/`.
+   - No `module {}` blocks across connector runtimes. No shared scripts. No cross-connector references in YAML.
 
-6. **DAB owns Databricks; no `databricks` Terraform provider.** Every Databricks resource (catalog, schemas, volumes, jobs, pipelines, ServiceNow Lakeflow connection) is declared in DAB YAMLs under `src/<component>/resources/`. The handful of Databricks objects DAB has no native type for (secret-scope container, UC storage credential, UC external location) are created post-deploy by `src/platform/scripts/bootstrap.sh`. Per-connector secret values are loaded by `src/connectors/<source>/scripts/load-secrets.sh`.
+6. **DAB owns Databricks; no `databricks` Terraform provider.** Every Databricks resource (catalog, schemas, volumes, jobs, pipelines, ServiceNow Lakeflow connection) is declared in DAB YAMLs under `src/<component>/resources/`. The handful of Databricks objects DAB has no native type for (secret scope container, UC storage credential, UC external location) are created post-deploy by `src/platform/scripts/bootstrap.sh`. Secret values for each connector are loaded by `src/connectors/<source>/scripts/load-secrets.sh`.
 
 7. **Don't.**
-   - …write local-Spark tests.
-   - …add a fourth ingestion path when Lakeflow Connect / SDK / dlt fits.
-   - …move severity/status logic into Python.
+   - …write local Spark tests.
+   - …add a fourth ingestion path when Lakeflow Connect, SDK, or dlt fits.
+   - …move severity or status logic into Python.
    - …use the `databricks` Terraform provider.
-   - …pre-declare connector-specific resources at the platform layer.
-   - …reference another connector's resources, secrets, or runtime outputs from a connector's setup code. Cross-connector orchestration glue lives at `examples/end-to-end-demo/`.
+   - …pre-declare resources for individual connectors at the platform layer.
+   - …reference resources, secrets, or runtime outputs of one connector from the setup code of another connector. Cross-connector orchestration glue lives at `examples/end-to-end-demo/`.
 
 ---
 
@@ -314,7 +314,7 @@ pytest src/connectors/github/tests/test_transform.py  # one connector
 pytest -m 'requirement("REQ-ING-HWM")'                # one REQ-ID
 ```
 
-Tests are co-located under each component's `tests/` folder. The `[tool.pytest.ini_options].testpaths` in `pyproject.toml` is `src/`. Pre-existing `test_silver.py` Spark-dedup failures (3 of them) are tracked in the redesign spec's "Out of scope" section and are unrelated to connector behavior.
+Tests are co-located under the `tests/` folder of each component. The `[tool.pytest.ini_options].testpaths` value in `pyproject.toml` is `src/`. Pre-existing `test_silver.py` Spark dedup failures (3 of them) are tracked in the "Out of scope" section of the redesign spec and are unrelated to connector behavior.
 
 ### Lint
 
@@ -345,51 +345,51 @@ databricks bundle deploy --target dev
 
 ## Documentation
 
-This README is the engineer-facing entry point. The deeper material lives in:
+This README is the entry point for engineers. The deeper material lives in:
 
-- **<https://vkraus.github.io/appsec-mvp/>** — operator-facing docs site:
-  - **Setup platform** — prerequisites, bundle deploy, secrets bootstrap, platform-bootstrap job
-  - **Install connectors** — per-connector 8-section runbooks (What it ingests / Dependencies / Operator inputs / Optional source runtime / Secrets / Run / Verify / Troubleshooting)
-  - **Build analytics** — silver→gold computation model, evidence scenarios, dashboards
-  - **Reference** — REQ catalog, project layout, source capability matrix, canonical mapping, connector-skills chain, silver-table ownership
-- **`mkdocs/docs/`** — same content, source form
-- **Per-connector READMEs** — each `src/connectors/<source>/runtime/README.md` documents that connector's optional source-system Terraform module
-- **`examples/end-to-end-demo/README.md`** — the cross-scanner CI workflow recipe
+- **<https://vkraus.github.io/appsec-mvp/>**, the docs site for operators:
+  - **Setup platform**: prerequisites, bundle deploy, secrets bootstrap, platform bootstrap job
+  - **Install connectors**: 8-section runbooks for each connector (What it ingests, Dependencies, Operator inputs, Optional source runtime, Secrets, Run, Verify, Troubleshooting)
+  - **Build analytics**: silver to gold computation model, evidence scenarios, dashboards
+  - **Reference**: REQ catalog, project layout, source capability matrix, recommended mapping, connector skills chain, silver table ownership
+- **`mkdocs/docs/`**: same content, source form
+- **READMEs for each connector**: each `src/connectors/<source>/runtime/README.md` documents the optional source-system Terraform module for that connector
+- **`examples/end-to-end-demo/README.md`**: the cross-scanner CI workflow recipe
 
 ---
 
 ## Project status
 
 **Implemented and tested:**
-- Framework primitives (HTTP, pagination, HWM state, severity/status normalization, dedup)
-- 9 connectors at varying depths — see [Connector inventory](#connector-inventory)
-- DAB bundle with per-component resources distribution
-- Per-connector optional Terraform runtimes (5 of them)
-- Cross-source silver canonical tables (findings, hwm, repositories, app_repo)
+- Framework primitives (HTTP, pagination, HWM state, severity and status normalization, dedup)
+- 9 connectors at varying depths. See [Connector inventory](#connector-inventory).
+- DAB bundle with resources distributed across components
+- Optional Terraform runtimes for several connectors (5 of them)
+- Cross-source silver standard tables (findings, hwm, repositories, app_repo)
 - Co-located tests with traceability via `@pytest.mark.requirement`
 
 **Out of scope for the current iteration** (tracked as follow-ups):
-- Connector-side population of `silver.repositories` and `silver.app_repo` — DDL exists; the writers from each SCM / CMDB connector to those tables are pending.
-- Full analytics implementation — `src/analytics/` is scaffolding.
-- Some skill-generated connectors carry placeholder `ingest_entry.py` / `transform_entry.py` notebook wrappers; full job orchestration for them is pending.
-- Inherited error-handling sharp edges in `src/platform/scripts/bootstrap.sh` (`grep -v ALREADY_EXISTS || true`) and `src/connectors/servicenow/runtime/main.tf` (`local-exec curl` doesn't fail on HTTP 4xx) — flagged for a follow-up hardening task.
+- Connector side population of `silver.repositories` and `silver.app_repo`. DDL exists. The writers from each SCM or CMDB connector to those tables are pending.
+- Full analytics implementation. `src/analytics/` is scaffolding.
+- Some skill generated connectors carry placeholder `ingest_entry.py` and `transform_entry.py` notebook wrappers. Full job orchestration for them is pending.
+- Inherited error handling sharp edges in `src/platform/scripts/bootstrap.sh` (`grep -v ALREADY_EXISTS || true`) and `src/connectors/servicenow/runtime/main.tf` (`local-exec curl` doesn't fail on HTTP 4xx). Flagged for a follow-up hardening task.
 
-The thesis's traceability matrix at [`mkdocs/docs/platform/reference/catalog.md`](mkdocs/docs/platform/reference/catalog.md) is authoritative for per-REQ status.
+The traceability matrix at [`mkdocs/docs/platform/reference/catalog.md`](mkdocs/docs/platform/reference/catalog.md) is authoritative for status of each REQ.
 
 ---
 
 ## Contributing
 
-This is a thesis-grade reference implementation, not a community project. Direct pushes to `main` are the default workflow on this repository (no PR gating unless explicitly requested). Specs and implementation plans for non-trivial changes live outside the repo at `docs/superpowers/` (gitignored, deliberately local-only) and follow a brainstorm → spec → plan → execute pipeline implemented via Claude Code's `superpowers` skills (the same skills that produced the connector chain).
+This is a thesis-grade reference implementation, not a community project. Direct pushes to `main` are the default workflow on this repository (no PR gating unless explicitly requested). Specs and implementation plans for non-trivial changes live outside the repo at `docs/superpowers/` (gitignored, deliberately local only) and follow a pipeline of brainstorm, spec, plan, then execute. It is implemented via Claude Code `superpowers` skills (the same skills that produced the connector chain).
 
 If you're a thesis reviewer or external reader, the right starting points are:
 
-1. **<https://vkraus.github.io/appsec-mvp/>** — the operator narrative.
-2. **`mkdocs/docs/platform/reference/catalog.md`** — the REQ catalog + traceability matrix (anchored by `@pytest.mark.requirement` markers).
-3. **One connector end-to-end** — pick `src/connectors/servicenow/` (Lakeflow Connect path) or `src/connectors/github/` (notebook job + SCM canonical entity) and read the implementation alongside the corresponding `mkdocs/docs/connectors/<category>/<source>.md` runbook.
+1. **<https://vkraus.github.io/appsec-mvp/>**, the operator narrative.
+2. **`mkdocs/docs/platform/reference/catalog.md`**, the REQ catalog and traceability matrix (anchored by `@pytest.mark.requirement` markers).
+3. **One connector end-to-end**: pick `src/connectors/servicenow/` (Lakeflow Connect path) or `src/connectors/github/` (notebook job plus SCM standard entity) and read the implementation alongside the corresponding `mkdocs/docs/connectors/<category>/<source>.md` runbook.
 
 ---
 
 ## Acknowledgements
 
-Built as a master's thesis at the Czech Technical University in Prague. The redesign and several connector implementations were assisted by Claude Code (Anthropic), via the `superpowers` brainstorm/plan/execute skill chain and a custom `analyze-source` / `generate-connector` / `validate-implementation` connector specialization chain at `.claude/skills/`.
+Built as a master's thesis at the Czech Technical University in Prague. The redesign and several connector implementations were assisted by Claude Code (Anthropic), via the `superpowers` brainstorm, plan, and execute skill chain plus a custom connector specialization chain (`analyze-source`, `generate-connector`, `validate-implementation`) at `.claude/skills/`.

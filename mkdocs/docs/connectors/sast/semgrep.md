@@ -4,7 +4,7 @@
 
 Semgrep is the primary standalone SAST tool in the reference implementation. Operational pattern: **CI/CD-step** in Docker-hosted mode (per-commit or per-CI/CD-run scans, commit SHA as high-water mark); **periodic-global** in Cloud Platform mode (server-side `updated_at` polling). The reference implementation targets the free open-source Semgrep engine running in a long-lived Docker container, which is the free-tier path most enterprises will actually run. Findings populate `silver.findings`.
 
-Two modes are supported. In the canonical **Docker-hosted mode** the Semgrep CLI runs inside a container deployed either as a CI/CD step or as a long-running service; the container writes JSON or SARIF scan artifacts to a known output location (a mounted volume, an artifact store, or a lightweight HTTP fetcher layered on top of the container), and the connector collects them on a schedule. In **Cloud Platform mode** the connector authenticates to Semgrep Cloud Platform and pulls findings via its REST API.
+Two modes are supported. In the recommended **Docker-hosted mode** the Semgrep CLI runs inside a container deployed either as a CI/CD step or as a long-running service. The container writes JSON or SARIF scan artifacts to a known output location (a mounted volume, an artifact store, or a lightweight HTTP fetcher layered on top of the container), and the connector collects them on a schedule. In **Cloud Platform mode** the connector authenticates to Semgrep Cloud Platform and pulls findings via its REST API.
 
 **Category:** SAST (Cloud server + Docker CLI; CI/CD-step) · **Integration pattern:** REST + dlt (Cloud); artifact path (Docker)
 
@@ -21,21 +21,21 @@ The MVP connector implements the Docker-hosted artifact-path mode only: the bron
 
 | Input | Where to obtain | Used as |
 |---|---|---|
-| Artifact bucket name | The S3 bucket the operator created in [Prerequisites → AWS backbone](../../platform/prerequisites.md#aws-backbone-the-operator-brings) and registered as a UC external location in [Secrets bootstrap](../../platform/secrets-bootstrap.md). | Env var `ARTIFACT_BUCKET` consumed by `src/connectors/semgrep/scripts/load-secrets.sh`; written to secret key `semgrep_artifact_bucket`. Also passed to `bundle deploy` as DAB var `artifact_bucket` so the volume's `storage_location` resolves. |
+| Artifact bucket name | The S3 bucket the operator created in [Prerequisites → AWS backbone](../../platform/prerequisites.md#aws-backbone-the-operator-brings) and registered as a UC external location in [Secrets bootstrap](../../platform/secrets-bootstrap.md). | Env var `ARTIFACT_BUCKET` consumed by `src/connectors/semgrep/scripts/load-secrets.sh`; written to secret key `semgrep_artifact_bucket`. Also passed to `bundle deploy` as DAB var `artifact_bucket` so the `storage_location` of the volume resolves. |
 | S3 prefix | Convention: `semgrep/`. The optional runtime writes under this prefix; CI/CD-step uploads should use the same prefix (or a sub-prefix). | Env var `SEMGREP_PREFIX` (default `semgrep/`); written to secret key `semgrep_artifact_prefix`. |
 
 ## Reference
 
-### API surface
+### API scope
 
-In **Docker-hosted mode** the connector makes no network calls to a Semgrep-operated API. The container is built from the upstream `returntocorp/semgrep` image and invoked as `semgrep scan --json` or `semgrep scan --sarif` (SARIF 2.1.0). Scan artifacts are written to a known output location: a volume mounted at `/out`, an object-storage bucket, or a sidecar HTTP server exposing a `GET /scans/{id}/results` endpoint on top of the container's writable filesystem. The connector's "API surface" at this point is the artifact-retrieval mechanism chosen by the deployment; the reference implementation treats volume-mounted filesystem collection (indexed by scan timestamp) as the default. The reference implementation defaults to JSON because it is Semgrep's native format and exposes metadata fields (`metadata.cwe`, `metadata.owasp`) sometimes dropped in the SARIF translation.
+In **Docker-hosted mode** the connector makes no network calls to a Semgrep-operated API. The container is built from the upstream `returntocorp/semgrep` image and invoked as `semgrep scan --json` or `semgrep scan --sarif` (SARIF 2.1.0). Scan artifacts are written to a known output location: a volume mounted at `/out`, an object-storage bucket, or a sidecar HTTP server exposing a `GET /scans/{id}/results` endpoint on top of the writable filesystem of the container. The connector "API contract" at this point is the artifact-retrieval mechanism chosen by the deployment. The reference implementation treats volume-mounted filesystem collection (indexed by scan timestamp) as the default. The reference implementation defaults to JSON because it is the native format of Semgrep and exposes metadata fields (`metadata.cwe`, `metadata.owasp`) sometimes dropped in the SARIF translation.
 
-In **Cloud Platform mode** the API is at `https://semgrep.dev/api/v1`. Authentication uses a deployment-scoped API token as a Bearer value; the token is stored in Databricks Secrets. All findings endpoints require the deployment slug as a path parameter.
+In **Cloud Platform mode** the API is at `https://semgrep.dev/api/v1`. Authentication uses a deployment-scoped API token as a Bearer value. The token is stored in Databricks Secrets. All findings endpoints require the deployment slug as a path parameter.
 
-- `GET /deployments` — enumerates the deployments accessible to the authenticated token; the connector reads the slug from the response to validate that the configured deployment name matches the token's scope.
-- `GET /deployments/{slug}/projects` — lists all projects (repositories) enrolled in the deployment; provides the project inventory that drives per-project filtering in subsequent calls.
-- `GET /deployments/{slug}/findings` — retrieves SAST findings across the deployment, with server-side filtering by project, severity, triage state, and date range.
-- `GET /deployments/{slug}/sca` — retrieves SCA findings (dependency vulnerabilities) detected by the Semgrep Supply Chain scanner; writes into `silver.findings` with `category = 'sca'` (alongside the `sast` records produced by the main findings endpoint).
+- `GET /deployments`: enumerates the deployments accessible to the authenticated token. The connector reads the slug from the response to validate that the configured deployment name matches the scope of the token.
+- `GET /deployments/{slug}/projects`: lists all projects (repositories) enrolled in the deployment. Provides the project inventory that drives per-project filtering in subsequent calls.
+- `GET /deployments/{slug}/findings`: retrieves SAST findings across the deployment, with server-side filtering by project, severity, triage state, and date range.
+- `GET /deployments/{slug}/sca`: retrieves SCA findings (dependency vulnerabilities) detected by the Semgrep Supply Chain scanner. Writes into `silver.findings` with `category = 'sca'` (alongside the `sast` records produced by the main findings endpoint).
 
 ### Pagination and rate limits
 
@@ -51,9 +51,9 @@ Cloud Platform rate limits vary by subscription tier and are not published as a 
 
 ### Incremental hook
 
-Docker-hosted mode is stateless: each `semgrep scan` invocation is a complete snapshot with no reference to prior scans. The connector treats every scan artifact as a full-reload input and uses the artifact's commit SHA (for CI/CD-step deployments) or scan-start timestamp (for long-running service deployments) as the high-water mark for incremental ingestion. Bronze-to-Silver deduplication via the SAST dedup key `(repository_id, file_path, rule_id, line_number)` reconstructs finding continuity across scans. This is the same full-reload-with-commit-SHA pattern used for TruffleHog.
+Docker-hosted mode is stateless: each `semgrep scan` invocation is a complete snapshot with no reference to prior scans. The connector treats every scan artifact as a full-reload input and uses the commit SHA of the artifact (for CI/CD-step deployments) or scan-start timestamp (for long-running service deployments) as the high-water mark for incremental ingestion. Bronze-to-Silver deduplication via the SAST dedup key `(repository_id, file_path, rule_id, line_number)` reconstructs finding continuity across scans. This is the same full-reload-with-commit-SHA pattern used for TruffleHog.
 
-The Cloud Platform findings endpoint supports `since_date` (ISO 8601), restricting results to findings first seen or modified after that date. Each finding carries `first_seen_scan_id` and `updated_at` (most recent state change). The connector records the maximum `updated_at` per run and supplies it as `since_date` on the next. No webhook is exposed by the Cloud Platform API at the time of writing, so scheduled `updated_at`-filtered polling is the canonical Cloud Platform incremental strategy. The webhook-preferred rule falls through to high-water-mark polling, which is adequate given per-scan cadence.
+The Cloud Platform findings endpoint supports `since_date` (ISO 8601), restricting results to findings first seen or modified after that date. Each finding carries `first_seen_scan_id` and `updated_at` (most recent state change). The connector records the maximum `updated_at` per run and supplies it as `since_date` on the next. No webhook is exposed by the Cloud Platform API at the time of writing, so scheduled `updated_at`-filtered polling is the recommended Cloud Platform incremental strategy. The webhook-preferred rule falls through to high-water-mark polling, which is adequate given per-scan cadence.
 
 > **Verify:** Confirm that no webhook or event-streaming interface is available on the Semgrep Cloud Platform API at the time of publication; the product roadmap may have introduced an event notification mechanism after the documentation entry was written.
 
@@ -97,7 +97,7 @@ The CLI JSON output (`semgrep scan --json`) uses a different top-level structure
 
 ### Enumerations
 
-**Severity vocabularies.** Cloud Platform and CLI use distinct severity vocabularies that cannot be unified without loss. Cloud Platform: `high`, `medium`, `low`, `info`, `experiment`. CLI: `ERROR`, `WARNING`, `INFO`. The reference implementation maintains `src/connectors/semgrep/severity-cloud.yml` and `src/connectors/semgrep/severity-cli.yml`, selected by the connector's `deployment_mode`. Two files keep each vocabulary independently reviewable and avoid conditional branching.
+**Severity vocabularies.** Cloud Platform and CLI use distinct severity vocabularies that cannot be unified without loss. Cloud Platform: `high`, `medium`, `low`, `info`, `experiment`. CLI: `ERROR`, `WARNING`, `INFO`. The reference implementation maintains `src/connectors/semgrep/severity-cloud.yml` and `src/connectors/semgrep/severity-cli.yml`, selected by the connector setting `deployment_mode`. Two files keep each vocabulary independently reviewable and avoid conditional branching.
 
 > **Verify:** Confirm the complete Cloud Platform severity vocabulary (`high`, `medium`, `low`, `info`, `experiment`) against the current Semgrep Cloud Platform API documentation; the `experiment` value in particular may be a transitional label that has been retired or renamed.
 
@@ -113,7 +113,7 @@ The CLI JSON output (`semgrep scan --json`) uses a different top-level structure
 
 ### Quirks
 
-**CLI mode is stateless.** Each `semgrep scan` is a complete snapshot with no cross-invocation identifier equivalent to the Cloud Platform's integer `id`. Cross-scan deduplication is the connector's responsibility, using the SAST key (`repository_id, file_path, rule_id, line_number`).
+**CLI mode is stateless.** Each `semgrep scan` is a complete snapshot with no cross-invocation identifier equivalent to the integer `id` from Cloud Platform. Cross-scan deduplication is the responsibility of the connector, using the SAST key (`repository_id, file_path, rule_id, line_number`).
 
 **Divergent severity vocabularies.** The Cloud Platform five-level and CLI three-level scales share no common token. Merging into a single lookup would require mode-conditional branching, which the framework avoids by keeping mapping files declarative. The two-file approach (`semgrep-cloud.yml`, `semgrep-cli.yml`) is selected at runtime via `deployment_mode`.
 
@@ -125,9 +125,9 @@ The CLI JSON output (`semgrep scan --json`) uses a different top-level structure
 
 If you want appsec-mvp to run Semgrep on your EKS cluster as a periodic CronJob (clones a list of repos, runs `semgrep scan`, writes JSON findings to the artifact S3 bucket via IRSA), apply the optional runtime under `src/connectors/semgrep/runtime/`. See [`src/connectors/semgrep/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/semgrep/runtime) for variables (cluster, OIDC provider ARN, repo list, GitHub PAT for cloning), CronJob schedule, and IRSA setup.
 
-Operators with their own Semgrep deployment skip the runtime — point any scanner that writes JSON results into `s3://${ARTIFACT_BUCKET}/semgrep/` (same prefix the connector reads from) and the connector picks them up.
+Operators with their own Semgrep deployment skip the runtime. Point any scanner that writes JSON results into `s3://${ARTIFACT_BUCKET}/semgrep/` (same prefix the connector reads from) and the connector picks them up.
 
-For CI/CD-step usage, the cross-scanner workflow at `examples/end-to-end-demo/.github/workflows/scan.yml` shows a Semgrep step that uploads to `s3://<bucket>/cicd/semgrep/`. The end-to-end demo writes under `cicd/semgrep/`; periodic runners write under `periodic/semgrep/`. Both prefixes are subdirectories of the connector's `semgrep/` root and are picked up by the same volume.
+For CI/CD-step usage, the cross-scanner workflow at `examples/end-to-end-demo/.github/workflows/scan.yml` shows a Semgrep step that uploads to `s3://<bucket>/cicd/semgrep/`. The end-to-end demo writes under `cicd/semgrep/`; periodic runners write under `periodic/semgrep/`. Both prefixes are subdirectories of the `semgrep/` root for this connector and are picked up by the same volume.
 
 ## Secrets
 
@@ -151,13 +151,13 @@ bash src/connectors/semgrep/scripts/load-secrets.sh
 
 The semgrep connector ingests scan artifacts from the `semgrep_artifacts` external volume. The volume points at `s3://${var.artifact_bucket}/semgrep/` and is created by `bundle deploy` (declared in `src/connectors/semgrep/resources/volumes.yml`).
 
-This connector currently has **no scheduled job** — the bundle deploys the bronze schema and volume so the ingest path exists, but the connector ingest entry-point is scaffolded as a notebook stub. Once a job resource is added under `src/connectors/semgrep/resources/`, run it via:
+This connector currently has **no scheduled job**. The bundle deploys the bronze schema and volume so the ingest path exists, but the connector ingest entry-point is scaffolded as a notebook stub. Once a job resource is added under `src/connectors/semgrep/resources/`, run it via:
 
 ```bash
 databricks bundle run semgrep-connector --target dev
 ```
 
-To populate Bronze in the meantime, ensure scan artifacts land in the volume's prefix:
+To populate Bronze in the meantime, ensure scan artifacts land in the volume prefix:
 
 **Periodic (optional runtime):** wait for the next CronJob firing, or force one:
 
@@ -199,10 +199,10 @@ A non-zero `missing_repo` count means Semgrep reports findings for repositories 
 
 | Symptom | Fix |
 |---|---|
-| `LIST` against the volume returns empty | No scan artifacts have landed under the volume's S3 prefix yet. Trigger a scan via the optional runtime's CronJob, or push a commit to a repo whose CI pipeline uploads to `s3://<bucket>/semgrep/cicd/`. |
-| Periodic pod `CrashLoopBackoff` (optional runtime) | Inspect logs; most commonly `git clone` fails — verify `GH_PAT` (`github_pat_for_clone`) in the runtime's secret has read access to the target repos. |
-| CI/CD-step `AccessDenied` on S3 upload | GitHub Actions OIDC role not trusted for the artifact bucket. Verify the trust policy binds the workflow's repo + branch to a role with `s3:PutObject` on the bucket ARN — see the github runtime's `optional` variable wiring at [`src/connectors/github/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/github/runtime). |
-| Volume create fails on `bundle deploy` | UC external location not yet created — run [Secrets bootstrap](../../platform/secrets-bootstrap.md) first, then re-deploy. |
+| `LIST` against the volume returns empty | No scan artifacts have landed under the S3 prefix of the volume yet. Trigger a scan via the optional runtime CronJob, or push a commit to a repo whose CI pipeline uploads to `s3://<bucket>/semgrep/cicd/`. |
+| Periodic pod `CrashLoopBackoff` (optional runtime) | Inspect logs; most commonly `git clone` fails. Verify `GH_PAT` (`github_pat_for_clone`) in the runtime secret has read access to the target repos. |
+| CI/CD-step `AccessDenied` on S3 upload | GitHub Actions OIDC role not trusted for the artifact bucket. Verify the trust policy binds the workflow repo and branch to a role with `s3:PutObject` on the bucket ARN. See the github runtime `optional` variable wiring at [`src/connectors/github/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/github/runtime). |
+| Volume create fails on `bundle deploy` | UC external location not yet created. Run [Secrets bootstrap](../../platform/secrets-bootstrap.md) first, then re-deploy. |
 | No rows in `silver.repositories` | No SCM connector has run yet. Install [GitHub](../scm/github.md) or another SCM connector and trigger its job before relying on the cross-source join. |
 
 ## Validation

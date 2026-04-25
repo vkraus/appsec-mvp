@@ -1,6 +1,6 @@
 # Tests
 
-The Tests surface is a **traceability index** into the `pytest` suites co-located under [`src/{platform,connectors/<source>}/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src). Tests themselves are not duplicated in this documentation — they live with the code — so this page describes the conventions and links out to the sources.
+The Tests page is a **traceability index** into the `pytest` suites co-located under [`src/{platform,connectors/<source>}/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src). Tests themselves are not duplicated in this documentation. They live with the code. This page describes the conventions and links out to the sources.
 
 ## Marker convention
 
@@ -12,7 +12,7 @@ def test_pagination_no_duplicates_across_pages():
     ...
 ```
 
-The marker string **SHALL** be one of the IDs in the [REQ catalog](../platform/reference/catalog.md). The `validate-implementation` skill enumerates markers when it runs the suite and populates the per-source traceability matrix.
+The marker string **SHALL** be one of the IDs in the [REQ catalog](../platform/reference/catalog.md). The `validate-implementation` skill enumerates markers when it runs the suite and populates the traceability matrix for each source.
 
 ## Suite layout
 
@@ -42,7 +42,7 @@ pytest -m 'requirement("REQ-ING-HWM")'     # all tests bound to a single REQ-ID
 ```
 
 !!! warning "No local Spark"
-    Tests that touch `SparkSession`, `createDataFrame`, or Silver schemas run against Databricks Connect or as Databricks jobs — never against a local `local[*]` session. Pure-Python logic (HTTP clients, config parsing, severity/status lookups, HWM math) runs locally without Spark. See the [project memory note on no local Spark](https://github.com/vkraus/appsec-mvp/blob/main/.claude/memory/feedback_no_local_spark.md) (if exposed in repo).
+    Tests that touch `SparkSession`, `createDataFrame`, or Silver schemas run against Databricks Connect or as Databricks jobs. Never against a local `local[*]` session. Pure Python logic (HTTP clients, config parsing, severity and status lookups, HWM math) runs locally without Spark. See the [project memory note on no local Spark](https://github.com/vkraus/appsec-mvp/blob/main/.claude/memory/feedback_no_local_spark.md) (if exposed in repo).
 
 ## Traceability flow
 
@@ -55,19 +55,19 @@ flowchart LR
     validate --> fixlist[Fix list for failing REQs]
 ```
 
-The [REQ catalog](../platform/reference/catalog.md) matrix is populated by the `validate-implementation` skill on each connector: each cell holds the outcome of every bound marker (`✓` pass, `✗` fail, `-` no bound test, `N/A` REQ doesn't apply to this source's category).
+The [REQ catalog](../platform/reference/catalog.md) matrix is populated by the `validate-implementation` skill on each connector. Each cell holds the outcome of every bound marker (`✓` pass, `✗` fail, `-` no bound test, `N/A` REQ doesn't apply to the category for this source).
 
-## Per-source coverage
+## Coverage by source
 
-Per-source traceability rows live on the per-source connector pages under [Connectors](../connectors/index.md) under each source's **Implementation report** subsection, and are aggregated in the [REQ catalog](../platform/reference/catalog.md) matrix.
+Traceability rows for each source live on the connector page for that source under [Connectors](../connectors/index.md) under the **Implementation report** subsection, and are aggregated in the [REQ catalog](../platform/reference/catalog.md) matrix.
 
 ## Fixtures
 
 Test fixtures follow the convention `{endpoint}_{scenario}.json` and live under `src/connectors/{source}/tests/fixtures/`. Scenarios deliberately cover:
 
 - Normal case (representative payload from official docs).
-- Empty result set (pagination-empty response).
+- Empty result set (pagination empty response).
 - Multi-page result set (forces at least two HTTP calls to exercise `REQ-ING-PAG`).
-- Rate-limit response (HTTP 429 with `Retry-After` header to exercise `REQ-ING-RL`).
-- Error response (HTTP 4xx/5xx to exercise auth error paths and retry exhaustion).
-- Edge values for severity / status columns (every documented source value + one undocumented value to exercise `REQ-TRF-SEV` / `REQ-TRF-STS` fallthrough).
+- Rate limit response (HTTP 429 with `Retry-After` header to exercise `REQ-ING-RL`).
+- Error response (HTTP 4xx or 5xx to exercise auth error paths and retry exhaustion).
+- Edge values for severity and status columns (every documented source value plus one undocumented value to exercise `REQ-TRF-SEV` and `REQ-TRF-STS` fallthrough).

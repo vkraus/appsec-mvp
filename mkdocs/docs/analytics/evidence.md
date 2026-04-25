@@ -2,13 +2,13 @@
 
 Three scenarios that exercise the end-to-end pipeline. Completing all three is your "you're done" signal.
 
-## Evidence 1 — Cross-tool deduplication
+## Evidence 1: Cross-tool deduplication
 
-**Claim:** two independent SAST tools (SonarQube + Semgrep) pointed at the same repository produce overlapping findings that the pipeline deduplicates.
+**Claim:** two independent SAST tools (SonarQube and Semgrep) pointed at the same repository produce overlapping findings that the pipeline deduplicates.
 
 ### Setup
 
-You already have SAST target repos (`BenchmarkJava`, `BenchmarkPython`) referenced by the github runtime under `src/connectors/github/runtime/` — these are forks of the OWASP Benchmark projects, which carry a curated catalogue of planted defects (CWE-89, CWE-78, CWE-79, CWE-22 among others). Scan each repo with `sonar-scanner-cli` per the [SonarQube connector page → Run the job](../connectors/sast/sonarqube.md#run-the-job), then wait for the next semgrep CronJob (or trigger one manually per the [Semgrep connector page → Run the job](../connectors/sast/semgrep.md#run-the-job)). Run the ingest jobs for both connectors via `databricks bundle run sonarqube-connector` and `databricks bundle run semgrep-connector`.
+You already have SAST target repos (`BenchmarkJava`, `BenchmarkPython`) referenced by the github runtime under `src/connectors/github/runtime/`. These are forks of the OWASP Benchmark projects, which carry a curated catalogue of planted defects (CWE-89, CWE-78, CWE-79, CWE-22 among others). Scan each repo with `sonar-scanner-cli` per the [SonarQube connector page, Run the job](../connectors/sast/sonarqube.md#run-the-job), then wait for the next semgrep CronJob (or trigger one manually per the [Semgrep connector page, Run the job](../connectors/sast/semgrep.md#run-the-job)). Run the ingest jobs for both connectors via `databricks bundle run sonarqube-connector` and `databricks bundle run semgrep-connector`.
 
 ### Query
 
@@ -31,12 +31,12 @@ FROM raw;
 
 - `sonarqube_count ≥ 4` (four planted defects).
 - `semgrep_count ≥ 4` (same four).
-- `overlap_count ≥ 4` — Sonar and Semgrep both find the same defects at the same locations.
+- `overlap_count ≥ 4`. Sonar and Semgrep both find the same defects at the same locations.
 - `deduped_count ≤ sonarqube_count + semgrep_count - overlap_count`.
 
-## Evidence 2 — Business-application rollup
+## Evidence 2: Business application rollup
 
-**Claim:** the ServiceNow→GitHub linkage joins findings to business applications, answering "which business apps carry critical unresolved SAST findings?".
+**Claim:** the linkage from ServiceNow to GitHub joins findings to business applications, answering "which business apps carry critical unresolved SAST findings?".
 
 ### Query
 
@@ -57,11 +57,11 @@ ORDER BY critical_findings DESC;
 
 ### Expected
 
-Two rows: "AppSec Demo Frontend" and "AppSec Demo Backend", each with a non-zero finding count that matches the planted defects per linked repo.
+Two rows: "AppSec Demo Frontend" and "AppSec Demo Backend", each with a non-zero finding count that matches the planted defects in each linked repo.
 
-## Evidence 3 — Finding-shape variety
+## Evidence 3: Variety in finding structure
 
-**Claim:** URL-based DAST findings (`file_path IS NULL`) and code-based SAST findings coexist in the same table.
+**Claim:** DAST findings located by URL (`file_path IS NULL`) and SAST findings located by code coexist in the same table.
 
 ### Query
 

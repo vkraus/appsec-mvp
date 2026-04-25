@@ -1,6 +1,6 @@
 # Connector job template
 
-Every batch-style connector instantiates the same Lakeflow Job shape: a two-task DAG where an ingest task produces bronze records and a transform task consumes them to produce silver. The transform task declares a hard dependency on the ingest task, so a failed ingest short-circuits the job without leaving silver partially refreshed. Lakeflow Connect connectors (e.g. ServiceNow) substitute a pipeline resource declared in `src/connectors/<source>/resources/pipeline.yml` for this job shape.
+Every batch style connector instantiates the same Lakeflow Job structure. It is a two task DAG where an ingest task produces bronze records and a transform task consumes them to produce silver. The transform task declares a hard dependency on the ingest task, so a failed ingest short circuits the job without leaving silver partially refreshed. Lakeflow Connect connectors (e.g. ServiceNow) substitute a pipeline resource declared in `src/connectors/<source>/resources/pipeline.yml` for this job structure.
 
 ## Bundle fragment
 
@@ -48,15 +48,15 @@ resources:
 
 ## Parameters
 
-- **`source_name`** — connector source name, used throughout resource naming (e.g. `github`, `sonarqube`).
-- **`target_catalog`** — Unity Catalog catalog name for the target environment. Each deployment target supplies its own catalog via the bundle root's `var.catalog` (e.g. `appsec_dev`, `appsec_prod`). Passed as `target_catalog` to both the ingest and transform tasks.
-- **`hwm_reset`** — boolean flag (default `"false"`). Set to `"true"` to force high-water-mark re-initialisation on the next run. Intended for manual backfills only.
-- **`quartz_cron_expression`** — the quartz cron expression driving scheduled runs. Source characteristics govern the cadence: high-change sources (SCM platforms, active scanners) run every 15 minutes (github) or every 3 hours (sonarqube); stable sources (CMDB application inventory) run daily.
+- **`source_name`**: connector source name, used throughout resource naming (e.g. `github`, `sonarqube`).
+- **`target_catalog`**: Unity Catalog catalog name for the target environment. Each deployment target supplies its own catalog via `var.catalog` at the bundle root (e.g. `appsec_dev`, `appsec_prod`). Passed as `target_catalog` to both the ingest and transform tasks.
+- **`hwm_reset`**: boolean flag (default `"false"`). Set to `"true"` to force high water mark re-initialisation on the next run. Intended for manual backfills only.
+- **`quartz_cron_expression`**: the quartz cron expression driving scheduled runs. Source characteristics govern the cadence. High change sources (SCM platforms, active scanners) run every 15 minutes (github) or every 3 hours (sonarqube). Stable sources (CMDB application inventory) run daily.
 
 ## Retry configuration
 
-Retry configuration is identical across connectors: three attempts (`max_retries: 3`), with `min_retry_interval_millis` set per the source's expected transient-failure profile (typically `2000`). This isolates transient source faults from pipeline faults. If retries exhaust, the task fails and downstream tasks in the same job do not execute.
+Retry configuration is identical across connectors: three attempts (`max_retries: 3`), with `min_retry_interval_millis` set per the expected transient failure profile of the source (typically `2000`). This isolates transient source faults from pipeline faults. If retries exhaust, the task fails and downstream tasks in the same job do not execute.
 
 ## Credentials
 
-Each new connector substitutes the source name and credential reference; credentials come from the `mvp-connectors` Databricks secret scope, never from the bundle fragment itself. Per-connector secret loading happens via `src/connectors/<source>/scripts/load-secrets.sh` — see [Secrets bootstrap](../secrets-bootstrap.md).
+Each new connector substitutes the source name and credential reference. Credentials come from the `mvp-connectors` Databricks secret scope, never from the bundle fragment itself. Secret loading for each connector happens via `src/connectors/<source>/scripts/load-secrets.sh`. See [Secrets bootstrap](../secrets-bootstrap.md).

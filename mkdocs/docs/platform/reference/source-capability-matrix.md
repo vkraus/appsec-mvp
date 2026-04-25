@@ -1,14 +1,14 @@
 # Source capability matrix
 
-Capability matrix for the nine sources selected for the reference implementation, covering protocol, pagination, high-water-mark column, webhook availability, native severity levels, and operational pattern.
+Capability matrix for the nine sources selected for the reference implementation, covering protocol, pagination, high water mark column, webhook availability, native severity levels, and operational pattern.
 
 The **operational pattern** column distinguishes:
 
-- **periodic-global** — scheduled scans of an enrolled inventory.
-- **CI/CD-step** — per-commit scans producing pipeline artifacts.
-- **on-demand** — scan-per-target lifecycle for dynamic scanners.
-- **runtime** — continuous event streams read in time windows.
-- **platform** — non-scanner sources (CMDB, SCM).
+- **periodic-global**: scheduled scans of an enrolled inventory.
+- **CI/CD-step**: scans for each commit producing pipeline artifacts.
+- **on-demand**: scan per target lifecycle for dynamic scanners.
+- **runtime**: continuous event streams read in time windows.
+- **platform**: non-scanner sources (CMDB, SCM).
 
 | Source | Protocol | Pagination | HWM | Webhook | Native severity levels | Op. pattern |
 |---|---|---|---|---|---|---|
@@ -25,4 +25,4 @@ The **operational pattern** column distinguishes:
 
 ## Patterns
 
-This matrix drives the canonical Silver Entity and Silver Finding patterns, which must accommodate sources varying across every column, and it drives the connector-framework defaults that apply uniformly across ingestion strategies.
+This matrix drives the standard Silver Entity and Silver Finding patterns, which must accommodate sources varying across every column. It also drives the connector framework defaults that apply uniformly across ingestion strategies.

@@ -1,31 +1,31 @@
-# Canonical Mapping Requirements
+# Standard Mapping Requirements
 
-The canonical Silver-layer schemas commit the framework to a single vendor-agnostic entity and finding model. This page states, per schema, the requirement the implementation **SHALL** satisfy when mapping a source record into Silver.
+The standard Silver layer schemas commit the framework to a single vendor agnostic entity and finding model. This page states, per schema, the requirement the implementation **SHALL** satisfy when mapping a source record into Silver.
 
 ## Silver Entity Mapping Requirements
 
-Entity tables (applications, repositories, teams, commits, pull requests, pipeline runs, dependencies, branch policies) are populated from the entity-emitting sources in the selection. The implementation **SHALL** union over the native fields these sources expose according to the table below: every canonical field maps to the source field shown in the corresponding column, with the derivation on the right. Fields marked as framework-generated are assigned by the connector or transformation layer, not read from the source.
+Entity tables (applications, repositories, teams, commits, pull requests, pipeline runs, dependencies, branch policies) are populated from the entity emitting sources in the selection. The implementation **SHALL** union over the native fields these sources expose according to the table below. Every standard field maps to the source field shown in the corresponding column, with the derivation on the right. Fields marked as framework generated are assigned by the connector or transformation layer, not read from the source.
 
-### Silver Entity Pattern field derivation across entity-emitting sources
+### Silver Entity Pattern field derivation across entity emitting sources
 
-| Canonical field | ServiceNow CMDB | GitHub | GitLab | Derivation |
+| Standard field | ServiceNow CMDB | GitHub | GitLab | Derivation |
 |---|---|---|---|---|
-| `id` | (generated) | (generated) | (generated) | surrogate key, framework-assigned |
-| `natural_key` | `sys_id` | `node_id` | `id` (`path_with_namespace` for repos) | the source's stable primary key |
+| `id` | (generated) | (generated) | (generated) | surrogate key, framework assigned |
+| `natural_key` | `sys_id` | `node_id` | `id` (`path_with_namespace` for repos) | the stable primary key in the source |
 | `source_system` | `"servicenow"` | `"github"` | `"gitlab"` | literal per connector |
 | `valid_from` | `sys_created_on` | `created_at` | `created_at` | creation timestamp |
 | `valid_to` | (framework SCD2) | (framework SCD2) | (framework SCD2) | set on supersedure |
-| Domain columns | `name`, `business_criticality`, `operational_status`, `owned_by`, ... | `full_name`, `default_branch`, `visibility`, `language`, ... | `path_with_namespace`, `default_branch`, `visibility`, `archived`, ... | entity-type-specific attributes |
+| Domain columns | `name`, `business_criticality`, `operational_status`, `owned_by`, ... | `full_name`, `default_branch`, `visibility`, `language`, ... | `path_with_namespace`, `default_branch`, `visibility`, `archived`, ... | attributes specific to the entity type |
 
 ## Silver Finding Mapping Requirements
 
-All findings are populated into the single Silver Finding table `silver.findings`, discriminated by a `category` column. The implementation **SHALL** union over the native fields these sources expose according to the tables below. Canonical fields marked "N/A" for a given source are stored as `NULL` in records from that source; this is the intended union-over-sources behavior, and the per-source `mapping.yml` makes each assignment explicit, including the record's `category` value. The two tables group sources by finding shape: the first covers code-level sources (SAST and secrets), the second covers package-level and platform-integrated sources (SCA, GitHub and GitLab platform-native findings).
+All findings are populated into the single Silver Finding table `silver.findings`, discriminated by a `category` column. The implementation **SHALL** union over the native fields these sources expose according to the tables below. Standard fields marked "N/A" for a given source are stored as `NULL` in records from that source. This is the intended union over sources behavior, and the `mapping.yml` for each source makes each assignment explicit, including the `category` value of the record. The two tables group sources by finding structure. The first covers code level sources (SAST and secrets). The second covers package level and platform integrated sources (SCA, GitHub and GitLab platform native findings).
 
-### Silver Finding derivation — code-level sources (SAST and secrets)
+### Silver Finding derivation: code level sources (SAST and secrets)
 
-Rows whose fields are N/A for all three sources are omitted; they appear in the next table.
+Rows whose fields are N/A for all three sources are omitted. They appear in the next table.
 
-| Canonical field | SonarQube | Semgrep | TruffleHog |
+| Standard field | SonarQube | Semgrep | TruffleHog |
 |---|---|---|---|
 | `finding_id` | (generated) | (generated) | (generated) |
 | `source_finding_id` | `key` | `id` (Cloud) / `check_id`+`path`+`line` (CLI) | `DetectorType`+`commit`+`file`+`line` |
@@ -41,11 +41,11 @@ Rows whose fields are N/A for all three sources are omitted; they appear in the 
 | `detected_at` | `creationDate` | `first_seen` (Cloud) | `SourceMetadata.Data.Git.timestamp` |
 | `resolved_at` | (on status transition) | (on `triage_state` transition) | N/A (full-reload) |
 
-### Silver Finding derivation — package-level and platform sources
+### Silver Finding derivation: package level and platform sources
 
-Dependency-Track produces package-vulnerability findings; GitHub and GitLab expose platform-native findings spanning Dependabot (SCA), code scanning (SAST), and secret scanning.
+Dependency-Track produces package vulnerability findings. GitHub and GitLab expose platform native findings spanning Dependabot (SCA), code scanning (SAST), and secret scanning.
 
-| Canonical field | Dependency-Track | GitHub / GitLab (platform) |
+| Standard field | Dependency-Track | GitHub / GitLab (platform) |
 |---|---|---|
 | `finding_id` | (generated) | (generated) |
 | `source_finding_id` | `component.uuid` + `vulnerability.vulnId` | `number` (GH) / `id` (GL) |
@@ -67,10 +67,10 @@ Dependency-Track produces package-vulnerability findings; GitHub and GitLab expo
 
 ## Severity and Status Normalization Requirements
 
-The implementation **SHALL** harmonize every source's native severity scale to the canonical four-level model (`critical`, `high`, `medium`, `low`) through a per-source lookup table co-located with the connector at [`src/connectors/{source}/severity.yml`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors). Each lookup **SHALL** cover every documented source value. Undocumented source values fall through to a configurable default (`medium` unless the connector's `config.yml` overrides it) and **SHALL** trigger a data-quality warning. A null or missing source severity is mapped to `medium` and similarly flagged.
+The implementation **SHALL** harmonize the native severity scale of each source to the standard four level model (`critical`, `high`, `medium`, `low`) through a lookup table for each source. The table is co-located with the connector at [`src/connectors/{source}/severity.yml`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors). Each lookup **SHALL** cover every documented source value. Undocumented source values fall through to a configurable default (`medium` unless the `config.yml` for the connector overrides it) and **SHALL** trigger a data quality warning. A null or missing source severity is mapped to `medium` and similarly flagged.
 
-The implementation **SHALL** translate every source's native lifecycle state to the canonical five-state model (`open`, `confirmed`, `resolved`, `false_positive`, `wontfix`) through an analogous per-source lookup at [`src/connectors/{source}/status.yml`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors).
+The implementation **SHALL** translate the native lifecycle state of each source to the standard five state model (`open`, `confirmed`, `resolved`, `false_positive`, `wontfix`) through an analogous lookup at [`src/connectors/{source}/status.yml`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors).
 
 Both severity and status lookup tables **SHALL** be maintained as configuration files rather than code so that vocabulary updates do not require a pipeline redeploy.
 
-All source timestamps **SHALL** be converted to UTC during the Bronze-to-Silver transformation. Source-specific formats (ISO 8601 with or without offsets, Unix epoch in seconds or milliseconds, and tool-specific strings) **SHALL** be parsed during schema mapping and stored as UTC datetime columns.
+All source timestamps **SHALL** be converted to UTC during the Bronze to Silver transformation. Formats specific to each source (ISO 8601 with or without offsets, Unix epoch in seconds or milliseconds, and tool specific strings) **SHALL** be parsed during schema mapping and stored as UTC datetime columns.

@@ -1,56 +1,56 @@
-# GitHub connector — source-system runtime (optional)
+# GitHub connector: source system runtime (optional)
 
-This Terraform module sets up the **GitHub side** of the github connector's source data: it references three existing OWASP-fork repositories under your GitHub org and provisions the AWS infrastructure that the demo CI workflow needs (ECR for image pushes, GitHub Actions OIDC IAM role, Juice Shop k8s namespace).
+This Terraform module sets up the **GitHub side** of the source data for the github connector. It references three existing OWASP fork repositories under your GitHub org and provisions the AWS infrastructure that the demo CI workflow needs (ECR for image pushes, GitHub Actions OIDC IAM role, Juice Shop k8s namespace).
 
-**It is optional.** The github connector itself only needs a GitHub org with target repositories the operator wants to ingest — it doesn't require these specific demo repos.
+**It is optional.** The github connector itself only needs a GitHub org with target repositories the operator wants to ingest. It does not require these specific demo repos.
 
 ## When to apply
 
-Apply this module if you want appsec-mvp to provision the *demo* GitHub setup on your behalf. Skip it if you have your own GitHub org with the repositories you'd like to scan.
+Apply this module if you want appsec-mvp to provision the *demo* GitHub setup on your behalf. Skip it if you have your own GitHub org with the repositories you would like to scan.
 
 ## Prerequisites
 
 The runtime references existing forks via `data "github_repository"` rather than creating new repositories. Before applying, fork the three upstream OWASP projects under `var.github_org`:
 
-- `appsec-mvp/BenchmarkJava` (forked from `OWASP-Benchmark/BenchmarkJava`) — Java SAST target.
-- `appsec-mvp/BenchmarkPython` (forked from the upstream Benchmark Python project) — Python SAST target.
-- `appsec-mvp/juice-shop` (forked from `juice-shop/juice-shop`) — Juice Shop, the DAST target and CI/CD demo subject.
+- `appsec-mvp/BenchmarkJava` (forked from `OWASP-Benchmark/BenchmarkJava`). Java SAST target.
+- `appsec-mvp/BenchmarkPython` (forked from the upstream Benchmark Python project). Python SAST target.
+- `appsec-mvp/juice-shop` (forked from `juice-shop/juice-shop`). Juice Shop, the DAST target and CI/CD demo subject.
 
 If any of the three forks are missing under `var.github_org`, `terraform plan` will fail at the data lookup.
 
 ## What it provisions
 
 - An ECR repository for Juice Shop image pushes from CI.
-- A GitHub Actions OIDC trust + IAM role (so CI can push to ECR / deploy to EKS without long-lived AWS keys).
+- A GitHub Actions OIDC trust and IAM role (so CI can push to ECR and deploy to EKS without long-lived AWS keys).
 - A Juice Shop Kubernetes namespace and LoadBalancer Service (target for ZAP scans).
 - Two appsec-mvp overlays committed onto the `juice-shop` fork only: `.sonarcloud.properties` (SonarQube project key) and `deploy/juiceshop.yaml` (the Kubernetes manifest the CI workflow `kubectl apply`s).
 
 It **references** (does not create) three forks under `var.github_org`: `BenchmarkJava` and `BenchmarkPython` as SAST targets, and `juice-shop` as the DAST target and CI/CD demo subject.
 
-It does **not** install the cross-scanner CI workflow (`scan.yml`). That workflow lives under `examples/end-to-end-demo/.github/workflows/scan.yml` and you copy it manually into the `juice-shop` fork if you want the end-to-end demo.
+It does **not** install the cross scanner CI workflow (`scan.yml`). That workflow lives under `examples/end-to-end-demo/.github/workflows/scan.yml` and you copy it manually into the `juice-shop` fork if you want the end to end demo.
 
-## Operator-supplied inputs
+## Operator supplied inputs
 
 ### Required
 
 | Variable | Description |
 |---|---|
-| `aws_region` | AWS region for ECR + IAM. Must match the region of `eks_cluster_name`. |
+| `aws_region` | AWS region for ECR and IAM. Must match the region of `eks_cluster_name`. |
 | `aws_access_key_id`, `aws_secret_access_key` | AWS credentials (sensitive). |
-| `eks_cluster_name` | EKS cluster where the Juice Shop namespace lives (operator-supplied). |
+| `eks_cluster_name` | EKS cluster where the Juice Shop namespace lives (supplied by the operator). |
 | `github_org` | GitHub organization for seed repos. |
-| `github_pat` | PAT with org + repo admin permissions (sensitive). |
+| `github_pat` | PAT with org and repo admin permissions (sensitive). |
 
-### Optional (only needed for the cross-scanner end-to-end demo)
+### Optional (only needed for the cross scanner end to end demo)
 
-These default to empty string. When empty, the corresponding GitHub Actions variable / secret is not created on the Juice Shop seed repo, and the conditional S3-write IAM grant is omitted.
+These default to empty string. When empty, the corresponding GitHub Actions variable or secret is not created on the Juice Shop seed repo, and the conditional S3 write IAM grant is omitted.
 
 | Variable | Description |
 |---|---|
-| `sonarqube_url` | Public SonarQube URL consumed by the cross-scanner CI workflow. |
+| `sonarqube_url` | Public SonarQube URL consumed by the cross scanner CI workflow. |
 | `sonarqube_project_token` | SonarQube project analysis token (sensitive). |
-| `zap_url` | Public ZAP URL consumed by the cross-scanner CI workflow. |
-| `artifact_bucket` | S3 bucket name for CI scan-artifact uploads (`${artifact_bucket}/cicd/*`). When set, the GitHub Actions IAM role is granted `s3:PutObject` / `s3:GetObject` / `s3:ListBucket` on it. |
+| `zap_url` | Public ZAP URL consumed by the cross scanner CI workflow. |
+| `artifact_bucket` | S3 bucket name for CI scan artifact uploads (`${artifact_bucket}/cicd/*`). When set, the GitHub Actions IAM role is granted `s3:PutObject`, `s3:GetObject`, and `s3:ListBucket` on it. |
 
 ## Apply
 
@@ -64,7 +64,7 @@ Operators write their own `terraform.tfvars`. The legacy `infra/terraform/terraf
 
 ## Outputs
 
-`seed_repo_full_names`, `sast_repo_full_names`, `juice_shop_repo_full_name`, `ecr_registry_uri`, `github_actions_role_arn`, `github_actions_role_name`, `juiceshop_namespace`, `juiceshop_ingress_host` — useful as inputs to `examples/end-to-end-demo/` if you're wiring the full demo. `seed_repo_full_names` carries the full `org/repo` paths of all three referenced forks; `sast_repo_full_names` narrows to the two Benchmark forks; `juice_shop_repo_full_name` is the single Juice Shop path. `github_actions_role_name` is provided so operators can attach additional IAM policies via `aws_iam_role_policy_attachment` without re-deriving the name from the ARN.
+`seed_repo_full_names`, `sast_repo_full_names`, `juice_shop_repo_full_name`, `ecr_registry_uri`, `github_actions_role_arn`, `github_actions_role_name`, `juiceshop_namespace`, `juiceshop_ingress_host`. Useful as inputs to `examples/end-to-end-demo/` if you are wiring the full demo. `seed_repo_full_names` carries the full `org/repo` paths of all three referenced forks. `sast_repo_full_names` narrows to the two Benchmark forks. `juice_shop_repo_full_name` is the single Juice Shop path. `github_actions_role_name` is provided so operators can attach additional IAM policies via `aws_iam_role_policy_attachment` without re-deriving the name from the ARN.
 
 ## Teardown
 
@@ -73,8 +73,8 @@ cd src/connectors/github/runtime
 terraform destroy
 ```
 
-Caveat: EKS access entries can be order-sensitive. If `terraform destroy` errors on the `aws_eks_access_*` resources (e.g. because the cluster is being torn down out-of-band), remove them from state with `terraform state rm` and re-run.
+Caveat: EKS access entries can be order sensitive. If `terraform destroy` errors on the `aws_eks_access_*` resources (e.g. because the cluster is being torn down out of band), remove them from state with `terraform state rm` and re-run.
 
 ## Independence
 
-This module references only operator-supplied inputs and the GitHub / AWS / Kubernetes provider APIs. It does not depend on any other connector's runtime — per the redesign's no-inter-connector-dependency rule.
+This module references only operator supplied inputs and the GitHub, AWS, and Kubernetes provider APIs. It does not depend on the runtime of any other connector, per the no inter connector dependency rule of the redesign.

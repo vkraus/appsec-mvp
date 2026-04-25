@@ -1,22 +1,22 @@
 # Build analytics
 
-Phase 3 of the install flow. Analytics consumes the canonical Silver
+Phase 3 of the install flow. Analytics consumes the standard Silver
 tables populated by [Phase 1: Setup platform](../platform/index.md) and
 [Phase 2: Install connectors](../connectors/index.md), and produces the
-gold-layer aggregates and evidence views used by reporting and
+gold layer aggregates and evidence views used by reporting and
 dashboards.
 
 !!! info "Scaffolding only at the redesign stage"
     The analytics layer is intentionally light in the Databricks-centric
     redesign. The DAB deploys a `gold` schema and a placeholder analytics
     job (`src/analytics/resources/job.yml`) so the include glob picks up
-    future fragments automatically, but the full analytics implementation
-    — gold tables, scheduled refresh, dashboard bundles — is tracked as
+    future fragments automatically. The full analytics implementation
+    (gold tables, scheduled refresh, dashboard bundles) is tracked as
     follow-on work.
 
     Until that lands, the [Evidence scenarios](evidence.md) page documents
     queries that read directly from `silver.findings`, `silver.app_repo`,
-    and `silver.repositories` — operators can run those queries by hand
+    and `silver.repositories`. Operators can run those queries by hand
     in a SQL editor against the warehouse to validate the end-to-end
     pipeline.
 
@@ -33,21 +33,21 @@ flowchart LR
     silver_repos --> evidence
 ```
 
-The gold layer aggregates Silver into per-application, per-team, and
-per-finding-shape views. Each gold table has a single owner (the
+The gold layer aggregates Silver into views for each application, each team, and
+each finding category. Each gold table has a single owner (the
 analytics layer) and is refreshed by the analytics job on a schedule.
 
 ## Pages
 
-- [Gold datasets](gold-datasets.md) — canonical Gold tables and views with
+- [Gold datasets](gold-datasets.md): standard Gold tables and views with
   column documentation. Forthcoming.
-- [Evidence scenarios](evidence.md) — three end-to-end scenarios with the
+- [Evidence scenarios](evidence.md): three end-to-end scenarios with the
   queries that produce them. The scenarios validate the cross-source
-  pipeline (SCM → CMDB → SAST → DAST) end-to-end without requiring the
+  pipeline (SCM, CMDB, SAST, DAST) end-to-end without requiring the
   full analytics implementation.
-- [Dashboards](dashboards.md) — Lakeview dashboards that visualize gold
+- [Dashboards](dashboards.md): Lakeview dashboards that visualize gold
   outputs. Forthcoming.
-- [Tests and traceability](tests.md) — REQ-* to pytest traceability index.
+- [Tests and traceability](tests.md): REQ-* to pytest traceability index.
 
 ## How dashboards will be served
 
@@ -58,7 +58,7 @@ deployed by `databricks bundle deploy` like every other DAB resource.
 
 ## Data dependencies for analytics
 
-Analytics queries assume the SCM-first install order has been respected:
+Analytics queries assume the install order with SCM first has been respected:
 
 - `silver.repositories` populated by an SCM connector
   ([GitHub](../connectors/scm/github.md) or [GitLab](../connectors/scm/gitlab.md)).
@@ -81,5 +81,5 @@ databricks bundle run analytics --target dev
 ```
 
 The job will fail until the placeholder SQL is replaced with real gold
-DDL — that replacement is part of the analytics follow-on. Operators do
-not need to run this job during Phase 1+2 setup.
+DDL. That replacement is part of the analytics follow-on. Operators do
+not need to run this job during Phase 1 and 2 setup.
