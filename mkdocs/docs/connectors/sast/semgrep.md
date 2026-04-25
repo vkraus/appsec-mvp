@@ -220,10 +220,10 @@ Tests live under [`tests/connectors/semgrep/`](https://github.com/vkraus/appsec-
 
 ## Generation log
 
-This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated generation log row is tracked as a deferred follow-up.
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work; the Reference and Validation sections preserve the original implementation-grounded prose, and the Generation log table records the actual skill runs that produced the reconciled artefacts.
 
-| Stage              | Skill                            | Inputs       | Outputs                                            | Run on     | Skills repo ref |
-|--------------------|----------------------------------|--------------|----------------------------------------------------|------------|-----------------|
-| Source analysis    | `analyze-source` (sast)          | (pre-skill)  | `mkdocs/docs/connectors/sast/semgrep.md` §1–§3     | (pre-skill) | (pre-skill)     |
-| Module generation  | `generate-connector` (sast)      | (pre-skill)  | `src/connectors/semgrep/`, `tests/connectors/semgrep/` | (pre-skill) | (pre-skill)     |
-| Validation         | `validate-implementation` (sast) | (pre-skill)  | `mkdocs/docs/connectors/sast/semgrep.md` §5        | (pre-skill) | (pre-skill)     |
+| Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (sast)            | name=Semgrep; url=https://semgrep.dev/api/v1/docs; category=sast      | mkdocs/docs/connectors/sast/semgrep.md §1–§3                                       | 2026-04-25 | 2fa3e2d (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (sast)        | (pending)                                                             | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation         | `validate-implementation` (sast)   | (pending)                                                             | (pending)                                                                          | (pending)  | (pending)                                |
