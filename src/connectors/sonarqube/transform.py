@@ -166,6 +166,7 @@ def issues_to_silver(spark: SparkSession, raw: list[dict[str, Any]]) -> DataFram
                     status,
                 ),
                 cwe_id=None,
+                cve_id=None,
                 rule_id_native=r["rule"],
                 trigger_context="periodic",
                 repository_id=repository_id,

@@ -217,12 +217,12 @@ A non-zero `missing_repo` count means Semgrep reports findings for repositories 
 | `REQ-ING-HWM` | `src/connectors/semgrep/tests/test_ingest.py::test_findings_since_hwm_resume` | PASS |
 | `REQ-TRF-MAP` | `src/connectors/semgrep/tests/test_transform.py::test_finding_mapping` | PASS |
 | `REQ-TRF-SEV` | `src/connectors/semgrep/tests/test_transform.py::test_severity_normalization_all_levels` | PASS |
-| `REQ-TRF-STS` | `src/connectors/semgrep/tests/test_transform.py::test_triage_state_to_status_normalization` | PASS |
-| `REQ-TRF-TS` | `src/connectors/semgrep/tests/test_transform.py::test_created_at_to_utc_datetime` | PASS |
-| `REQ-DQ` | `src/connectors/semgrep/tests/test_transform.py::test_findings_expectation_quarantines_null_rule_id` | PASS |
+| `REQ-TRF-STS` | `src/connectors/semgrep/tests/test_transform.py::test_status_defaults_to_open_for_cli` | PASS |
+| `REQ-TRF-TS` | `src/connectors/semgrep/tests/test_transform.py::test_seen_at_is_utc_datetime` | PASS |
+| `REQ-DQ` | `src/connectors/semgrep/tests/test_transform.py::test_findings_expectation_quarantines_null_check_id` | PASS |
 | `REQ-DEDUP` | `src/connectors/semgrep/tests/test_transform.py::test_dedup_links_against_sonarqube_overlap` | PASS |
 
-Collected 10 requirement-bound tests via `pytest src/connectors/semgrep/tests/ -v --tb=short` (2026-04-22, 4.2 s wall-clock); 10 passed.
+Collected 15 requirement-bound tests via `pytest src/connectors/semgrep/tests/ -v --tb=short` (2026-04-25, 16.9 s wall-clock); 15 passed.
 
 ### Tests
 
@@ -236,4 +236,4 @@ This connector page was reconciled by the connector-lifecycle skills under the r
 |--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (sast)            | name=Semgrep; url=https://semgrep.dev/api/v1/docs; category=sast      | mkdocs/docs/connectors/sast/semgrep.md §1–§3                                       | 2026-04-25 | d47eb26 (retrofit-9-connectors)          |
 | Module generation  | `generate-connector` (sast)        | page hash=72c0eb36b9f8                                           | src/connectors/semgrep/, src/connectors/semgrep/tests/, src/connectors/semgrep/severity.yml, src/connectors/semgrep/status.yml, src/connectors/semgrep/resources/job.yml | 2026-04-25 | 15935ca (retrofit-9-connectors)  |
-| Validation         | `validate-implementation` (sast)   | module path=src/connectors/semgrep/                                   | mkdocs/docs/connectors/sast/semgrep.md §5                                          | 2026-04-25 | ef600a8 (retrofit-9-connectors)          |
+| Validation         | `validate-implementation` (sast)   | module path=src/connectors/semgrep/                                   | mkdocs/docs/connectors/sast/semgrep.md §5                                          | 2026-04-25 | fa314d2 (production-shape-b)             |

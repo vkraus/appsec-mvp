@@ -45,6 +45,7 @@ silver_findings = StructType([
     StructField("severity_canonical", StringType(), nullable=False),
     StructField("status_canonical", StringType(), nullable=False),
     StructField("cwe_id", StringType(), nullable=True),
+    StructField("cve_id", StringType(), nullable=True),
     StructField("rule_id_native", StringType(), nullable=False),
     StructField("trigger_context", StringType(), nullable=False),
     StructField("repository_id", StringType(), nullable=True),

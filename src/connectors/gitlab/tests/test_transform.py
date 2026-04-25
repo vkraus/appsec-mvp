@@ -242,14 +242,14 @@ def test_dedup_key_branches_on_finding_shape() -> None:
     sca = vulnerability_to_finding(200, by_id[5003])
     assert sca["category"] == "sca"
     assert sca["package_name"] == "lodash"
-    assert sca["cwe_id"] == "CVE-2024-12345"
+    assert sca["cve_id"] == "CVE-2024-12345"  # CVE goes to cve_id, not cwe_id
     assert sca["dedup_key"] == ("200", "lodash", "CVE-2024-12345")
 
     # SCA finding without a top-level ``cve`` must fall back to the first
     # ``cve``-typed entry in ``identifiers`` per connector page § Resource
     # schema excerpt. Mis-branching here corrupts dedup_links.
     sca_fallback = vulnerability_to_finding(200, by_id[5005])
-    assert sca_fallback["cwe_id"] == "CVE-2023-99999"
+    assert sca_fallback["cve_id"] == "CVE-2023-99999"
     assert sca_fallback["dedup_key"] == ("200", "django", "CVE-2023-99999")
 
 
