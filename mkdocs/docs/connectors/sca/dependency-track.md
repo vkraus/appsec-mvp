@@ -197,7 +197,7 @@ Collected 10 requirement-bound tests via `pytest src/connectors/dependency_track
 
 ### Tests
 
-Tests live under [`src/connectors/dependency_track/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/dependency_track). The report table above is the outcome for each REQ.
+Tests live under [`src/connectors/dependency_track/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/dependency_track/tests). The report table above is the outcome for each REQ.
 
 ## Generation log
 

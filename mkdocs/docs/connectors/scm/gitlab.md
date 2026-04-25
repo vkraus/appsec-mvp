@@ -252,22 +252,22 @@ If `silver.repositories` has zero `gitlab`-sourced rows after a successful job r
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `src/connectors/gitlab/test_ingest.py::test_auth_secret_resolution` | PASS |
-| `REQ-ING-PAG` | `src/connectors/gitlab/test_ingest.py::test_keyset_pagination_two_pages` | PASS |
-| `REQ-ING-RL` | `src/connectors/gitlab/test_ingest.py::test_429_backoff_retries` | PASS |
-| `REQ-ING-HWM` | `src/connectors/gitlab/test_ingest.py::test_updated_at_hwm_resume` | PASS |
-| `REQ-TRF-MAP` | `src/connectors/gitlab/test_transform.py::test_project_to_repository_projects_expected_fields` | PASS |
-| `REQ-TRF-SEV` | `src/connectors/gitlab/test_transform.py::test_severity_lookup_covers_every_documented_value` | PASS |
-| `REQ-TRF-STS` | `src/connectors/gitlab/test_transform.py::test_status_lookup_covers_every_documented_value` | PASS |
-| `REQ-TRF-TS` | `src/connectors/gitlab/test_transform.py::test_parse_iso_utc_roundtrips_timezone_aware` | PASS |
-| `REQ-DQ` | `src/connectors/gitlab/test_transform.py::test_unknown_severity_falls_through_to_default` | PASS |
-| `REQ-DEDUP` | `src/connectors/gitlab/test_transform.py::test_dedup_key_branches_on_finding_shape` | PASS |
+| `REQ-ING-AUTH` | `src/connectors/gitlab/tests/test_ingest.py::test_auth_secret_resolution` | PASS |
+| `REQ-ING-PAG` | `src/connectors/gitlab/tests/test_ingest.py::test_keyset_pagination_two_pages` | PASS |
+| `REQ-ING-RL` | `src/connectors/gitlab/tests/test_ingest.py::test_429_backoff_retries` | PASS |
+| `REQ-ING-HWM` | `src/connectors/gitlab/tests/test_ingest.py::test_updated_at_hwm_resume` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/gitlab/tests/test_transform.py::test_project_to_repository_projects_expected_fields` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/gitlab/tests/test_transform.py::test_severity_lookup_covers_every_documented_value` | PASS |
+| `REQ-TRF-STS` | `src/connectors/gitlab/tests/test_transform.py::test_status_lookup_covers_every_documented_value` | PASS |
+| `REQ-TRF-TS` | `src/connectors/gitlab/tests/test_transform.py::test_parse_iso_utc_roundtrips_timezone_aware` | PASS |
+| `REQ-DQ` | `src/connectors/gitlab/tests/test_transform.py::test_unknown_severity_falls_through_to_default` | PASS |
+| `REQ-DEDUP` | `src/connectors/gitlab/tests/test_transform.py::test_dedup_key_branches_on_finding_shape` | PASS |
 
 Collected 24 requirement bound tests via `py -3.11 -m pytest src/connectors/gitlab/tests/ -v --tb=short` (2026-04-25, 0.48 s wall clock). 22 passed, 0 failed, 2 skipped (`test_expired_token_produces_clear_error` under `REQ-ING-AUTH` and `test_dedup_links_across_gitlab_and_semgrep` under `REQ-DEDUP`. Both pending live fixtures for the B follow-up on a live GitLab Ultimate tenancy. The marker binds, the assertion is synthesized, so they are recorded as `PASS (synthesized fixture)` for the traceability matrix). N/A rationale: none. GitLab is a dual role SCM source per the SCM reference (Vulnerabilities API for platform native findings plus REST API for entities), so all ten SCM REQ-IDs bind to bound tests.
 
 ### Tests
 
-Tests live under [`src/connectors/gitlab/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/gitlab). The report table above is the outcome per REQ of running the bound tests in that directory.
+Tests live under [`src/connectors/gitlab/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/gitlab/tests). The report table above is the outcome per REQ of running the bound tests in that directory.
 
 ## Generation log
 

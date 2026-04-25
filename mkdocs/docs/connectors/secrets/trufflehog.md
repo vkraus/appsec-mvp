@@ -236,18 +236,18 @@ Expected: bronze count equals the number of artefact files dropped at the locati
 | `REQ-ING-PAG` | n/a | N/A |
 | `REQ-ING-RL` | n/a | N/A |
 | `REQ-ING-HWM` | n/a | N/A |
-| `REQ-TRF-MAP` | `src/connectors/trufflehog/test_transform.py::test_record_to_silver_projects_every_consumed_field` | PASS |
-| `REQ-TRF-SEV` | `src/connectors/trufflehog/test_transform.py::test_severity_is_hard_coded_high` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/trufflehog/tests/test_transform.py::test_record_to_silver_projects_every_consumed_field` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/trufflehog/tests/test_transform.py::test_severity_is_hard_coded_high` | PASS |
 | `REQ-TRF-STS` | n/a | N/A |
-| `REQ-TRF-TS` | `src/connectors/trufflehog/test_transform.py::test_source_timestamp_is_preserved_from_git_leaf` | PASS |
-| `REQ-DQ` | `src/connectors/trufflehog/test_transform.py::test_missing_git_metadata_produces_well_formed_row` | PASS |
-| `REQ-DEDUP` | `src/connectors/trufflehog/test_transform.py::test_dedup_key_is_four_tuple_per_secrets_reference` | PASS |
+| `REQ-TRF-TS` | `src/connectors/trufflehog/tests/test_transform.py::test_source_timestamp_is_preserved_from_git_leaf` | PASS |
+| `REQ-DQ` | `src/connectors/trufflehog/tests/test_transform.py::test_missing_git_metadata_produces_well_formed_row` | PASS |
+| `REQ-DEDUP` | `src/connectors/trufflehog/tests/test_transform.py::test_dedup_key_is_four_tuple_per_secrets_reference` | PASS |
 
 Collected 26 requirement-bound tests via `pytest src/connectors/trufflehog/tests/ -v --tb=short` (2026-04-25, 0.31 s wall-clock); 26 passed, 0 failed, 4 skipped as documentation markers for the N/A rows. Five requirements are marked N/A: `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` because the CLI artefact ingestion path has no API auth, pagination, or upstream rate limit (quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix"); `REQ-ING-HWM` because TruffleHog is full reload only per the capability scope for secrets and the commit SHA lives in the artefact key rather than as a record level HWM column; `REQ-TRF-STS` because secret detection sources expose no lifecycle vocabulary to normalise (references/secrets.md § Quirks).
 
 ### Tests
 
-Tests live under [`src/connectors/trufflehog/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/trufflehog). The report table above is the outcome for each REQ.
+Tests live under [`src/connectors/trufflehog/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/trufflehog/tests). The report table above is the outcome for each REQ.
 
 ## Generation log
 

@@ -237,22 +237,22 @@ Expected: bronze count > 0 after the Firehose buffer flushes; events grouped by 
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `src/connectors/aws_waf/test_ingest.py::test_ingest_contract_rejects_missing_aws_credential_ref` | PASS |
+| `REQ-ING-AUTH` | `src/connectors/aws_waf/tests/test_ingest.py::test_ingest_contract_rejects_missing_aws_credential_ref` | PASS |
 | `REQ-ING-PAG` | n/a | N/A |
 | `REQ-ING-RL` | n/a | N/A |
-| `REQ-ING-HWM` | `src/connectors/aws_waf/test_ingest.py::test_event_timestamp_hwm_round_trip` | PASS |
-| `REQ-TRF-MAP` | `src/connectors/aws_waf/test_transform.py::test_normalise_event_projects_log_record_onto_silver_shape` | PASS |
-| `REQ-TRF-SEV` | `src/connectors/aws_waf/test_transform.py::test_severity_lookup_covers_every_documented_action_value` | PASS |
+| `REQ-ING-HWM` | `src/connectors/aws_waf/tests/test_ingest.py::test_event_timestamp_hwm_round_trip` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/aws_waf/tests/test_transform.py::test_normalise_event_projects_log_record_onto_silver_shape` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/aws_waf/tests/test_transform.py::test_severity_lookup_covers_every_documented_action_value` | PASS |
 | `REQ-TRF-STS` | n/a | N/A |
-| `REQ-TRF-TS` | `src/connectors/aws_waf/test_transform.py::test_epoch_ms_timestamp_normalises_to_utc_datetime` | PASS |
-| `REQ-DQ` | `src/connectors/aws_waf/test_transform.py::test_unmatched_webacl_leaves_application_id_null` | PASS |
+| `REQ-TRF-TS` | `src/connectors/aws_waf/tests/test_transform.py::test_epoch_ms_timestamp_normalises_to_utc_datetime` | PASS |
+| `REQ-DQ` | `src/connectors/aws_waf/tests/test_transform.py::test_unmatched_webacl_leaves_application_id_null` | PASS |
 | `REQ-DEDUP` | n/a | N/A |
 
 Collected 6 requirement-bound applicable REQs via `pytest src/connectors/aws_waf/tests/ -v --tb=short` (2026-04-25, 0.41 s wall-clock); 25 passed, 0 failed, 5 skipped; 6 applicable REQs PASS, 4 marked N/A. N/A rationale: `REQ-ING-PAG` and `REQ-ING-RL`: log-stream mode has no API pagination or rate limit (SDK fallback is single-page `GetSampledRequests` with boto3-native throttling). `REQ-TRF-STS`: WAF events are an append-only edge-event stream with no lifecycle state. `REQ-DEDUP`: no cross-tool overlap in MVP scope, and the within-source replay-window dedup on `(timestamp, rule_id, source_ip, request_id)` is asserted under `REQ-DQ` instead.
 
 ### Tests
 
-Tests live under [`src/connectors/aws_waf/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/aws_waf). The report table above is the per-REQ outcome.
+Tests live under [`src/connectors/aws_waf/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/aws_waf/tests). The report table above is the per-REQ outcome.
 
 ## Generation log
 

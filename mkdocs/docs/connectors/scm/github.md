@@ -242,18 +242,18 @@ For an user running the demo runtime, expect three rows: `BenchmarkJava`, `Bench
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `src/connectors/github/tests/test_ingest.py::test_pat_resolution_from_secret_scope` | PASS |
-| `REQ-ING-PAG` | `src/connectors/github/tests/test_ingest.py::test_link_header_pagination_two_pages` | PASS |
-| `REQ-ING-RL` | `src/connectors/github/tests/test_ingest.py::test_secondary_rate_limit_backoff` | PASS |
-| `REQ-ING-HWM` | `src/connectors/github/tests/test_ingest.py::test_updated_at_hwm_resume` | PASS |
-| `REQ-TRF-MAP` | `src/connectors/github/tests/test_transform.py::test_ghas_alert_mapping` | PASS |
-| `REQ-TRF-SEV` | `src/connectors/github/tests/test_transform.py::test_severity_normalization_all_levels` | PASS |
-| `REQ-TRF-STS` | `src/connectors/github/tests/test_transform.py::test_state_to_status_normalization` | PASS |
-| `REQ-TRF-TS` | `src/connectors/github/tests/test_transform.py::test_iso8601_to_utc_datetime` | PASS |
-| `REQ-DQ` | `src/connectors/github/tests/test_transform.py::test_findings_expectation_quarantines_null_repo` | PASS |
-| `REQ-DEDUP` | `src/connectors/github/tests/test_transform.py::test_dedup_links_against_semgrep_overlap` | PASS |
+| `REQ-ING-AUTH` | `src/connectors/github/tests/test_ingest.py::test_ingest_resolves_token_from_state_and_rejects_missing_secret` | PASS |
+| `REQ-ING-PAG` | `src/connectors/github/tests/test_ingest.py::test_fetch_org_repositories_yields_raw_data_per_repo` | PASS |
+| `REQ-ING-RL` | `src/connectors/github/tests/test_ingest.py::test_github_client_configures_retry_policy` | PASS |
+| `REQ-ING-HWM` | `src/connectors/github/tests/test_ingest.py::test_fetch_repo_commits_passes_since_as_datetime` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/github/tests/test_transform.py::test_repositories_to_silver` | PASS |
+| `REQ-TRF-SEV` | _(pending — finding ingestion not yet shipped; SCM entity-only MVP, see test docstring)_ | (pending) |
+| `REQ-TRF-STS` | _(pending — finding ingestion not yet shipped; SCM entity-only MVP, see test docstring)_ | (pending) |
+| `REQ-TRF-TS` | `src/connectors/github/tests/test_transform.py::test_repositories_updated_at_is_utc_datetime` | PASS |
+| `REQ-DQ` | `src/connectors/github/tests/test_transform.py::test_repositories_missing_full_name_raises` | PASS |
+| `REQ-DEDUP` | _(pending — finding ingestion not yet shipped; SCM entity-only MVP, see test docstring)_ | (pending) |
 
-Collected 10 requirement bound tests via `pytest src/connectors/github/tests/ -v --tb=short` (2026-04-22, 5.1 s wall clock). 10 passed.
+Collected 7 requirement bound tests via `pytest src/connectors/github/tests/ -v --tb=short`. The three finding-only REQs (REQ-TRF-SEV, REQ-TRF-STS, REQ-DEDUP) are out of scope until GHAS finding ingestion ships — see the docstring at the top of `src/connectors/github/tests/test_ingest.py`.
 
 ### Tests
 

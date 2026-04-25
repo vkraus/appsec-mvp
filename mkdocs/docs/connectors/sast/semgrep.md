@@ -217,10 +217,12 @@ A non-zero `missing_repo` count means Semgrep reports findings for repositories 
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `src/connectors/semgrep/tests/test_ingest.py::test_api_token_resolution` | PASS |
-| `REQ-ING-PAG` | `src/connectors/semgrep/tests/test_ingest.py::test_cursor_pagination_two_pages` | PASS |
-| `REQ-ING-RL` | `src/connectors/semgrep/tests/test_ingest.py::test_429_backoff_retries` | PASS |
-| `REQ-ING-HWM` | `src/connectors/semgrep/tests/test_ingest.py::test_findings_since_hwm_resume` | PASS |
+| `REQ-ING-AUTH` | _(N/A — CLI-artefact connector reads S3 prefix; no API auth at the connector layer)_ | N/A |
+| `REQ-ING-PAG` | _(N/A — autoloader-style prefix walk; no cursor/keyset pagination)_ | N/A |
+| `REQ-ING-RL` | _(N/A — no upstream API to rate-limit; only S3 GET concurrency)_ | N/A |
+| `REQ-ING-HWM` | _(N/A — Lakeflow Auto Loader manages high-water-mark via checkpoint location)_ | N/A |
+| `REQ-FW-CONTRACT` | `src/connectors/semgrep/tests/test_contract_wrappers.py::test_ingest_wrapper_has_contract_signature` | PASS |
+| `REQ-FW-BRONZE-ENVELOPE` | `src/connectors/semgrep/tests/test_contract_wrappers.py::test_run_ingest_pipeline_accepts_run_id_kwarg` | PASS |
 | `REQ-TRF-MAP` | `src/connectors/semgrep/tests/test_transform.py::test_finding_mapping` | PASS |
 | `REQ-TRF-SEV` | `src/connectors/semgrep/tests/test_transform.py::test_severity_normalization_all_levels` | PASS |
 | `REQ-TRF-STS` | `src/connectors/semgrep/tests/test_transform.py::test_status_defaults_to_open_for_cli` | PASS |
@@ -228,7 +230,7 @@ A non-zero `missing_repo` count means Semgrep reports findings for repositories 
 | `REQ-DQ` | `src/connectors/semgrep/tests/test_transform.py::test_findings_expectation_quarantines_null_check_id` | PASS |
 | `REQ-DEDUP` | `src/connectors/semgrep/tests/test_transform.py::test_dedup_links_against_sonarqube_overlap` | PASS |
 
-Collected 15 requirement-bound tests via `pytest src/connectors/semgrep/tests/ -v --tb=short` (2026-04-25, 16.9 s wall-clock); 15 passed.
+Collected 8 requirement-bound tests via `pytest src/connectors/semgrep/tests/ -v --tb=short`. The four ingest-side REQs do not apply: Semgrep findings arrive as CLI `--json` artefacts on S3, so authentication, pagination, rate-limiting, and high-water-mark are properties of the artefact pipeline (CronJob / CI step) and Lakeflow Auto Loader, not the connector itself.
 
 ### Tests
 
