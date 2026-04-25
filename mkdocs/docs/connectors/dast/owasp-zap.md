@@ -162,10 +162,10 @@ Tests live under [`tests/connectors/owasp_zap/`](https://github.com/vkraus/appse
 
 ## Generation log
 
-This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated generation log row is tracked as a deferred follow-up.
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work; the Reference and Validation sections preserve the original implementation-grounded prose, and the Generation log table records the actual skill runs that produced the reconciled artefacts.
 
-| Stage              | Skill                            | Inputs       | Outputs                                            | Run on     | Skills repo ref |
-|--------------------|----------------------------------|--------------|----------------------------------------------------|------------|-----------------|
-| Source analysis    | `analyze-source` (dast)          | (pre-skill)  | `mkdocs/docs/connectors/dast/owasp-zap.md` §1–§3   | (pre-skill) | (pre-skill)     |
-| Module generation  | `generate-connector` (dast)      | (pre-skill)  | `src/connectors/owasp_zap/`, `tests/connectors/owasp_zap/` | (pre-skill) | (pre-skill)     |
-| Validation         | `validate-implementation` (dast) | (pre-skill)  | `mkdocs/docs/connectors/dast/owasp-zap.md` §5      | (pre-skill) | (pre-skill)     |
+| Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (dast)            | name=OWASP ZAP; url=https://www.zaproxy.org/docs/api/; category=dast  | mkdocs/docs/connectors/dast/owasp-zap.md §1–§3                                     | 2026-04-25 | 7ab1cb8 (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (dast)        | (pending)                                                             | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation         | `validate-implementation` (dast)   | (pending)                                                             | (pending)                                                                          | (pending)  | (pending)                                |
