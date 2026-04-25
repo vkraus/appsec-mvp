@@ -1,180 +1,207 @@
 # SCM skills
 
-Three skills operationalize the connector lifecycle for SCM sources.
+Three skills cover the connector lifecycle for SCM sources. Each carries an SCM-specific reference; the procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
 
-!!! info "Specialization pending"
-    These skills will be specialized for SCM sources (renamed to
-    `analyze-source-scm`, `generate-connector-scm`,
-    `validate-implementation-scm`) in a follow-up work item. Until then,
-    the category-generic versions below apply.
+## analyze-source — SCM reference
 
-## `analyze-source`
+Facts the analyze-source skill needs to write a complete Reference section for an SCM source.
 
-Source: [`.claude/skills/analyze-source.md`](https://github.com/vkraus/appsec-mvp/blob/main/.claude/skills/analyze-source.md)
+### Applicable REQ-IDs
 
-````markdown
----
-name: analyze-source
-description: Use when analyzing a new data source system (REST API, GraphQL, SDK, or CLI) to produce a per-connector page for the docs site. Inputs are source name, homepage URL, API documentation URL, and AppSec category.
----
+From `mkdocs/docs/platform/reference/catalog.md`. SCM sources are dual-role: they emit repository / pull-request / branch-policy entities AND, where the platform hosts native scanners (Dependabot, GitHub code scanning, GitHub Secret Scanning), they emit findings.
 
-# analyze-source
+- Always apply (entity role): `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL`, `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-TS`, `REQ-DQ`.
+- Apply only when the SCM source is configured as a finding-emitting integration (platform-native scanners): `REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-DEDUP`.
 
-Produce a per-connector documentation page for a data source to be integrated into the AppSec data platform framework. The output follows the five-section connector page template used across `mkdocs/docs/connectors/<category>/`.
+The traceability matrix's GitHub column shows the full set as `PASS` because the GitHub connector ingests both repositories and platform-native findings. A pure-entity SCM connector would mark severity, status, and dedup as N/A.
 
-## Inputs
+### Default severity
 
-- Source system name and homepage URL.
-- Official API documentation (accessed via WebFetch).
-- AppSec category (one of: `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf`).
-- Optional: live API credentials for fixture generation.
+N/A for the entity role. For the finding role, severity comes from the platform's native field (`rule.security_severity_level` on GitHub code scanning, `severity` on GitLab) and is normalized to the canonical four-level model (`critical`, `high`, `medium`, `low`) via per-source lookup. The configurable default for unmatched values is `medium` per the canonical mapping.
 
-## Output
+### Incremental strategy
 
-Emit the Markdown page to stdout, ready for inclusion at `mkdocs/docs/connectors/<category>/<source-slug>.md` where `<category>` is one of `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf` (matching the AppSec category input).
+SCM connectors select from the three-option preference order documented in the SCM capability surface:
 
-The page has five top-level sections:
+1. **Webhook or event-stream delivery** where exposed (preferred). The connector subscribes and materializes events into Bronze in near-real-time.
+2. **Native `updated_at` (or equivalent) timestamp** as the high-water mark; persisted to the state table.
+3. **Full reload**, reserved for sources exposing neither.
 
-1. **Overview** — what this connector does; its role in the platform (which Silver table(s) it populates; any distinguishing capability). For sources not in the MVP, include an admonition:
-   ```
-   !!! info "Not in MVP scope"
-       This connector is documented for future implementation.
-   ```
-2. **Prerequisites** — how to set up the external service and extract credentials (API keys, OAuth apps, PATs).
-3. **Reference** — the seven API facts:
-   - API surface (REST / GraphQL / SDK / CLI; endpoints consumed; authentication mechanisms)
-   - Pagination and rate limits (strategy and quotas)
-   - Incremental hook (selected per the category rules at `platform/reference/canonical-mapping`; preference order: webhook > native HWM column > full reload)
-   - Resource schema excerpt (only fields consumed by connectors; Markdown table with columns Field / Type / Meaning)
-   - Enumerations (severity and status mappings in terms of the canonical models from `platform/reference/canonical-mapping`)
-   - Quirks (deviations from category norms, format surprises, per-source handling policies)
-4. **Setup** — configuration, bundle deployment, first-run commands. If the source is not in the MVP, stub this section:
-   ```
-   !!! info "Not implemented in MVP"
-       Setup instructions will be added when this connector is implemented.
-   ```
-5. **Validation** — implementation report and test outcomes. Always stub on first emit; `validate-implementation` fills this in after the test suite runs:
-   ```
-   !!! info "Pending validation"
-       Run `validate-implementation` after implementing the connector to populate this section.
-   ```
+The per-source decision MUST be recorded in the Reference section's Incremental hook fact and reflected in the connector's `config.yml`.
 
-## Steps
+### Deduplication key
 
-1. Fetch the source's API documentation via WebFetch.
-2. Identify the authentication mechanism supported by the source; select the one matching the category's convention documented at `platform/reference/canonical-mapping`.
-3. Enumerate endpoints required to populate the Silver tables assigned to the source's category (cross-reference the Silver Table Ownership table at `platform/reference/catalog`).
-4. Select the incremental strategy per the preference order in `platform/reference/canonical-mapping` for this category.
-5. Extract consumed-field table entries matching canonical Silver fields from `platform/reference/canonical-mapping` (entities or findings schema, whichever applies to the source's category).
-6. Produce severity and status lookup proposals per the canonical enumeration models at `platform/reference/canonical-mapping`.
-7. Document quirks (deviations from category norms; format surprises).
-8. Assemble the five-section Markdown page and emit to stdout.
+For the entity role: not applicable.
 
-## Invariants
+For the finding role: the dedup key follows the finding shape — code-level findings (code scanning, secret scanning) reuse the SAST and secrets keys respectively; package-level findings (Dependabot) reuse the SCA key `(repository_id, package_name, cve_id)`. The Reference section's Quirks fact MUST disclose which finding shapes the source emits.
 
-- The output must link every official documentation URL used as an inline hyperlink or a References list at the bottom of the page.
-- The severity and status lookups must cover every documented source value; undocumented values default to the configured fallback with a data-quality warning noted inline.
-- No fabricated fields: every claim about the source's API must be traceable to the fetched documentation.
-- The page slug and category directory must match the AppSec category input exactly; do not invent a new category.
-````
+### Target Silver tables
 
-## `generate-connector`
+Entity role: `silver.repositories`, `silver.pull_requests`, `silver.branch_policies` per `mkdocs/docs/platform/reference/canonical-mapping.md#silver-entity-mapping-requirements`.
 
-Source: [`.claude/skills/generate-connector.md`](https://github.com/vkraus/appsec-mvp/blob/main/.claude/skills/generate-connector.md)
+Finding role: `silver.findings` discriminated by `category` per `mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements` (the GitHub / GitLab platform table).
 
-````markdown
----
-name: generate-connector
-description: Use after analyze-source has produced a per-connector page. Generates a connector module conforming to the framework's project structure, connector contract, and canonical mapping requirements. Inputs are the source name, per-connector page, and category.
----
+### Authentication norms
 
-# generate-connector
+Personal access token (PAT) or OAuth per the SCM capability surface. The connector resolves credentials from the platform secret scope (REQ-ING-AUTH).
 
-Generate a connector module implementing the framework contract for a specific source, given the per-connector page produced by `analyze-source`.
+### Ingestion-tooling preference
 
-## Inputs
+Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. GitHub and GitLab both expose REST and GraphQL surfaces; pick the SDK or dlt path matching the chosen surface and pagination style (cursor-based on GitHub, keyset on GitLab).
 
-- Source name (determines the module path `src/connectors/{source}/`).
-- Per-connector page (structured form from `analyze-source`).
-- Framework contracts: canonical Silver schemas (entities and findings) and normalization rules from `platform/reference/canonical-mapping`; connector contract from `platform/reference/catalog`.
+### Quirks
 
-## Output
+- **Dual-role.** A single SCM source can populate entity tables AND `silver.findings`. The Reference section MUST scope each endpoint set explicitly so generate-connector emits distinct mapping blocks.
+- **Cursor vs keyset pagination.** GraphQL APIs typically use cursor pagination; REST APIs may use keyset. The Reference section's Pagination fact records the strategy per endpoint.
+- **GraphQL availability.** Where a GraphQL surface is available it usually offers tighter field selection and incremental hooks; prefer it over REST for entity-heavy reads when the SDK supports it.
+- **Webhook delivery.** Webhook-driven HWM is the preferred mode; the Reference section MUST document the event types subscribed and the replay strategy if the webhook delivery is missed.
+- **Platform-native finding shapes.** Dependabot is package-level (SCA shape); code scanning is code-level (SAST shape); secret scanning is code-level secrets shape. The Reference section names the shapes in the Quirks fact.
 
-A connector module at `src/connectors/{source}/` containing:
+*Rendered from `.claude/skills/analyze-source/references/scm.md`. Source-of-truth lives in the skill file.*
 
-- `config.yml` — base URL, endpoints, pagination, HWM column, target Bronze table, credential reference.
-- `ingest.py` — implements `ingest(run_id, state) -> batch` per the connector contract in `platform/reference/catalog`.
-- `transform.py` — implements `transform(bronze_df) -> silver_df` per the normalization rules in `platform/reference/canonical-mapping`.
-- `mapping.yml` — declarative Bronze-to-Silver column expressions referencing `config/severity/{source}.yml` and `config/status/{source}.yml`.
-- `config/severity/{source}.yml` and `config/status/{source}.yml` — per-source lookups covering every source value documented in the connector page.
-- `resources/{source}-job.yml` — canonical two-task Lakeflow job bundle fragment.
-- `tests/connectors/{source}/test_ingest.py` and `test_transform.py` — pytest suite covering every REQ-ID from `platform/reference/catalog` applicable to the connector's category.
-- `tests/connectors/{source}/fixtures/` — JSON fixtures named `{endpoint}_{scenario}.json`.
+## generate-connector — SCM reference
 
-## Preconditions
+Facts the generate-connector skill needs to emit an SCM connector module. SCM sources are dual-role: entities (always) plus platform-native findings (where the platform hosts native scanners — Dependabot, code scanning, secret scanning).
 
-- The per-connector page exists at `mkdocs/docs/connectors/<category>/<source-slug>.md` and has been reviewed for completeness.
-- The framework's shared utilities (auth helpers, pagination handlers, normalization helpers under `src/common/`) are present.
+### Applicable REQ-IDs
 
-## Steps
+From `mkdocs/docs/platform/reference/catalog.md`. Bind one test function per REQ-ID below.
 
-1. Read the per-connector page and extract: authentication mechanism, pagination style, HWM column, resource endpoints and fields, severity map, status map, quirks.
-2. Emit `config.yml` with the extracted parameters.
-3. Select a connector category (LakeFlow Connect / SDK / REST-with-dlt-tool) per the preference order in `platform/reference/catalog` (Lakeflow Connect → SDK → dlt).
-4. Emit `ingest.py` against the chosen category. LakeFlow Connect connectors leave the file empty and declare the ingestion resource in the bundle fragment. SDK connectors use the source's SDK. REST-with-dlt-tool connectors compose dlt components.
-5. Emit `mapping.yml` with canonical-field → `{source_path, cast, lookup?}` blocks for every canonical Silver field defined in `platform/reference/canonical-mapping` (entities or findings schema, whichever applies).
-6. Emit `config/severity/{source}.yml` and `config/status/{source}.yml` with every source value covered. For undocumented values, insert the configurable default and a comment flagging the DQ warning path.
-7. Emit `transform.py` applying mapping plus normalization rules from `platform/reference/canonical-mapping`.
-8. Emit the bundle fragment at `resources/{source}-job.yml` using the canonical two-task shape documented in `platform/reference/catalog`, substituting the source name.
-9. Emit the test suite: one test function per REQ-ID applicable to the connector category, each marked with `@pytest.mark.requirement("REQ-...")`. Fixtures follow the `{endpoint}_{scenario}.json` naming convention.
-10. Record the invocation — inputs, generated file paths, git commit hash — so that `validate-implementation` can reference it.
+- Always bind (entity role): `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL`, `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-TS`, `REQ-DQ`.
+- Bind only when the SCM source is configured as a finding-emitting integration (platform-native scanners — Dependabot, code scanning, secret scanning): `REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-DEDUP`.
+- Pure-entity SCM connectors (no platform-native findings consumed) MUST NOT bind the three finding-only REQ-IDs.
 
-## Invariants
+### Default severity
 
-- No file is written outside `src/connectors/{source}/`, `tests/connectors/{source}/`, `config/severity/{source}.yml`, `config/status/{source}.yml`, or `resources/{source}-job.yml`. The connector generation is self-contained.
-- Every REQ-ID applicable to the category (from `platform/reference/catalog`) has at least one bound test function.
-- All imports from `src/common/` reference only functions that already exist in that module; new shared helpers are not introduced by this skill.
-````
+For the entity role: N/A — entity rows have no `severity` column.
 
-## `validate-implementation`
+For the finding role: derived from the platform's native field (`rule.security_severity_level` for GitHub code scanning, `severity` for GitLab) and normalized via `config/severity/{source}.yml` to the canonical four-level model (`critical`, `high`, `medium`, `low`). Configurable default for unmatched values is `medium`. The lookup file MUST cover every source value documented in the connector page.
 
-Source: [`.claude/skills/validate-implementation.md`](https://github.com/vkraus/appsec-mvp/blob/main/.claude/skills/validate-implementation.md)
+### Incremental strategy
 
-````markdown
----
-name: validate-implementation
-description: Use after generate-connector to run the test suite against a generated connector and populate the Validation section of the connector's page at mkdocs/docs/connectors/<category>/<source>.md. Inputs are the source name, category, and connector module path.
----
+Three-option preference order; encode the chosen option in `config.yml`:
 
-# validate-implementation
+1. **Webhook / event-stream** (preferred where exposed). The connector materialises events into Bronze in near-real-time. Emit subscription configuration, not polling.
+2. **Native `updated_at` (or equivalent) column** as the high-water mark, persisted via `src/platform/` HWM helpers.
+3. **Full reload**, reserved for sources exposing neither.
 
-Run the test suite for a generated connector and populate the **Validation** section of its page at `mkdocs/docs/connectors/<category>/<source>.md`.
+The selected mode MUST match the connector page's Incremental hook fact.
 
-## Inputs
+### Deduplication key
 
-- Source name (for path resolution).
-- AppSec category (one of: `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf`).
-- Connector module path at `src/connectors/{source}/`.
-- Test suite path at `tests/connectors/{source}/`.
-- Applicable REQ-IDs for the connector's category (looked up from `platform/reference/catalog`).
+For the entity role: not applicable. Entity dedup uses the natural-key column at Bronze-to-Silver upsert; no `dedup_links` rows are emitted.
 
-## Output
+For the finding role: encode the dedup-key tuple by finding shape (the source typically emits multiple shapes simultaneously):
 
-- A Markdown table summarizing test outcomes per REQ-ID (pass / fail / missing), ready to replace the stub in the **Validation** section of `mkdocs/docs/connectors/<category>/<source>.md`.
-- Optional: a fix list for failing REQ-IDs with pointers to the failing test files.
+- Code scanning (SAST shape): `(repository_id, file_path, rule_id)`.
+- Secret scanning (secrets shape): `(repository_id, commit_sha, secret_type, file_path)`.
+- Dependabot (SCA shape): `(repository_id, package_name, cve_id)`.
 
-## Steps
+`transform.py` MUST branch on the finding-shape discriminator (the connector reads which scanner produced the row) and emit `dedup_links` rows keyed by the matching tuple. The Quirks section of the connector page identifies which shapes the source emits.
 
-1. Run `pytest tests/connectors/{source}/ -v --tb=short` with coverage collection enabled.
-2. Collect every test function carrying a `@pytest.mark.requirement("REQ-...")` marker and its outcome (passed / failed / skipped).
-3. For each REQ-ID in the category's applicable set (from `platform/reference/catalog`), record: is there a bound test? did it pass? what is the line coverage of the production code invoked by that test?
-4. Emit the Markdown table with one row per REQ-ID, using the symbols `PASS`, `FAIL`, or `—` (no bound test).
-5. Emit the fix list as plain text: for each failing REQ-ID, the failing test file path and a one-line summary of the failure.
-6. Replace the stub admonition in the **Validation** section of `mkdocs/docs/connectors/<category>/<source>.md` with the completed Markdown table and fix list (if any).
+### Target Silver tables
 
-## Invariants
+Authoritative names per `mkdocs/docs/platform/reference/silver-table-ownership.md`:
 
-- No production code is modified by this skill. It is purely observational.
-- Test timeouts are treated as failures, not skips.
-- The Validation table always has exactly the REQ-IDs in the category's applicable set as rows, in the order they appear in `platform/reference/catalog`.
-````
+- Entity role: `silver.repositories`, `silver.pull_requests`, `silver.branch_policies`. (`silver.commits` and `silver.teams` may also be populated where the source exposes them.)
+- Finding role: `silver.findings` (single union table) discriminated by `category` per the matching scanner shape (`sast`, `sca`, `secrets`).
+
+The `mapping.yml` file MUST contain TWO top-level blocks when the source emits both entities and findings:
+
+```yaml
+entities:
+  # repository, pull_request, branch_policy field projections
+findings:
+  # platform-native finding field projections, discriminated by category
+```
+
+Pure-entity sources omit the `findings` block.
+
+### Authentication norms
+
+Personal access token (PAT) or OAuth. `ingest.py` reads credentials via `src/platform/` from the secret scope; `config.yml` references the secret-scope key names only. For OAuth deployments, encode the token-refresh callback in the helper, not inline.
+
+### Ingestion-tooling preference
+
+Per the standard order with one practical split:
+
+- **Entities**: Lakeflow Connect first where a managed GitHub / GitLab connector exists; SDK / dlt fall back otherwise.
+- **Findings**: Databricks SDK is the preferred path — GitHub and GitLab finding APIs (Dependabot alerts, code scanning alerts, secret scanning alerts) are SDK-covered and require finer pagination control than Lakeflow Connect typically exposes.
+
+Justify the chosen tool with a one-line comment at the top of `ingest.py`.
+
+### Quirks
+
+- **Two `mapping.yml` blocks.** A single SCM source typically populates entity tables AND `silver.findings`. Emit two clearly delimited blocks; do NOT collapse them. Pure-entity sources emit only the entity block.
+- **Plural Silver names are authoritative.** `silver.repositories`, `silver.pull_requests`, `silver.branch_policies`. Singular forms are wrong.
+- **Cursor vs keyset pagination.** GraphQL APIs typically use cursor pagination; REST APIs may use keyset. Encode the pagination strategy per endpoint in `config.yml`; `src/platform/` exposes both helpers.
+- **Webhook replay.** When webhook delivery is the chosen incremental hook, `config.yml` MUST also encode a fallback polling window (typically 24h) so missed deliveries are recovered on the next scheduled run.
+- **Finding-shape branch.** `transform.py` MUST handle each shape (code-scanning, secret-scanning, Dependabot) with the matching dedup-key tuple. Mis-branching corrupts `dedup_links`.
+
+*Rendered from `.claude/skills/generate-connector/references/scm.md`. Source-of-truth lives in the skill file.*
+
+## validate-implementation — SCM reference
+
+Facts the validate-implementation skill needs to populate the Validation table for an SCM connector. SCM sources are dual-role: entities (always) plus platform-native findings (where the platform hosts native scanners). All ten REQ-IDs apply.
+
+### Applicable REQ-IDs
+
+From `mkdocs/docs/platform/reference/catalog.md` § "Requirement catalog". The GitHub column of the traceability matrix is the authoritative per-source row for this category — every cell is `PASS`.
+
+Apply (all ten — the test suite MUST have a `@pytest.mark.requirement("REQ-...")`-bound test for each):
+
+- `REQ-ING-AUTH`
+- `REQ-ING-PAG`
+- `REQ-ING-RL`
+- `REQ-ING-HWM`
+- `REQ-TRF-MAP`
+- `REQ-TRF-SEV`
+- `REQ-TRF-STS`
+- `REQ-TRF-TS`
+- `REQ-DQ`
+- `REQ-DEDUP`
+
+Mark `N/A`: none.
+
+For pure-entity SCM sources (no platform-native findings consumed), the three finding-only REQ-IDs (`REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-DEDUP`) do not bind to entity-shape tests — but the reference SCM connector (GitHub) consumes platform-native findings (Dependabot, code scanning, secret scanning), so the full ten apply. If validating a pure-entity variant, mark the finding-only REQ-IDs `N/A` with the rationale "pure-entity SCM source; no platform-native findings consumed".
+
+### Default severity
+
+For the finding role: `medium` configurable default per `mkdocs/docs/connectors/scm/index.md` § "Capability surface" (inherits the generic per-tool lookup model). The test suite asserts severity normalization in `test_severity_normalization`, bound to `REQ-TRF-SEV`, covering every documented source value (e.g. `low`, `medium`, `high`, `critical` for GitHub code scanning).
+
+For the entity role: N/A — entity rows have no `severity` column.
+
+### Incremental strategy
+
+Three-option preference order per `mkdocs/docs/connectors/scm/index.md` § "Capability surface": webhook → native `updated_at` → full reload. The test suite asserts HWM resume bound to `REQ-ING-HWM` against whichever mode the connector selected; webhook deployments additionally assert the fallback polling window.
+
+### Deduplication key
+
+Per finding shape, per `mkdocs/docs/connectors/scm/index.md`: code-scanning `(repository_id, file_path, rule_id)`; secret-scanning `(repository_id, commit_sha, secret_type, file_path)`; Dependabot `(repository_id, package_name, cve_id)`. The test suite asserts `dedup_links` linkage in `test_dedup_links` per shape, bound to `REQ-DEDUP`. Mis-branching across shapes is itself a `FAIL`.
+
+### Target Silver tables
+
+Authoritative per `mkdocs/docs/platform/reference/silver-table-ownership.md`:
+
+- Entity role: `silver.repositories`, `silver.pull_requests`, `silver.branch_policies` (also `silver.commits` and `silver.teams` where the source exposes them).
+- Finding role: `silver.findings` discriminated by `category` (`sast`, `sca`, `secrets`).
+
+The test suite's `REQ-TRF-MAP` assertions cover both blocks of `mapping.yml` (entities and findings).
+
+### Authentication norms
+
+PAT or OAuth per `mkdocs/docs/connectors/scm/index.md` § "Capability surface". The test suite asserts credential resolution from the platform secret scope under `REQ-ING-AUTH`.
+
+### Ingestion-tooling preference
+
+Per the standard order with the practical split documented in the generate-connector SCM reference: Lakeflow Connect for entities; Databricks SDK for findings. The test suite indirectly verifies the chosen tool's pagination and rate-limit behaviour through `REQ-ING-PAG` and `REQ-ING-RL`.
+
+### Quirks
+
+- **Two `mapping.yml` blocks.** Entity and finding blocks are tested separately; `REQ-TRF-MAP` covers both. The dual-shape coverage is mandatory for finding-emitting SCM sources.
+- **Plural Silver names are authoritative.** `silver.repositories`, `silver.pull_requests`, `silver.branch_policies`. Tests assert against the plural names.
+- **Cursor vs keyset pagination.** GraphQL cursor pagination and REST keyset pagination are both exercised by `REQ-ING-PAG` per endpoint; the test suite covers each style the source uses.
+- **Webhook replay.** Webhook-mode connectors include a fallback polling-window assertion under `REQ-ING-HWM`.
+- **Finding-shape branch.** The `REQ-DEDUP` test exercises every emitted shape (code-scanning, secret-scanning, Dependabot). Mis-branched dedup keys are surfaced as `FAIL`.
+
+*Rendered from `.claude/skills/validate-implementation/references/scm.md`. Source-of-truth lives in the skill file.*

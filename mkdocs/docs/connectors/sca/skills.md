@@ -1,180 +1,186 @@
 # SCA skills
 
-Three skills operationalize the connector lifecycle for SCA sources.
+Three skills cover the connector lifecycle for SCA sources. Each carries a SCA-specific reference; the procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
 
-!!! info "Specialization pending"
-    These skills will be specialized for SCA sources (renamed to
-    `analyze-source-sca`, `generate-connector-sca`,
-    `validate-implementation-sca`) in a follow-up work item. Until then,
-    the category-generic versions below apply.
+## analyze-source — SCA reference
 
-## `analyze-source`
+Facts the analyze-source skill needs to write a complete Reference section for an SCA source.
 
-Source: [`.claude/skills/analyze-source.md`](https://github.com/vkraus/appsec-mvp/blob/main/.claude/skills/analyze-source.md)
+### Applicable REQ-IDs
 
-````markdown
----
-name: analyze-source
-description: Use when analyzing a new data source system (REST API, GraphQL, SDK, or CLI) to produce a per-connector page for the docs site. Inputs are source name, homepage URL, API documentation URL, and AppSec category.
----
+From `mkdocs/docs/platform/reference/catalog.md`. SCA sources emit findings keyed by dependency.
 
-# analyze-source
+- Apply: `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL`, `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-TRF-TS`, `REQ-DQ`, `REQ-DEDUP`.
+- All ten REQ-IDs apply for server-based SCA (Dependency-Track shape).
+- For CLI-based SCA (package-manager audit artefacts), `REQ-ING-AUTH`, `REQ-ING-PAG`, and `REQ-ING-RL` may be N/A — same rationale as the CLI-artefact SAST path.
 
-Produce a per-connector documentation page for a data source to be integrated into the AppSec data platform framework. The output follows the five-section connector page template used across `mkdocs/docs/connectors/<category>/`.
+### Default severity
 
-## Inputs
+`medium`. Source severity vocabularies extend up to five CVSS-aligned labels (`None`, `Low`, `Medium`, `High`, `Critical`) and some tools add a sixth `UNASSIGNED` or informational level. Per-source lookup tables at `config/severity/{source}.yml` map each value to the canonical four-level model (`critical`, `high`, `medium`, `low`). Undocumented values fall through to `medium` and trigger a data-quality warning.
 
-- Source system name and homepage URL.
-- Official API documentation (accessed via WebFetch).
-- AppSec category (one of: `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf`).
-- Optional: live API credentials for fixture generation.
+### Incremental strategy
 
-## Output
+Selection depends on the deployment style per the SCA capability surface:
 
-Emit the Markdown page to stdout, ready for inclusion at `mkdocs/docs/connectors/<category>/<source-slug>.md` where `<category>` is one of `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf` (matching the AppSec category input).
+- **Server-based SCA** (Dependency-Track) exposes paginated REST APIs with update-timestamp HWM columns; this is the default mode.
+- **CLI-based SCA** (package-manager audits invoked in CI/CD) has no incremental hook; treat under the full-reload strategy with the commit SHA or scan-start timestamp as the HWM.
+- **Platform-integrated SCA** (Dependabot in GitHub) shares the host SCM platform's auth, pagination, and incremental hook (typically webhook or `updated_at`).
 
-The page has five top-level sections:
+### Deduplication key
 
-1. **Overview** — what this connector does; its role in the platform (which Silver table(s) it populates; any distinguishing capability). For sources not in the MVP, include an admonition:
-   ```
-   !!! info "Not in MVP scope"
-       This connector is documented for future implementation.
-   ```
-2. **Prerequisites** — how to set up the external service and extract credentials (API keys, OAuth apps, PATs).
-3. **Reference** — the seven API facts:
-   - API surface (REST / GraphQL / SDK / CLI; endpoints consumed; authentication mechanisms)
-   - Pagination and rate limits (strategy and quotas)
-   - Incremental hook (selected per the category rules at `platform/reference/canonical-mapping`; preference order: webhook > native HWM column > full reload)
-   - Resource schema excerpt (only fields consumed by connectors; Markdown table with columns Field / Type / Meaning)
-   - Enumerations (severity and status mappings in terms of the canonical models from `platform/reference/canonical-mapping`)
-   - Quirks (deviations from category norms, format surprises, per-source handling policies)
-4. **Setup** — configuration, bundle deployment, first-run commands. If the source is not in the MVP, stub this section:
-   ```
-   !!! info "Not implemented in MVP"
-       Setup instructions will be added when this connector is implemented.
-   ```
-5. **Validation** — implementation report and test outcomes. Always stub on first emit; `validate-implementation` fills this in after the test suite runs:
-   ```
-   !!! info "Pending validation"
-       Run `validate-implementation` after implementing the connector to populate this section.
-   ```
+`(repository_id, package_name, cve_id)` per `mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements`. This is the canonical SCA scope.
 
-## Steps
+The Reference section's Resource schema excerpt MUST therefore extract `package_name`, `package_version`, `ecosystem`, `cve_id`, and (where present) `purl`.
 
-1. Fetch the source's API documentation via WebFetch.
-2. Identify the authentication mechanism supported by the source; select the one matching the category's convention documented at `platform/reference/canonical-mapping`.
-3. Enumerate endpoints required to populate the Silver tables assigned to the source's category (cross-reference the Silver Table Ownership table at `platform/reference/catalog`).
-4. Select the incremental strategy per the preference order in `platform/reference/canonical-mapping` for this category.
-5. Extract consumed-field table entries matching canonical Silver fields from `platform/reference/canonical-mapping` (entities or findings schema, whichever applies to the source's category).
-6. Produce severity and status lookup proposals per the canonical enumeration models at `platform/reference/canonical-mapping`.
-7. Document quirks (deviations from category norms; format surprises).
-8. Assemble the five-section Markdown page and emit to stdout.
+### Target Silver tables
 
-## Invariants
+`silver.findings` discriminated by `category="sca"` per `mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements` (the package-level finding table).
 
-- The output must link every official documentation URL used as an inline hyperlink or a References list at the bottom of the page.
-- The severity and status lookups must cover every documented source value; undocumented values default to the configured fallback with a data-quality warning noted inline.
-- No fabricated fields: every claim about the source's API must be traceable to the fetched documentation.
-- The page slug and category directory must match the AppSec category input exactly; do not invent a new category.
-````
+### Authentication norms
 
-## `generate-connector`
+PAT or API-key based, as for SAST. Platform-integrated SCA inherits the host SCM platform's auth (PAT or OAuth). The connector resolves credentials from the platform secret scope (REQ-ING-AUTH).
 
-Source: [`.claude/skills/generate-connector.md`](https://github.com/vkraus/appsec-mvp/blob/main/.claude/skills/generate-connector.md)
+### Ingestion-tooling preference
 
-````markdown
----
-name: generate-connector
-description: Use after analyze-source has produced a per-connector page. Generates a connector module conforming to the framework's project structure, connector contract, and canonical mapping requirements. Inputs are the source name, per-connector page, and category.
----
+Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. Server-based SCA REST APIs work cleanly with dlt for paginated reads. CLI-based SCA uses the artefact-collection pattern documented for SAST.
 
-# generate-connector
+### Quirks
 
-Generate a connector module implementing the framework contract for a specific source, given the per-connector page produced by `analyze-source`.
+- **CVE correlation.** SCA findings reference external advisory sources (NVD, GHSA). The connector reads the source-supplied advisory linkage; cross-source enrichment happens in Silver, not at ingestion.
+- **SBOM-centric data.** Many SCA tools are SBOM-driven (CycloneDX or SPDX). The Reference section MUST disclose whether the source emits SBOM-style outputs or per-finding records, since the consumed-field map differs.
+- **PURL availability.** Where the source emits a Package URL (`purl`), capture it — `package_name`, `package_version`, and `ecosystem` are all derivable from it for Silver normalization.
+- **Operational pattern axis.** Same CI/CD-step vs periodic-global split as SAST. CI/CD-step SCA (Dependabot alerts on PRs, Semgrep Supply Chain in pipelines) scopes findings to the scanned commit; periodic-global SCA (Dependency-Track scanning enrolled SBOMs on a schedule) scopes findings to the full SBOM inventory at scan time. Reconcile duplicates via the SCA dedup key.
+- **Severity scale variation.** Some tools emit numeric CVSS scores instead of (or alongside) named labels. The Reference section MUST disclose whether the connector consumes the named label, the numeric score, or derives one from the other.
 
-## Inputs
+*Rendered from `.claude/skills/analyze-source/references/sca.md`. Source-of-truth lives in the skill file.*
 
-- Source name (determines the module path `src/connectors/{source}/`).
-- Per-connector page (structured form from `analyze-source`).
-- Framework contracts: canonical Silver schemas (entities and findings) and normalization rules from `platform/reference/canonical-mapping`; connector contract from `platform/reference/catalog`.
+## generate-connector — SCA reference
 
-## Output
+Facts the generate-connector skill needs to emit an SCA connector module. SCA sources emit package-level findings keyed by dependency.
 
-A connector module at `src/connectors/{source}/` containing:
+### Applicable REQ-IDs
 
-- `config.yml` — base URL, endpoints, pagination, HWM column, target Bronze table, credential reference.
-- `ingest.py` — implements `ingest(run_id, state) -> batch` per the connector contract in `platform/reference/catalog`.
-- `transform.py` — implements `transform(bronze_df) -> silver_df` per the normalization rules in `platform/reference/canonical-mapping`.
-- `mapping.yml` — declarative Bronze-to-Silver column expressions referencing `config/severity/{source}.yml` and `config/status/{source}.yml`.
-- `config/severity/{source}.yml` and `config/status/{source}.yml` — per-source lookups covering every source value documented in the connector page.
-- `resources/{source}-job.yml` — canonical two-task Lakeflow job bundle fragment.
-- `tests/connectors/{source}/test_ingest.py` and `test_transform.py` — pytest suite covering every REQ-ID from `platform/reference/catalog` applicable to the connector's category.
-- `tests/connectors/{source}/fixtures/` — JSON fixtures named `{endpoint}_{scenario}.json`.
+From `mkdocs/docs/platform/reference/catalog.md`. Bind one test function per REQ-ID below.
 
-## Preconditions
+- Server-based SCA (Dependency-Track shape; full ten REQ-IDs apply): `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL`, `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-TRF-TS`, `REQ-DQ`, `REQ-DEDUP`.
+- CLI-based SCA (package-manager audit artefacts): `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` are N/A — same rationale as the CLI-artefact SAST path. Do NOT bind these three.
+- Platform-integrated SCA (Dependabot in GitHub) inherits the host SCM connector's auth / pagination / rate-limit code; bind only the transform / DQ / dedup REQ-IDs locally.
 
-- The per-connector page exists at `mkdocs/docs/connectors/<category>/<source-slug>.md` and has been reviewed for completeness.
-- The framework's shared utilities (auth helpers, pagination handlers, normalization helpers under `src/common/`) are present.
+### Default severity
 
-## Steps
+`medium`. Generate `config/severity/{source}.yml` covering the documented source vocabulary (typically five CVSS-aligned labels: `None`, `Low`, `Medium`, `High`, `Critical`; some tools add `UNASSIGNED` or informational levels) mapped to the canonical four-level model (`critical`, `high`, `medium`, `low`). Configurable default for unmatched values is `medium` with a data-quality warning.
 
-1. Read the per-connector page and extract: authentication mechanism, pagination style, HWM column, resource endpoints and fields, severity map, status map, quirks.
-2. Emit `config.yml` with the extracted parameters.
-3. Select a connector category (LakeFlow Connect / SDK / REST-with-dlt-tool) per the preference order in `platform/reference/catalog` (Lakeflow Connect → SDK → dlt).
-4. Emit `ingest.py` against the chosen category. LakeFlow Connect connectors leave the file empty and declare the ingestion resource in the bundle fragment. SDK connectors use the source's SDK. REST-with-dlt-tool connectors compose dlt components.
-5. Emit `mapping.yml` with canonical-field → `{source_path, cast, lookup?}` blocks for every canonical Silver field defined in `platform/reference/canonical-mapping` (entities or findings schema, whichever applies).
-6. Emit `config/severity/{source}.yml` and `config/status/{source}.yml` with every source value covered. For undocumented values, insert the configurable default and a comment flagging the DQ warning path.
-7. Emit `transform.py` applying mapping plus normalization rules from `platform/reference/canonical-mapping`.
-8. Emit the bundle fragment at `resources/{source}-job.yml` using the canonical two-task shape documented in `platform/reference/catalog`, substituting the source name.
-9. Emit the test suite: one test function per REQ-ID applicable to the connector category, each marked with `@pytest.mark.requirement("REQ-...")`. Fixtures follow the `{endpoint}_{scenario}.json` naming convention.
-10. Record the invocation — inputs, generated file paths, git commit hash — so that `validate-implementation` can reference it.
+The `mapping.yml` `severity` field references the lookup file by path:
 
-## Invariants
+```yaml
+severity:
+  source_path: <native-severity-field>
+  lookup: config/severity/{source}.yml
+```
 
-- No file is written outside `src/connectors/{source}/`, `tests/connectors/{source}/`, `config/severity/{source}.yml`, `config/status/{source}.yml`, or `resources/{source}-job.yml`. The connector generation is self-contained.
-- Every REQ-ID applicable to the category (from `platform/reference/catalog`) has at least one bound test function.
-- All imports from `src/common/` reference only functions that already exist in that module; new shared helpers are not introduced by this skill.
-````
+Where the source emits a numeric CVSS score instead of (or alongside) a label, encode the derivation rule in `mapping.yml` (e.g. `>= 9.0 → critical`, `>= 7.0 → high`, etc.) and document it in the connector page Quirks.
 
-## `validate-implementation`
+### Incremental strategy
 
-Source: [`.claude/skills/validate-implementation.md`](https://github.com/vkraus/appsec-mvp/blob/main/.claude/skills/validate-implementation.md)
+Selection depends on deployment style; encode in `config.yml`:
 
-````markdown
----
-name: validate-implementation
-description: Use after generate-connector to run the test suite against a generated connector and populate the Validation section of the connector's page at mkdocs/docs/connectors/<category>/<source>.md. Inputs are the source name, category, and connector module path.
----
+- **Server-based** (Dependency-Track): paginated REST APIs with update-timestamp HWM columns. Default mode.
+- **CLI-based**: full-reload from CI/CD pipeline artefact storage; HWM is the commit SHA or scan-start timestamp.
+- **Platform-integrated** (Dependabot): inherit the SCM platform's webhook or `updated_at` hook.
 
-# validate-implementation
+### Deduplication key
 
-Run the test suite for a generated connector and populate the **Validation** section of its page at `mkdocs/docs/connectors/<category>/<source>.md`.
+`(repository_id, package_name, cve_id)` per `mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements`. Encode this tuple literally in `transform.py`:
 
-## Inputs
+```python
+dedup_key = (row["repository_id"], row["package_name"], row["cve_id"])
+```
 
-- Source name (for path resolution).
-- AppSec category (one of: `cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, `waf`).
-- Connector module path at `src/connectors/{source}/`.
-- Test suite path at `tests/connectors/{source}/`.
-- Applicable REQ-IDs for the connector's category (looked up from `platform/reference/catalog`).
+The transform MUST also project `package_version`, `ecosystem`, and (where present) `purl` — the lookup table fields drive Silver normalization but `cve_id` is the dedup-anchor across SCA tools.
 
-## Output
+### Target Silver tables
 
-- A Markdown table summarizing test outcomes per REQ-ID (pass / fail / missing), ready to replace the stub in the **Validation** section of `mkdocs/docs/connectors/<category>/<source>.md`.
-- Optional: a fix list for failing REQ-IDs with pointers to the failing test files.
+`silver.findings` discriminated by `category="sca"` per `mkdocs/docs/platform/reference/silver-table-ownership.md`. The `mapping.yml` finding block MUST set `category: "sca"` literally. SCA does NOT write to `silver.dependencies`; that table is fed by SBOM enrichment paths, not the per-finding dedup pipeline.
 
-## Steps
+### Authentication norms
 
-1. Run `pytest tests/connectors/{source}/ -v --tb=short` with coverage collection enabled.
-2. Collect every test function carrying a `@pytest.mark.requirement("REQ-...")` marker and its outcome (passed / failed / skipped).
-3. For each REQ-ID in the category's applicable set (from `platform/reference/catalog`), record: is there a bound test? did it pass? what is the line coverage of the production code invoked by that test?
-4. Emit the Markdown table with one row per REQ-ID, using the symbols `PASS`, `FAIL`, or `—` (no bound test).
-5. Emit the fix list as plain text: for each failing REQ-ID, the failing test file path and a one-line summary of the failure.
-6. Replace the stub admonition in the **Validation** section of `mkdocs/docs/connectors/<category>/<source>.md` with the completed Markdown table and fix list (if any).
+PAT or API-key based, as for SAST. Platform-integrated SCA inherits the host SCM connector's auth (PAT or OAuth). `ingest.py` reads credentials via the helper in `src/platform/`; `config.yml` references the secret-scope key names only.
 
-## Invariants
+### Ingestion-tooling preference
 
-- No production code is modified by this skill. It is purely observational.
-- Test timeouts are treated as failures, not skips.
-- The Validation table always has exactly the REQ-IDs in the category's applicable set as rows, in the order they appear in `platform/reference/catalog`.
-````
+Standard order: Lakeflow Connect → Databricks SDK → dlt.
+
+- Server-based SCA REST APIs work cleanly with dlt for paginated reads.
+- CLI-based SCA uses the artefact-collection pattern documented for SAST — autoloader-style ingestion from the artefact prefix.
+- Platform-integrated SCA shares the host SCM connector's helpers.
+
+### Quirks
+
+- **CVE correlation.** SCA findings reference external advisory sources (NVD, GHSA). The transform reads the source-supplied advisory linkage directly into `cve_id`; cross-source enrichment (NVD detail, EPSS scoring, KEV flagging) lands at later transform stages, NOT here. Do NOT call NVD inline in this connector's `transform.py`.
+- **SBOM-centric data.** SBOM-driven sources (CycloneDX, SPDX) emit per-component records; the connector flattens to per-finding rows in `transform.py`. The connector page identifies the format flavour.
+- **PURL availability.** Where the source emits a Package URL (`purl`), project it; `package_name`, `package_version`, and `ecosystem` are all derivable from it but the source-side fields are preferred when present.
+- **Operational pattern axis.** Same CI/CD-step vs periodic-global split as SAST. The `config.yml` HWM shape changes between modes; encode explicitly.
+- **Severity scale variation.** Numeric CVSS vs named labels — the severity lookup or the `mapping.yml` derivation rule MUST cover the chosen format; do not leave gaps.
+
+*Rendered from `.claude/skills/generate-connector/references/sca.md`. Source-of-truth lives in the skill file.*
+
+## validate-implementation — SCA reference
+
+Facts the validate-implementation skill needs to populate the Validation table for an SCA connector. SCA sources emit dependency-keyed findings; the full ten REQ-IDs apply for server-based deployments.
+
+### Applicable REQ-IDs
+
+From `mkdocs/docs/platform/reference/catalog.md` § "Requirement catalog". Server-based SCA (Dependency-Track shape) tracks the same row pattern as SAST.
+
+Apply (all ten — the test suite MUST have a `@pytest.mark.requirement("REQ-...")`-bound test for each):
+
+- `REQ-ING-AUTH`
+- `REQ-ING-PAG`
+- `REQ-ING-RL`
+- `REQ-ING-HWM`
+- `REQ-TRF-MAP`
+- `REQ-TRF-SEV`
+- `REQ-TRF-STS`
+- `REQ-TRF-TS`
+- `REQ-DQ`
+- `REQ-DEDUP`
+
+Mark `N/A`: none for the server-based deployment style.
+
+CLI-based SCA (package-manager audit artefacts): `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL` are N/A — same rationale as the CLI-artefact SAST path quoted from `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix": "the CLI-artifact ingestion path … has no API auth, pagination, or rate limit." Apply this N/A profile when validating a CLI-only connector.
+
+Platform-integrated SCA (Dependabot in GitHub) inherits the host SCM connector's auth / pagination / rate-limit code; the SCA test suite binds only the transform / DQ / dedup REQ-IDs locally.
+
+### Default severity
+
+`medium` configurable default per `mkdocs/docs/connectors/sca/index.md` § "Capability surface". The test suite asserts severity normalization in `test_severity_normalization`, bound to `REQ-TRF-SEV`, covering the documented source vocabulary (typically `None`, `Low`, `Medium`, `High`, `Critical`; some tools add `UNASSIGNED` or informational levels) and asserting that undocumented values fall through with a data-quality warning per the catalog requirement text.
+
+### Incremental strategy
+
+Per `mkdocs/docs/connectors/sca/index.md` § "Capability surface": server-based uses paginated REST APIs with update-timestamp HWM columns; CLI-based uses commit SHA or scan-start timestamp under full reload; platform-integrated inherits the SCM platform's hook. The test suite asserts HWM-resume behaviour under `REQ-ING-HWM` against the connector's chosen mode.
+
+### Deduplication key
+
+`(repository_id, package_name, cve_id)` per `mkdocs/docs/connectors/sca/index.md` § "Canonical mapping contribution". The test suite asserts `dedup_links` linkage in `test_dedup_links`, bound to `REQ-DEDUP`, against this exact tuple.
+
+### Target Silver tables
+
+`silver.findings` discriminated by `category="sca"` per `mkdocs/docs/platform/reference/silver-table-ownership.md`. SCA does NOT write to `silver.dependencies` (that table is fed by SBOM enrichment paths, not the per-finding dedup pipeline); the test suite verifies the connector targets `silver.findings` only under `REQ-TRF-MAP`.
+
+### Authentication norms
+
+PAT or API-key per `mkdocs/docs/connectors/sca/index.md` § "Capability surface". The test suite asserts credential resolution from the platform secret scope under `REQ-ING-AUTH`. CLI-based and platform-integrated variants omit or inherit this test as documented above.
+
+### Ingestion-tooling preference
+
+Standard order: Lakeflow Connect → Databricks SDK → dlt. The validation suite verifies pagination and rate-limit behaviour under `REQ-ING-PAG` and `REQ-ING-RL` against whichever tool the connector chose.
+
+### Quirks
+
+- **CVE correlation.** `REQ-TRF-MAP` asserts that the source-supplied advisory linkage is read directly into `cve_id`. Cross-source enrichment (NVD detail, EPSS scoring, KEV flagging) lands at later transform stages and is NOT asserted by the per-connector test suite.
+- **SBOM-centric data.** SBOM-driven sources emit per-component records; the connector flattens to per-finding rows. `REQ-TRF-MAP` covers the flattening assertion.
+- **PURL availability.** Where the source emits a `purl`, `REQ-TRF-MAP` asserts the field is projected. `package_name`, `package_version`, `ecosystem` are derivable from PURL but the source-side fields are preferred and asserted under the same REQ-ID.
+- **Operational pattern axis.** Same CI/CD-step vs periodic-global split as SAST. `REQ-ING-HWM` exercises the chosen mode.
+- **Severity scale variation.** Numeric CVSS vs named labels — `REQ-TRF-SEV` asserts coverage over the chosen format with no gaps.
+
+*Rendered from `.claude/skills/validate-implementation/references/sca.md`. Source-of-truth lives in the skill file.*
