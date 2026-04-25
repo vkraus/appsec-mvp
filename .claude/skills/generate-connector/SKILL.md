@@ -55,6 +55,7 @@ A connector module composed of exactly the following eight files (per the baseli
 - Every REQ-ID applicable to the category (per `references/<category>.md`) has at least one bound test function carrying `@pytest.mark.requirement("REQ-...")`. REQ-IDs marked N/A for the category are not bound.
 - The Generation log section of `mkdocs/docs/connectors/{category}/{slug}.md` has row 2 filled and row 3 still marked `(pending)` after this skill runs. Row 1 (set by `analyze-source`) is not modified.
 - Output is code, configuration, and test fixtures only — plus the single-line Generation log row update on the connector page. No new Markdown files are created.
+- Shared files (`databricks.yml`, `mkdocs/mkdocs.yml`, `pyproject.toml`) are NEVER touched by this skill. Required shared-file additions — for example, including a new `resources/<source>-job.yml` in `databricks.yml` — are reported in the run output for the controller to wire up sequentially in a separate consolidation step.
 
 Category-specific invariants (target Silver tables, dedup-key tuple, ingestion-tooling override, severity / status lookup shape, mapping.yml shape, applicable REQ-IDs, category quirks affecting code emission) live in `references/<category>.md`. Read the file matching the input category before emitting any file.
 
