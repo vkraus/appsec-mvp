@@ -10,25 +10,25 @@ The connector also loads rule metadata from `/api/rules/search` for severity/sta
 
 Bronze schema: `bronze_sonarqube`. Cross-source contribution: `silver.findings` with `tool_source = 'sonarqube'`.
 
-The connector module at `src/connectors/sonarqube/` is present as a **structural skeleton**. Folder layout, DAB job and schema resources, secret-loader script, severity/status lookups, and notebook entry stubs are all in place, but `ingest()` and `transform()` raise `NotImplementedError`. The full implementation is tracked as a separate follow-on task (per the "Out of scope" section in the redesign spec). The runbook below describes the *intended* operator flow; until the implementation lands, the job runs but produces no Bronze rows.
+The connector module at `src/connectors/sonarqube/` is present as a **structural skeleton**. Folder layout, DAB job and schema resources, secret-loader script, severity/status lookups, and notebook entry stubs are all in place, but `ingest()` and `transform()` raise `NotImplementedError`. The full implementation is tracked as a separate follow-on task (per the "Out of scope" section in the redesign spec). The runbook below describes the *intended* user flow; until the implementation lands, the job runs but produces no Bronze rows.
 
 ## Dependencies
 
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
 - **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** SonarQube findings carry a project key that maps to `silver.findings.repository_id`; that value must resolve to a row in `silver.repositories` for downstream rollups to attribute findings to a repository (and through `silver.app_repo`, to a business application).
 
-## Operator inputs
+## User inputs
 
 | Input | Where to obtain | Used as |
 |---|---|---|
-| SonarQube server URL | Existing SonarQube instance run by the operator, or the `sonarqube_url` output of the optional source runtime. | Env var `SONARQUBE_URL` consumed by `src/connectors/sonarqube/scripts/load-secrets.sh`; written to secret key `sonarqube_url`. |
+| SonarQube server URL | Existing SonarQube instance run by the user, or the `sonarqube_url` output of the optional source runtime. | Env var `SONARQUBE_URL` consumed by `src/connectors/sonarqube/scripts/load-secrets.sh`; written to secret key `sonarqube_url`. |
 | SonarQube analysis token (or user token) | Generated in the SonarQube UI under **My Account → Security → Generate Tokens**. The connector accepts a project-analysis token or a user token; the user token type has broader scope and is recommended for cross-project enumeration. See [Bootstrapping the analysis token](#bootstrapping-the-analysis-token) for the demo runtime path. | Env var `SONARQUBE_TOKEN`; written to secret key `sonarqube_token`. |
 
 ## Optional source runtime
 
-If you want appsec-mvp to provision a SonarQube 10.6 Helm release on your EKS cluster (backed by an RDS Postgres instance the operator supplies, exposed via LoadBalancer), apply the optional runtime under `src/connectors/sonarqube/runtime/`. See [`src/connectors/sonarqube/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/sonarqube/runtime) for variables, RDS endpoint preconditions, the admin password handling, and produced outputs.
+If you want appsec-mvp to provision a SonarQube 10.6 Helm release on your EKS cluster (backed by an RDS Postgres instance the user supplies, exposed via LoadBalancer), apply the optional runtime under `src/connectors/sonarqube/runtime/`. See [`src/connectors/sonarqube/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/sonarqube/runtime) for variables, RDS endpoint preconditions, the admin password handling, and produced outputs.
 
-Operators with their own SonarQube instance skip the runtime. Wire the URL and token of the existing instance directly via the next section.
+Users with their own SonarQube instance skip the runtime. Wire the URL and token of the existing instance directly via the next section.
 
 ### Bootstrapping the analysis token
 
@@ -46,7 +46,7 @@ curl -X POST "$SONAR_URL/api/user_tokens/generate" \
 
 Then load the value into the secret scope via `bash src/connectors/sonarqube/scripts/load-secrets.sh` (with `SONARQUBE_URL` + `SONARQUBE_TOKEN` exported).
 
-Operators with their own SonarQube instance skip this step. The token already exists.
+Users with their own SonarQube instance skip this step. The token already exists.
 
 ## Reference
 
@@ -70,7 +70,7 @@ The SonarQube API uses 1-indexed offset pagination: `p` (page number, from 1) an
 
 A hard 10,000-record per-query cap applies: `paging.total` stops at 10,000 and page requests beyond the cap are rejected. The connector partitions by creation-date window using `createdAfter`/`createdBefore`: when `paging.total` exceeds a warning threshold (default 8,000), it splits the query into date windows sized to historical issue density.
 
-SonarQube does not enforce a per-client request quota. Throughput is bounded by instance resources; sustained high-frequency requests can degrade analysis for other users. The connector applies a configurable inter-request delay (default 100 ms) and exponential backoff on `HTTP 429`, though 429s are uncommon on dedicated instances. Operators on shared instances should increase the delay.
+SonarQube does not enforce a per-client request quota. Throughput is bounded by instance resources; sustained high-frequency requests can degrade analysis for other users. The connector applies a configurable inter-request delay (default 100 ms) and exponential backoff on `HTTP 429`, though 429s are uncommon on dedicated instances. Users on shared instances should increase the delay.
 
 ### Incremental hook
 
@@ -132,7 +132,7 @@ Hotspots model a different concept from issues: a hotspot flags a security-sensi
 
 **Ten-thousand-result cap and date-window partitioning.** The 10,000-record cap is per-query, not per-project. Large projects require partitioning by creation-date window via `createdAfter`/`createdBefore`. The connector issues a first unpartitioned query and, if `paging.total` exceeds the warning threshold, computes windows that distribute issue volume evenly. This logic lives in the `IssuePageIterator` class.
 
-**CODE_SMELL filtering at the Silver layer.** Bronze stores all three types unfiltered (preserving the raw record). Silver applies `type IN ('BUG', 'VULNERABILITY')` when projecting into `silver.findings`. Operators who want CODE_SMELL in security reporting can override the predicate in `mapping.yml`.
+**CODE_SMELL filtering at the Silver layer.** Bronze stores all three types unfiltered (preserving the raw record). Silver applies `type IN ('BUG', 'VULNERABILITY')` when projecting into `silver.findings`. Users who want CODE_SMELL in security reporting can override the predicate in `mapping.yml`.
 
 **INFO severity handling.** INFO is a defined value, not unmapped, so it maps directly to `low` rather than triggering the fallback rule. The fallback emits a warning and increments a metric counter; direct mapping avoids spurious noise for high-volume INFO findings.
 
@@ -221,7 +221,7 @@ databricks bundle run sonarqube-connector --target dev
 The job is declared in `src/connectors/sonarqube/resources/job.yml`, runs on a 3-hour cron, and has two tasks: `ingest` (REST → Bronze) and `transform` (Bronze → `silver.findings`).
 
 !!! warning "Skeleton-only behaviour"
-    The `ingest()` and `transform()` functions in the connector module raise `NotImplementedError`. Until the full implementation lands, the bundle deploys the job and the schema, but the first run of the job fails on the placeholder. Operators wiring SonarQube can deploy the resources and validate the secret-loading flow end-to-end; functional ingest is future work.
+    The `ingest()` and `transform()` functions in the connector module raise `NotImplementedError`. Until the full implementation lands, the bundle deploys the job and the schema, but the first run of the job fails on the placeholder. Users wiring SonarQube can deploy the resources and validate the secret-loading flow end-to-end; functional ingest is future work.
 
 **Normalization spot-check (target behaviour).**
 

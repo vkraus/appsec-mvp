@@ -17,11 +17,11 @@ The MVP connector implements the Docker-hosted artifact-path mode only: the bron
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, the `silver` schema, and the UC external location pointing at `s3://${ARTIFACT_BUCKET}/` (created by [Secrets bootstrap](../../platform/secrets-bootstrap.md)) must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
 - **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** Semgrep findings are keyed by `(repository_id, file_path, rule_id)`; the `repository_id` value must resolve to a row in `silver.repositories` for downstream rollups to attribute findings to a repository (and through `silver.app_repo`, to a business application).
 
-## Operator inputs
+## User inputs
 
 | Input | Where to obtain | Used as |
 |---|---|---|
-| Artifact bucket name | The S3 bucket the operator created in [Prerequisites → AWS backbone](../../platform/prerequisites.md#aws-backbone-the-operator-brings) and registered as a UC external location in [Secrets bootstrap](../../platform/secrets-bootstrap.md). | Env var `ARTIFACT_BUCKET` consumed by `src/connectors/semgrep/scripts/load-secrets.sh`; written to secret key `semgrep_artifact_bucket`. Also passed to `bundle deploy` as DAB var `artifact_bucket` so the `storage_location` of the volume resolves. |
+| Artifact bucket name | The S3 bucket the user created in [Prerequisites → AWS backbone](../../platform/prerequisites.md#aws-backbone-the-user-brings) and registered as a UC external location in [Secrets bootstrap](../../platform/secrets-bootstrap.md). | Env var `ARTIFACT_BUCKET` consumed by `src/connectors/semgrep/scripts/load-secrets.sh`; written to secret key `semgrep_artifact_bucket`. Also passed to `bundle deploy` as DAB var `artifact_bucket` so the `storage_location` of the volume resolves. |
 | S3 prefix | Convention: `semgrep/`. The optional runtime writes under this prefix; CI/CD-step uploads should use the same prefix (or a sub-prefix). | Env var `SEMGREP_PREFIX` (default `semgrep/`); written to secret key `semgrep_artifact_prefix`. |
 
 ## Reference
@@ -125,7 +125,7 @@ The CLI JSON output (`semgrep scan --json`) uses a different top-level structure
 
 If you want appsec-mvp to run Semgrep on your EKS cluster as a periodic CronJob (clones a list of repos, runs `semgrep scan`, writes JSON findings to the artifact S3 bucket via IRSA), apply the optional runtime under `src/connectors/semgrep/runtime/`. See [`src/connectors/semgrep/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/semgrep/runtime) for variables (cluster, OIDC provider ARN, repo list, GitHub PAT for cloning), CronJob schedule, and IRSA setup.
 
-Operators with their own Semgrep deployment skip the runtime. Point any scanner that writes JSON results into `s3://${ARTIFACT_BUCKET}/semgrep/` (same prefix the connector reads from) and the connector picks them up.
+Users with their own Semgrep deployment skip the runtime. Point any scanner that writes JSON results into `s3://${ARTIFACT_BUCKET}/semgrep/` (same prefix the connector reads from) and the connector picks them up.
 
 For CI/CD-step usage, the cross-scanner workflow at `examples/end-to-end-demo/.github/workflows/scan.yml` shows a Semgrep step that uploads to `s3://<bucket>/cicd/semgrep/`. The end-to-end demo writes under `cicd/semgrep/`; periodic runners write under `periodic/semgrep/`. Both prefixes are subdirectories of the `semgrep/` root for this connector and are picked up by the same volume.
 

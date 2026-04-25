@@ -1,9 +1,9 @@
 # ---------------------------------------------------------------------------
-# Operator-supplied inputs for the Dependency-Track connector runtime.
+# User-supplied inputs for the Dependency-Track connector runtime.
 #
 # The Dependency-Track instance itself (community edition v4.10+ via docker
-# on the operator's dev VPC, or an existing operator-run tenant) is
-# operator-provisioned. This module references — but does not create — the
+# on the user's dev VPC, or an existing user-run tenant) is
+# user-provisioned. This module references — but does not create — the
 # Bronze schema and the Databricks secret holding the Dependency-Track API
 # key.
 # ---------------------------------------------------------------------------

@@ -23,7 +23,7 @@ From [Prerequisites](prerequisites.md):
   `servicenow_host`, `servicenow_username`, `servicenow_password`.
 
 The `databricks.yml` file in the bundle declares these as DAB variables. Any unset
-variable forces the operator to supply it on the command line. The deploy
+variable forces the user to supply it on the command line. The deploy
 fails fast rather than silently using a default.
 
 ## Targets
@@ -84,7 +84,7 @@ the workspace contains:
 |---|---|---|
 | `appsec` | catalog | Unity Catalog (`appsec_dev`, `appsec_staging`, or `appsec_prod`) for Bronze, Silver, and Gold. |
 | `silver` | schema | Cross-source standard Silver: `findings`, `hwm`, `repositories`, `app_repo`. |
-| `platform-bootstrap` | job | One-task SQL job that runs `src/platform/sql/silver_tables.sql` against the SQL warehouse. Operator runs it once after secrets are loaded. See [Platform bootstrap job](platform-bootstrap-job.md). |
+| `platform-bootstrap` | job | One-task SQL job that runs `src/platform/sql/silver_tables.sql` against the SQL warehouse. User runs it once after secrets are loaded. See [Platform bootstrap job](platform-bootstrap-job.md). |
 
 ### Connector layers (`src/connectors/<source>/resources/`)
 
@@ -132,7 +132,7 @@ for each source are not in the secret scope. Those land in the next two steps.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `Error: variable "warehouse_id" has not been assigned a value` | Missing `--var "warehouse_id=..."` on the deploy command. | Re-run with the variable. The bundle deliberately has no default to force operator awareness. |
+| `Error: variable "warehouse_id" has not been assigned a value` | Missing `--var "warehouse_id=..."` on the deploy command. | Re-run with the variable. The bundle deliberately has no default to force user awareness. |
 | `INVALID_PARAMETER_VALUE: Catalog 'appsec_dev' already exists with a different owner` | Catalog created by a previous attempt under a different principal. | Drop the catalog (`databricks catalogs delete appsec_dev --force`) and redeploy, or change the `catalog` variable for this target. |
 | `PERMISSION_DENIED: Cannot create catalog` | The user behind the PAT lacks the `CREATE CATALOG` privilege on the metastore. | Have a metastore admin grant `CREATE CATALOG` to the deploying principal, or switch to an admin PAT for first-time setup. |
 | `INVALID_PARAMETER_VALUE: Connection 'servicenow' could not be created: authentication failed` | `servicenow_*` variables wrong. | Re-validate against the ServiceNow tenant: `curl -u $USER:$PASS https://$HOST/api/now/table/cmdb_ci_business_app?sysparm_limit=1`. Re-deploy with corrected values. |

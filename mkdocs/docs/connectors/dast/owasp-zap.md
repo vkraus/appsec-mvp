@@ -15,11 +15,11 @@ The MVP connector implements the CI/CD step artifact path mode. The bronze reade
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, the `silver` schema, and the UC external location pointing at `s3://${ARTIFACT_BUCKET}/` (created by [Secrets bootstrap](../../platform/secrets-bootstrap.md)) must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
 - **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** ZAP findings carry a target URL rather than a repository directly. The documented join goes URL to `silver.deployments` to application to `silver.app_repo` to `silver.repositories`. Without an SCM connector first, the cross-source rollups in [Evidence scenarios](../../analytics/evidence.md) cannot resolve.
 
-## Operator inputs
+## User inputs
 
 | Input | Where to obtain | Used as |
 |---|---|---|
-| ZAP daemon URL | Running ZAP instance of the operator, or the `zap_url` output of the optional source runtime. | Env var `ZAP_URL` consumed by `src/connectors/owasp_zap/scripts/load-secrets.sh`. Written to secret key `zap_url`. |
+| ZAP daemon URL | Running ZAP instance of the user, or the `zap_url` output of the optional source runtime. | Env var `ZAP_URL` consumed by `src/connectors/owasp_zap/scripts/load-secrets.sh`. Written to secret key `zap_url`. |
 | ZAP API key | The 40 character value configured at daemon startup via `-config api.key=<value>`. The optional runtime mints a random key and stores it in a Kubernetes secret. | Env var `ZAP_API_KEY`. Written to secret key `zap_api_key`. |
 | Artifact bucket | Same `ARTIFACT_BUCKET` registered in [Secrets bootstrap](../../platform/secrets-bootstrap.md). The storage location of the `zap_artifacts` volume reads `s3://${var.artifact_bucket}/zap/`. | DAB var `artifact_bucket` at `bundle deploy`. |
 
@@ -71,7 +71,7 @@ ZAP alerts are scoped to a scan. The connector uses the numeric scan `scanId` as
 
 If you want appsec-mvp to deploy a long-lived ZAP daemon on your EKS cluster (exposed via LoadBalancer with a randomly generated 40 character API key), apply the optional runtime under `src/connectors/owasp_zap/runtime/`. See [`src/connectors/owasp_zap/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/owasp_zap/runtime) for variables and the public LB security note (the upstream demo configuration whitelists all caller IPs against the ZAP API and relies on the API key for access control. Production deployments should harden this).
 
-Operators with their own ZAP instance skip the runtime. Wire the URL and API key of the existing daemon directly via the next section.
+Users with their own ZAP instance skip the runtime. Wire the URL and API key of the existing daemon directly via the next section.
 
 ## Secrets
 
@@ -99,7 +99,7 @@ Like semgrep, this connector currently has **no scheduled job**. The bundle depl
 
 To populate Bronze in the meantime, ensure scan artifacts land in the prefix of the volume.
 
-**On demand path** (against an operator running ZAP daemon and live target):
+**On demand path** (against an user running ZAP daemon and live target):
 
 ```bash
 TARGET="http://my-target-app.example.com"

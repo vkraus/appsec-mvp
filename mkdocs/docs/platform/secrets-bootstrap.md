@@ -8,7 +8,7 @@ the four-step Phase 1 platform flow**: [Prerequisites](prerequisites.md), then
 
 The split between platform level secret loading and connector level secret loading is
 deliberate: the platform script bootstraps shared infrastructure once, and
-each connector ships its own loader so operators only configure connectors
+each connector ships its own loader so users only configure connectors
 they actually use.
 
 ## Two scripts, two responsibilities
@@ -19,7 +19,7 @@ they actually use.
 | `src/connectors/<source>/scripts/load-secrets.sh` | **Secret values for each connector.** Each connector script writes only the secret keys that connector reads. | Once per connector, before the first run of that connector. | Yes. Re-runs update existing values. |
 
 The platform script does **not** load any secret values for individual connectors. The
-operator runs whichever connector loaders apply to their deployment.
+user runs whichever connector loaders apply to their deployment.
 
 ## Platform bootstrap script
 
@@ -29,7 +29,7 @@ Source: `src/platform/scripts/bootstrap.sh`.
 
 | Env var | Purpose |
 |---|---|
-| `EXTERNAL_LOCATION_ROLE_ARN` | IAM role ARN for the UC external location (provisioned by the operator per [Prerequisites, AWS backbone](prerequisites.md#aws-backbone-the-operator-brings)). |
+| `EXTERNAL_LOCATION_ROLE_ARN` | IAM role ARN for the UC external location (provisioned by the user per [Prerequisites, AWS backbone](prerequisites.md#aws-backbone-the-user-brings)). |
 | `ARTIFACT_BUCKET` | S3 bucket name (no `s3://` prefix). |
 | `CATALOG` | Unity Catalog name (e.g. `appsec_dev`). Used to name the UC objects so they are scoped per target. |
 
@@ -40,7 +40,7 @@ The script `set -u`s on missing variables and fails fast.
 | Databricks object | Name | Why |
 |---|---|---|
 | Secret scope | `mvp-connectors` | Container for every connector secret. All connector code reads from this scope. |
-| Storage credential | `${CATALOG}-artifacts` (e.g. `appsec_dev-artifacts`) | Unity Catalog wrapper around the UC IAM role provided by the operator. |
+| Storage credential | `${CATALOG}-artifacts` (e.g. `appsec_dev-artifacts`) | Unity Catalog wrapper around the UC IAM role provided by the user. |
 | External location | `${CATALOG}_artifacts` | UC pointer to `s3://${ARTIFACT_BUCKET}/` using the storage credential. The semgrep and owasp_zap connectors create external volumes inside this location. |
 
 ### Run

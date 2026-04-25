@@ -13,20 +13,20 @@ The MVP connector ingests the SCM subset only (repositories, commits, pull reque
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
 - **No upstream connector dependency.** GitHub is an SCM connector. It is the source of truth for `silver.repositories` that the findings of every other connector join against. Install at least one SCM connector (this one or [GitLab](gitlab.md)) **before** any non-SCM connector.
 
-## Operator inputs
+## User inputs
 
 | Input | Where to obtain | Used as |
 |---|---|---|
-| GitHub organization slug | Operator owned org (or [github.com/organizations/new](https://github.com/organizations/new) for a new free org). | Env var `GITHUB_ORG` consumed by `src/connectors/github/scripts/load-secrets.sh`. Written to secret key `github_org`. |
+| GitHub organization slug | User owned org (or [github.com/organizations/new](https://github.com/organizations/new) for a new free org). | Env var `GITHUB_ORG` consumed by `src/connectors/github/scripts/load-secrets.sh`. Written to secret key `github_org`. |
 | GitHub Personal Access Token (PAT) | **User Settings → Developer settings → Personal access tokens**. Classic PAT scopes: `repo` plus `read:org`. Fine grained PAT: organization plus repository read permissions, issued against the target org. | Env var `GITHUB_PAT` consumed by `src/connectors/github/scripts/load-secrets.sh`. Written to secret key `github_token`. |
 
 GitHub App installations are preferred for production org wide ingestion (rate limit 15,000 req/hr vs the PAT 5,000 req/hr), but the MVP connector reads a PAT from the secret scope and is portable to either credential type.
 
 ## Optional source runtime
 
-If you want appsec-mvp to provision a *demo* GitHub setup (references to two OWASP Benchmark forks `BenchmarkJava` and `BenchmarkPython` as SAST targets, a `juice-shop` fork as DAST target, ECR for image pushes, the GitHub Actions OIDC IAM trust, and a Juice Shop k8s namespace), apply the optional runtime under `src/connectors/github/runtime/`. The runtime references existing forks under your GitHub org rather than creating repos, so the operator must have already forked `OWASP-Benchmark/BenchmarkJava`, the upstream Benchmark Python project, and `juice-shop/juice-shop` under `var.github_org`. See [`src/connectors/github/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/github/runtime) for variables, apply order, and produced outputs.
+If you want appsec-mvp to provision a *demo* GitHub setup (references to two OWASP Benchmark forks `BenchmarkJava` and `BenchmarkPython` as SAST targets, a `juice-shop` fork as DAST target, ECR for image pushes, the GitHub Actions OIDC IAM trust, and a Juice Shop k8s namespace), apply the optional runtime under `src/connectors/github/runtime/`. The runtime references existing forks under your GitHub org rather than creating repos, so the user must have already forked `OWASP-Benchmark/BenchmarkJava`, the upstream Benchmark Python project, and `juice-shop/juice-shop` under `var.github_org`. See [`src/connectors/github/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/github/runtime) for variables, apply order, and produced outputs.
 
-Operators with their own GitHub org skip the runtime. Wire the existing org slug plus PAT directly into the secrets via the next section.
+Users with their own GitHub org skip the runtime. Wire the existing org slug plus PAT directly into the secrets via the next section.
 
 ## Secrets
 
@@ -219,7 +219,7 @@ SELECT full_name, default_branch FROM appsec_dev.silver.repositories
   ORDER BY full_name;
 ```
 
-For an operator running the demo runtime, expect three rows: `BenchmarkJava`, `BenchmarkPython`, `juice-shop`. For an operator pointing at their own org, expect a row per ingested repo.
+For an user running the demo runtime, expect three rows: `BenchmarkJava`, `BenchmarkPython`, `juice-shop`. For an user pointing at their own org, expect a row per ingested repo.
 
 ## Troubleshooting
 

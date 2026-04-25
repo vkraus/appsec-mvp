@@ -44,7 +44,7 @@ Every connector runbook follows the same eight section structure:
    Silver tables.
 2. **Dependencies**: explicit data level dependencies, restated on every
    page (Phase 1 plus SCM first).
-3. **Operator inputs**: URLs, tokens, credentials with where to obtain
+3. **User inputs**: URLs, tokens, credentials with where to obtain
    each.
 4. **Optional source runtime**: when to apply
    `src/connectors/<source>/runtime/` and when to skip.
@@ -57,6 +57,6 @@ Every connector runbook follows the same eight section structure:
 8. **Troubleshooting**: known failure modes including "no rows in
    `silver.repositories`" for non-SCM connectors.
 
-The structure is self sustained. An operator wiring only one connector can
+The structure is self sustained. An user wiring only one connector can
 finish its runbook from that one page, with cross-references only to
 deeper architectural context (Reference pages, the spec).

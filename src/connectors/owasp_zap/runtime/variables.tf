@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# AWS-side inputs (operator-supplied; what aws-foundation used to produce
+# AWS-side inputs (user-supplied; what aws-foundation used to produce
 # internally before the redesign).
 # ---------------------------------------------------------------------------
 
@@ -9,13 +9,13 @@ variable "aws_region" {
 }
 
 variable "aws_access_key_id" {
-  description = "AWS access key ID (operator-supplied)."
+  description = "AWS access key ID (user-supplied)."
   type        = string
   sensitive   = true
 }
 
 variable "aws_secret_access_key" {
-  description = "AWS secret access key (operator-supplied)."
+  description = "AWS secret access key (user-supplied)."
   type        = string
   sensitive   = true
 }
@@ -31,7 +31,7 @@ variable "project_prefix" {
 # ---------------------------------------------------------------------------
 
 variable "eks_cluster_name" {
-  description = "Operator-supplied EKS cluster name. The ZAP namespace, Deployment, Secret, and LoadBalancer Service are created in this cluster. Must be in `var.aws_region` — the kubernetes provider's auth flow resolves the cluster endpoint via the AWS provider's region."
+  description = "User-supplied EKS cluster name. The ZAP namespace, Deployment, Secret, and LoadBalancer Service are created in this cluster. Must be in `var.aws_region` — the kubernetes provider's auth flow resolves the cluster endpoint via the AWS provider's region."
   type        = string
 }
 

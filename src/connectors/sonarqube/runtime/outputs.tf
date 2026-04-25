@@ -20,7 +20,7 @@ output "sonarqube_project_token" {
 }
 
 output "rds_endpoint" {
-  description = "Postgres endpoint SonarQube uses (host:port). Either the RDS instance this module created or the `var.rds_endpoint` operator-supplied value."
+  description = "Postgres endpoint SonarQube uses (host:port). Either the RDS instance this module created or the `var.rds_endpoint` user-supplied value."
   value       = local.rds_endpoint_resolved
 }
 
@@ -35,7 +35,7 @@ output "rds_username" {
 }
 
 output "rds_password" {
-  description = "Postgres password SonarQube uses (generated random when this module created RDS, else the operator-supplied `var.rds_password`)."
+  description = "Postgres password SonarQube uses (generated random when this module created RDS, else the user-supplied `var.rds_password`)."
   value       = local.rds_password_resolved
   sensitive   = true
 }

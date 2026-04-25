@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Operator-supplied inputs for the TruffleHog source-system runtime.
+# User-supplied inputs for the TruffleHog source-system runtime.
 #
 # TruffleHog is a CLI-artefact connector: scans run on CI/CD runners and
 # write `--json` line-delimited output to a cloud bucket (S3 / ADLS / GCS).
@@ -13,7 +13,7 @@ variable "catalog" {
 }
 
 variable "trufflehog_artifact_volume_path" {
-  description = "UC Volume path for ingesting TruffleHog JSON artefacts, e.g. /Volumes/appsec_dev/bronze_trufflehog/artefacts. The underlying cloud bucket (S3 / ADLS / GCS) must be pre-provisioned by the operator; this runtime only creates the UC Volume that maps to it."
+  description = "UC Volume path for ingesting TruffleHog JSON artefacts, e.g. /Volumes/appsec_dev/bronze_trufflehog/artefacts. The underlying cloud bucket (S3 / ADLS / GCS) must be pre-provisioned by the user; this runtime only creates the UC Volume that maps to it."
   type        = string
 }
 

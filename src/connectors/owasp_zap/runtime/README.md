@@ -1,8 +1,8 @@
 # OWASP ZAP connector: source system runtime (optional)
 
-This Terraform module deploys an **OWASP ZAP daemon** on the EKS cluster of the operator, exposed via a LoadBalancer Service. The OWASP ZAP connector then drives the daemon (typically from a CI workflow that triggers scans against a target URL via the ZAP API) and ingests the resulting findings.
+This Terraform module deploys an **OWASP ZAP daemon** on the EKS cluster of the user, exposed via a LoadBalancer Service. The OWASP ZAP connector then drives the daemon (typically from a CI workflow that triggers scans against a target URL via the ZAP API) and ingests the resulting findings.
 
-**It is optional.** The OWASP ZAP connector itself only needs a ZAP daemon URL and API key. Operators with their own ZAP deployment skip this module entirely and feed their existing endpoint directly into the secrets of the connector.
+**It is optional.** The OWASP ZAP connector itself only needs a ZAP daemon URL and API key. Users with their own ZAP deployment skip this module entirely and feed their existing endpoint directly into the secrets of the connector.
 
 ## When to apply
 
@@ -19,7 +19,7 @@ The runtime is pure Kubernetes. No IRSA, no IAM role, no S3 grants. (The LoadBal
 
 > **Security note:** the Deployment runs ZAP with `api.addrs.addr.name=.*` + `api.addrs.addr.regex=true`, which whitelists *all caller IPs* against the ZAP API. Combined with the public LoadBalancer Service, this means the API of the daemon is internet facing and the only access control is the 40 character random API key. This is faithful to the upstream demo configuration. **Production deployments should front the daemon with a Kubernetes NetworkPolicy, a private (`internal`-mode) LoadBalancer, or a VPN gateway**, and consider tightening `api.addrs.addr.*` to a specific caller IP or range.
 
-## Operator supplied inputs
+## User supplied inputs
 
 ### Required
 
@@ -46,7 +46,7 @@ terraform init
 terraform apply -var-file=terraform.tfvars
 ```
 
-Operators write their own `terraform.tfvars`. The legacy `infra/terraform/terraform.tfvars.example` can serve as a starting reference for the AWS credentials block.
+Users write their own `terraform.tfvars`. The legacy `infra/terraform/terraform.tfvars.example` can serve as a starting reference for the AWS credentials block.
 
 > **Note:** On first apply the LoadBalancer hostname may still be unresolved when Terraform reads the `status` field of the Service. The `zap_url` output will contain `http://pending:8080`. Re-run `terraform apply` (or `terraform refresh`) once AWS finishes provisioning the ELB to populate the hostname.
 
@@ -68,6 +68,6 @@ The Deployment, Secret, LoadBalancer Service, and namespace are torn down cleanl
 
 ## Independence
 
-This module references only operator supplied inputs and the AWS and Kubernetes provider APIs. It does not depend on the runtime of any other connector, per the no inter connector dependency rule of the redesign. The cross-runtime reference that previously came from `aws-foundation` outputs (`eks_cluster_name`) becomes an operator supplied variable.
+This module references only user supplied inputs and the AWS and Kubernetes provider APIs. It does not depend on the runtime of any other connector, per the no inter connector dependency rule of the redesign. The cross-runtime reference that previously came from `aws-foundation` outputs (`eks_cluster_name`) becomes an user supplied variable.
 
 This module is intended to be used as a **root** module, not a child module. It declares its own `aws` and `kubernetes` provider blocks. Using it via `module "..."` from a parent module will collide with the providers of the parent.
