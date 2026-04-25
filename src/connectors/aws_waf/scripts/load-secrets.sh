@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 # Populate AWS WAF connector secrets into the mvp-connectors scope.
 #
+# AWS WAF is a log-stream connector: the autoloader reads gzipped JSON
+# records that Kinesis Firehose delivers from the operator's WebACLs to
+# an S3 bucket. The connector needs AWS credentials with `s3:GetObject`
+# on the log bucket; we pack them as a single JSON-shaped secret so the
+# bronze pipeline can read them with one secret lookup.
+#
 # Reads from environment variables:
-#   WAF_LOG_BUCKET            — S3 bucket the Firehose-to-S3 logs land in
-#                               (consumed by the log-stream autoloader)
-#   AWS_WAF_IAM_ROLE_ARN      — IAM role ARN for the SDK fallback path
-#                               (boto3 wafv2 GetSampledRequests)
+#   AWS_ACCESS_KEY_ID      — programmatic access key for S3 reads
+#   AWS_SECRET_ACCESS_KEY  — paired secret key
 #
 # Idempotent: re-runs update existing secret values.
 
 set -euo pipefail
 
-: "${WAF_LOG_BUCKET:?WAF_LOG_BUCKET is required}"
-: "${AWS_WAF_IAM_ROLE_ARN:?AWS_WAF_IAM_ROLE_ARN is required}"
+: "${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID is required}"
+: "${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY is required}"
 
 SCOPE="mvp-connectors"
+KEY="aws_waf_credentials"
 
-databricks secrets put-secret "$SCOPE" waf_log_bucket          --string-value "$WAF_LOG_BUCKET"
-databricks secrets put-secret "$SCOPE" aws_waf_iam_role_arn    --string-value "$AWS_WAF_IAM_ROLE_ARN"
+PAYLOAD=$(printf '{"access_key_id":"%s","secret_access_key":"%s"}' \
+  "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY")
 
-echo "OK: aws_waf secrets loaded into scope $SCOPE"
+databricks secrets put-secret "$SCOPE" "$KEY" --string-value "$PAYLOAD"
+
+echo "OK: aws_waf secrets loaded into scope $SCOPE (key: $KEY)"
