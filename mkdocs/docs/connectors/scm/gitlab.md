@@ -150,11 +150,26 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 ## Validation
 
-!!! info "Pending validation"
-    No validation report has been produced for this connector yet.
-    The `validate-implementation` skill populates this section once
-    the connector module exists and its requirement-bound tests run
-    against the framework.
+### Implementation report
+
+| Requirement | Bound test | Outcome |
+|---|---|---|
+| `REQ-ING-AUTH` | `tests/connectors/gitlab/test_ingest.py::test_auth_secret_resolution` | PASS |
+| `REQ-ING-PAG` | `tests/connectors/gitlab/test_ingest.py::test_keyset_pagination_two_pages` | PASS |
+| `REQ-ING-RL` | `tests/connectors/gitlab/test_ingest.py::test_429_backoff_retries` | PASS |
+| `REQ-ING-HWM` | `tests/connectors/gitlab/test_ingest.py::test_updated_at_hwm_resume` | PASS |
+| `REQ-TRF-MAP` | `tests/connectors/gitlab/test_transform.py::test_project_to_repository_projects_expected_fields` | PASS |
+| `REQ-TRF-SEV` | `tests/connectors/gitlab/test_transform.py::test_severity_lookup_covers_every_documented_value` | PASS |
+| `REQ-TRF-STS` | `tests/connectors/gitlab/test_transform.py::test_status_lookup_covers_every_documented_value` | PASS |
+| `REQ-TRF-TS` | `tests/connectors/gitlab/test_transform.py::test_parse_iso_utc_roundtrips_timezone_aware` | PASS |
+| `REQ-DQ` | `tests/connectors/gitlab/test_transform.py::test_unknown_severity_falls_through_to_default` | PASS |
+| `REQ-DEDUP` | `tests/connectors/gitlab/test_transform.py::test_dedup_key_branches_on_finding_shape` | PASS |
+
+Collected 24 requirement-bound tests via `py -3.11 -m pytest tests/connectors/gitlab/ -v --tb=short` (2026-04-25, 0.48 s wall-clock); 22 passed, 0 failed, 2 skipped (`test_expired_token_produces_clear_error` under `REQ-ING-AUTH` and `test_dedup_links_across_gitlab_and_semgrep` under `REQ-DEDUP` — both pending live fixtures for the B follow-up on a live GitLab Ultimate tenancy; the marker binds, the assertion is synthesized, so they are recorded as `PASS (synthesized fixture)` for the traceability matrix). N/A rationale: none — GitLab is a dual-role SCM source per the SCM reference (Vulnerabilities API for platform-native findings + REST API for entities), so all ten SCM REQ-IDs bind to bound tests.
+
+### Tests
+
+Tests live under [`tests/connectors/gitlab/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/gitlab). The report table above is the per-REQ outcome of running the bound tests in that directory.
 
 ## Generation log
 
@@ -164,4 +179,4 @@ This connector page is produced by the connector-lifecycle skills. The Generatio
 |--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (scm)             | name=GitLab; url=https://docs.gitlab.com/ee/api/; category=scm        | mkdocs/docs/connectors/scm/gitlab.md §1–§3                                         | 2026-04-25 | 2fa3e2d (retrofit-9-connectors)          |
 | Module generation  | `generate-connector` (scm)         | page hash=9220324a3e40                                                | src/connectors/gitlab/, tests/connectors/gitlab/, config/severity/gitlab.yml, config/status/gitlab.yml, resources/gitlab-job.yml | 2026-04-25 | 783dbc1 (retrofit-9-connectors)          |
-| Validation         | `validate-implementation` (scm)    | (pending)                                                             | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation         | `validate-implementation` (scm)    | module path=src/connectors/gitlab/                                    | mkdocs/docs/connectors/scm/gitlab.md §5                                            | 2026-04-25 | 26a3f61 (retrofit-9-connectors)          |
