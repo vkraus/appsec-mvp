@@ -220,10 +220,10 @@ Tests live under [`tests/connectors/github/`](https://github.com/vkraus/appsec-m
 
 ## Generation log
 
-This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated generation log row is tracked as a deferred follow-up.
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work; the Reference and Validation sections preserve the original implementation-grounded prose, and the Generation log table records the actual skill runs that produced the reconciled artefacts.
 
-| Stage              | Skill                            | Inputs       | Outputs                                            | Run on     | Skills repo ref |
-|--------------------|----------------------------------|--------------|----------------------------------------------------|------------|-----------------|
-| Source analysis    | `analyze-source` (scm)           | (pre-skill)  | `mkdocs/docs/connectors/scm/github.md` §1–§3       | (pre-skill) | (pre-skill)     |
-| Module generation  | `generate-connector` (scm)       | (pre-skill)  | `src/connectors/github/`, `tests/connectors/github/` | (pre-skill) | (pre-skill)     |
-| Validation         | `validate-implementation` (scm)  | (pre-skill)  | `mkdocs/docs/connectors/scm/github.md` §5          | (pre-skill) | (pre-skill)     |
+| Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (scm)             | name=GitHub; url=https://docs.github.com/en/rest; category=scm        | mkdocs/docs/connectors/scm/github.md §1–§3                                         | 2026-04-25 | 2fa3e2d (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (scm)         | (pending)                                                             | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation         | `validate-implementation` (scm)    | (pending)                                                             | (pending)                                                                          | (pending)  | (pending)                                |
