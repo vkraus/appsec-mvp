@@ -38,6 +38,7 @@ No file outside the connector page is modified by this skill.
 6. Emit the fix list as plain text below the table: for each `FAIL` row, one line listing the failing test file path (`tests/connectors/{source}/test_*.py::test_name`) and a one-line summary of the failure drawn from the pytest `--tb=short` output. Omit the fix list entirely if there are no failures.
 7. Replace the stub admonition in the **Validation** section of `mkdocs/docs/connectors/{category}/{source}.md` with the table from step 5 and the fix list from step 6 (if any). Append a one-line summary noting how many requirement-bound tests were collected, the wall-clock duration, the pass / fail / N/A split, and the N/A rationale for the category (sourced from `references/<category>.md`).
 8. Update the connector page's Provenance section row 3 (`validate-implementation`) with the run date, inputs (the connector module path `src/connectors/{source}/`), outputs (the connector page §5), and the skill repo ref via `git rev-parse --short HEAD`. Use the row template below.
+9. Update the aggregator table at `mkdocs/docs/platform/reference/connector-skills.md` § "Generated connectors" by appending a row for this connector with the source name, category, three skill-run dates from the connector page's Provenance section, and Status `Generated`.
 
 ## Invariants
 
