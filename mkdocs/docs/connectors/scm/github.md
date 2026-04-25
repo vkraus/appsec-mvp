@@ -220,7 +220,7 @@ Tests live under [`tests/connectors/github/`](https://github.com/vkraus/appsec-m
 
 ## Provenance
 
-This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated provenance row is tracked as a deferred follow-up (see the design spec).
+This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated provenance row is tracked as a deferred follow-up.
 
 | Stage              | Skill                            | Inputs       | Outputs                                            | Run on     | Skills repo ref |
 |--------------------|----------------------------------|--------------|----------------------------------------------------|------------|-----------------|

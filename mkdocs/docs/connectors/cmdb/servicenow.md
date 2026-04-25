@@ -174,10 +174,10 @@ Tests live under [`tests/connectors/servicenow/`](https://github.com/vkraus/apps
 
 ## Provenance
 
-This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated provenance row is tracked as a deferred follow-up (see the design spec).
+This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated provenance row is tracked as a deferred follow-up.
 
 | Stage              | Skill                            | Inputs       | Outputs                                            | Run on     | Skills repo ref |
 |--------------------|----------------------------------|--------------|----------------------------------------------------|------------|-----------------|
 | Source analysis    | `analyze-source` (cmdb)          | (pre-skill)  | `mkdocs/docs/connectors/cmdb/servicenow.md` §1–§3  | (pre-skill) | (pre-skill)     |
-| Module generation  | `generate-connector` (cmdb)      | (pre-skill)  | `src/connectors/servicenow/`, `tests/.../`         | (pre-skill) | (pre-skill)     |
+| Module generation  | `generate-connector` (cmdb)      | (pre-skill)  | `src/connectors/servicenow/`, `tests/connectors/servicenow/`         | (pre-skill) | (pre-skill)     |
 | Validation         | `validate-implementation` (cmdb) | (pre-skill)  | `mkdocs/docs/connectors/cmdb/servicenow.md` §5     | (pre-skill) | (pre-skill)     |
