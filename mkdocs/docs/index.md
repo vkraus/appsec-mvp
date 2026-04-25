@@ -12,7 +12,7 @@ hide:
 <p class="subtitle">An MVP implementation of a data integration framework for application security, built on Databricks.</p>
 
 <div class="actions" markdown>
-[Start setup →](platform/prerequisites.md){ .md-button .md-button--primary }
+[Start setup →](platform/index.md){ .md-button .md-button--primary }
 [View on GitHub](https://github.com/vkraus/appsec-mvp){ .md-button }
 </div>
 
@@ -36,25 +36,19 @@ flowchart LR
 
 <div class="grid cards" markdown>
 
--   :material-clipboard-check:{ .lg .middle } **1. [Prerequisites](platform/prerequisites.md)**
+-   :material-server-network:{ .lg .middle } **1. [Setup platform](platform/index.md)**
 
     ---
 
-    Databricks workspace, cloud account, Terraform, credentials.
+    Workspace bootstrap: catalog, schemas, jobs, secrets.
 
--   :material-server-network:{ .lg .middle } **2. [Terraform apply](platform/terraform-apply.md)**
-
-    ---
-
-    Provision workspace, UC metastore, secret scopes, bundle targets.
-
--   :material-power-plug:{ .lg .middle } **3. [Connectors](connectors/index.md)**
+-   :material-power-plug:{ .lg .middle } **2. [Install connectors](connectors/index.md)**
 
     ---
 
-    Wire each AppSec source, in the order below.
+    Wire each AppSec source.
 
--   :material-chart-line:{ .lg .middle } **4. [Analytics](analytics/index.md)**
+-   :material-chart-line:{ .lg .middle } **3. [Build analytics](analytics/index.md)**
 
     ---
 
@@ -66,12 +60,46 @@ flowchart LR
 
 <div class="grid cards" markdown>
 
--   **CMDB** — [ServiceNow](connectors/cmdb/index.md)
--   **SCM** — [GitHub, GitLab](connectors/scm/index.md)
--   **SAST** — [SonarQube, Semgrep](connectors/sast/index.md)
--   **SCA** — [Dependency-Track](connectors/sca/index.md)
--   **Secrets** — [TruffleHog](connectors/secrets/index.md)
--   **DAST** — [OWASP ZAP](connectors/dast/index.md)
--   **WAF** — [AWS WAF](connectors/waf/index.md)
+-   :material-source-branch:{ .lg .middle } **1. [SCM](connectors/scm/index.md)**
+
+    ---
+
+    GitHub, GitLab. Must be installed first; populates `silver.repositories`.
+
+-   :material-database:{ .lg .middle } **2. [CMDB](connectors/cmdb/index.md)**
+
+    ---
+
+    ServiceNow.
+
+-   :material-magnify-scan:{ .lg .middle } **3. [SAST](connectors/sast/index.md)**
+
+    ---
+
+    SonarQube, Semgrep.
+
+-   :material-package-variant:{ .lg .middle } **4. [SCA](connectors/sca/index.md)**
+
+    ---
+
+    Dependency-Track.
+
+-   :material-key-variant:{ .lg .middle } **5. [Secrets](connectors/secrets/index.md)**
+
+    ---
+
+    TruffleHog.
+
+-   :material-bug-check:{ .lg .middle } **6. [DAST](connectors/dast/index.md)**
+
+    ---
+
+    OWASP ZAP.
+
+-   :material-shield-check:{ .lg .middle } **7. [WAF](connectors/waf/index.md)**
+
+    ---
+
+    AWS WAF.
 
 </div>
