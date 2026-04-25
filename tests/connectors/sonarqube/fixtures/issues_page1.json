@@ -1,0 +1,30 @@
+{
+  "paging": {"pageIndex": 1, "pageSize": 2, "total": 3},
+  "issues": [
+    {
+      "key": "AYx1aaaaaaaaaaaaaaa1",
+      "rule": "java:S2259",
+      "severity": "BLOCKER",
+      "status": "OPEN",
+      "project": "seed-python-a",
+      "component": "seed-python-a:src/main/java/com/example/Service.java",
+      "line": 42,
+      "type": "VULNERABILITY",
+      "creationDate": "2026-04-18T09:00:00+0000",
+      "updateDate": "2026-04-20T10:00:00+0000"
+    },
+    {
+      "key": "AYx1aaaaaaaaaaaaaaa2",
+      "rule": "javascript:S1488",
+      "severity": "MAJOR",
+      "status": "RESOLVED",
+      "resolution": "FALSE-POSITIVE",
+      "project": "seed-javascript-b",
+      "component": "seed-javascript-b:src/index.js",
+      "line": 17,
+      "type": "BUG",
+      "creationDate": "2026-04-17T09:00:00+0000",
+      "updateDate": "2026-04-20T11:30:00+0000"
+    }
+  ]
+}

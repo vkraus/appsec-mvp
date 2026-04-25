@@ -146,15 +146,15 @@ Expected: `file_path IS NULL` and `url` populated for every row. This is the sha
 | `REQ-ING-AUTH` | — | N/A |
 | `REQ-ING-PAG` | — | N/A |
 | `REQ-ING-RL` | — | N/A |
-| `REQ-ING-HWM` | `tests/connectors/owasp_zap/test_ingest.py::test_s3_marker_resume_after_last_processed_key` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/owasp_zap/test_transform.py::test_zap_alert_mapping` | PASS |
-| `REQ-TRF-SEV` | `tests/connectors/owasp_zap/test_transform.py::test_risk_to_severity_normalization` | PASS |
-| `REQ-TRF-STS` | `tests/connectors/owasp_zap/test_transform.py::test_confidence_to_status_normalization` | PASS |
-| `REQ-TRF-TS` | `tests/connectors/owasp_zap/test_transform.py::test_scan_timestamp_to_utc_datetime` | PASS |
-| `REQ-DQ` | `tests/connectors/owasp_zap/test_transform.py::test_findings_expectation_quarantines_null_url` | PASS |
-| `REQ-DEDUP` | `tests/connectors/owasp_zap/test_transform.py::test_dedup_links_against_dast_overlap` | PASS |
+| `REQ-ING-HWM` | — | (pending) |
+| `REQ-TRF-MAP` | — | (pending) |
+| `REQ-TRF-SEV` | — | (pending) |
+| `REQ-TRF-STS` | — | (pending) |
+| `REQ-TRF-TS` | — | (pending) |
+| `REQ-DQ` | — | (pending) |
+| `REQ-DEDUP` | — | (pending) |
 
-Collected 7 requirement-bound tests via `pytest tests/connectors/owasp_zap/ -v --tb=short` (2026-04-22, 2.9 s wall-clock); 7 passed, 3 marked `N/A` because the CLI-artifact ingestion path has no API auth, pagination, or upstream rate limit.
+Collected 5 tests via `pytest tests/connectors/owasp_zap/ -v --tb=short` (2026-04-25, 0.34 s wall-clock); 5 passed, 0 failed. Three REQ-IDs are marked `N/A` because the CLI-artifact ingestion path has no API auth, pagination, or upstream rate limit. The remaining seven DAST-applicable REQ-IDs are `(pending)`: the MVP `transform.py` is a framework-contract stub that returns an empty `silver_findings` frame (per thesis §4 Future Work — the ZAP rule catalog mapping is not yet finalized), so no requirement-bound transform tests are wired up. The collected tests cover framework-contract plumbing only (`REQ-FW-CONTRACT`, `REQ-FW-BRONZE-ENVELOPE`) plus the CI/CD-step source classifier.
 
 ### Tests
 
@@ -162,10 +162,10 @@ Tests live under [`tests/connectors/owasp_zap/`](https://github.com/vkraus/appse
 
 ## Generation log
 
-This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated generation log row is tracked as a deferred follow-up.
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work; the Reference and Validation sections preserve the original implementation-grounded prose, and the Generation log table records the actual skill runs that produced the reconciled artefacts.
 
-| Stage              | Skill                            | Inputs       | Outputs                                            | Run on     | Skills repo ref |
-|--------------------|----------------------------------|--------------|----------------------------------------------------|------------|-----------------|
-| Source analysis    | `analyze-source` (dast)          | (pre-skill)  | `mkdocs/docs/connectors/dast/owasp-zap.md` §1–§3   | (pre-skill) | (pre-skill)     |
-| Module generation  | `generate-connector` (dast)      | (pre-skill)  | `src/connectors/owasp_zap/`, `tests/connectors/owasp_zap/` | (pre-skill) | (pre-skill)     |
-| Validation         | `validate-implementation` (dast) | (pre-skill)  | `mkdocs/docs/connectors/dast/owasp-zap.md` §5      | (pre-skill) | (pre-skill)     |
+| Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (dast)            | name=OWASP ZAP; url=https://www.zaproxy.org/docs/api/; category=dast  | mkdocs/docs/connectors/dast/owasp-zap.md §1–§3                                     | 2026-04-25 | 662ee6a (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (dast)        | page hash=ed67875c66f7                                           | src/connectors/owasp_zap/, tests/connectors/owasp_zap/, config/severity/owasp_zap.yml, config/status/owasp_zap.yml, resources/owasp_zap-job.yml | 2026-04-25 | 24c745f (retrofit-9-connectors)  |
+| Validation         | `validate-implementation` (dast)   | module path=src/connectors/owasp_zap/                                 | mkdocs/docs/connectors/dast/owasp-zap.md §5                                        | 2026-04-25 | ef600a8 (retrofit-9-connectors)          |

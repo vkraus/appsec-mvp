@@ -1,0 +1,35 @@
+[
+  {
+    "uuid": "11111111-1111-1111-1111-111111111111",
+    "name": "acme/payments-api",
+    "version": "1.4.2",
+    "classifier": "APPLICATION",
+    "purl": "pkg:generic/acme/payments-api@1.4.2",
+    "active": true,
+    "lastBomImport": "2026-04-20T08:00:00Z",
+    "lastInheritedRiskScoreUpdate": "2026-04-24T12:00:00Z",
+    "properties": {
+      "repository_id": "acme/payments-api"
+    }
+  },
+  {
+    "uuid": "22222222-2222-2222-2222-222222222222",
+    "name": "legacy-firmware-blob",
+    "version": null,
+    "classifier": "FIRMWARE",
+    "active": true,
+    "lastBomImport": "2026-02-10T08:00:00Z",
+    "properties": {}
+  },
+  {
+    "uuid": "33333333-3333-3333-3333-333333333333",
+    "name": "acme/loyalty-web",
+    "version": "2.0.0",
+    "classifier": "APPLICATION",
+    "active": false,
+    "lastBomImport": "2025-11-01T08:00:00Z",
+    "properties": {
+      "repository_id": "acme/loyalty-web"
+    }
+  }
+]

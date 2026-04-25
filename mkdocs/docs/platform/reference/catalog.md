@@ -21,22 +21,22 @@ Each `REQ-*` identifier is bound to pytest markers in the reference implementati
 
 ## Per-source traceability matrix
 
-Rows are `REQ-*` IDs; columns are the nine selected sources spanning static testing, dynamic testing, and runtime security tiers. Cells are populated by the `validate-implementation` skill when it runs against each source. `PASS` means the bound test passed; `N/A` means the requirement does not apply to the source — either because the category does not exercise the requirement (e.g. CMDB sources emit no findings, so severity/status/dedup do not apply) or because the source is documented but not built in the MVP.
+Rows are `REQ-*` IDs; columns are the nine selected sources spanning static testing, dynamic testing, and runtime security tiers. Cells are populated by the `validate-implementation` skill when it runs against each source. `PASS` means the bound test passed; `N/A` means the requirement does not apply to the source; `(pending)` means the connector module is in place but the bound test is deferred (transform stub awaiting Future-Work implementation).
 
 | REQ | ServiceNow | GitHub | GitLab | SonarQube | Semgrep | Dep-Track | TruffleHog | ZAP | AWS WAF |
 |---|---|---|---|---|---|---|---|---|---|
-| `REQ-ING-AUTH` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | N/A | N/A |
-| `REQ-ING-PAG` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | N/A | N/A |
-| `REQ-ING-RL` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | N/A | N/A |
-| `REQ-ING-HWM` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
-| `REQ-TRF-MAP` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
-| `REQ-TRF-SEV` | N/A | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
-| `REQ-TRF-STS` | N/A | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
-| `REQ-TRF-TS` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
-| `REQ-DQ` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
-| `REQ-DEDUP` | N/A | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
+| `REQ-ING-AUTH` | PASS | PASS | PASS | PASS | N/A | PASS | N/A | N/A | PASS |
+| `REQ-ING-PAG` | PASS | PASS | PASS | PASS | N/A | PASS | N/A | N/A | N/A |
+| `REQ-ING-RL` | PASS | PASS | PASS | PASS | N/A | PASS | N/A | N/A | N/A |
+| `REQ-ING-HWM` | PASS | PASS | PASS | PASS | PASS | PASS | N/A | (pending) | PASS |
+| `REQ-TRF-MAP` | PASS | PASS | PASS | PASS | (pending) | PASS | PASS | (pending) | PASS |
+| `REQ-TRF-SEV` | N/A | N/A | PASS | PASS | (pending) | PASS | PASS | (pending) | PASS |
+| `REQ-TRF-STS` | N/A | N/A | PASS | PASS | (pending) | PASS | N/A | (pending) | N/A |
+| `REQ-TRF-TS` | PASS | PASS | PASS | PASS | (pending) | PASS | PASS | (pending) | PASS |
+| `REQ-DQ` | PASS | PASS | PASS | PASS | (pending) | PASS | PASS | (pending) | PASS |
+| `REQ-DEDUP` | N/A | N/A | PASS | PASS | (pending) | PASS | PASS | (pending) | N/A |
 
-Cells marked `N/A` indicate a REQ-ID that does not apply to a source — either because the category does not exercise the requirement (for example, `REQ-DEDUP` does not apply to the CMDB category, which emits no findings subject to cross-tool deduplication; the CLI-artifact ingestion path used by OWASP ZAP has no API auth, pagination, or rate limit) or because the source is documented but not built in the MVP (GitLab, Dependency-Track, TruffleHog, AWS WAF). The per-source Implementation reports linked from each connector page are the authoritative record of which tests were bound to which REQ-ID.
+Cells marked `N/A` indicate a REQ-ID that does not apply to a source — because the category does not exercise the requirement (for example, `REQ-DEDUP` does not apply to the CMDB category, which emits no findings subject to cross-tool deduplication; the CLI-artifact ingestion path has no API auth, pagination, or rate limit). Cells marked `(pending)` indicate that the connector module is generated but the transform implementation is deferred (Future Work) — the bound test asserts against an empty stub. Some greenfield-connector tests are skipped pending live API fixture capture; these are bound to their REQ-IDs via `@pytest.mark.requirement` markers but skip-marked with `pending live fixtures (B follow-up)`. The per-source Implementation reports linked from each connector page are the authoritative record of which tests were bound to which REQ-ID.
 
 ## How traceability is populated
 

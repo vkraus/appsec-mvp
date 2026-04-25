@@ -1,0 +1,14 @@
+[
+  {
+    "uuid": "44444444-4444-4444-4444-444444444444",
+    "name": "acme/checkout-service",
+    "version": "0.9.1",
+    "classifier": "CONTAINER",
+    "active": true,
+    "lastBomImport": "2026-04-25T03:00:00Z",
+    "lastInheritedRiskScoreUpdate": "2026-04-25T03:15:00Z",
+    "properties": {
+      "repository_id": "acme/checkout-service"
+    }
+  }
+]

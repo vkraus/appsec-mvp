@@ -1,0 +1,42 @@
+# AWS WAF connector configuration.
+#
+# Primary ingestion mode: log-stream autoloader reading the Firehose-to-S3
+# prefix (or equivalent CloudWatch Logs subscription). No WAF-API
+# authentication is involved on this path; the Databricks workspace's AWS
+# service credential reads from the destination directly.
+#
+# The chosen ingestion_mode MUST be recorded here so that REQ-applicability
+# can be evaluated at validate-implementation time. The SDK fallback mode
+# (``sdk_sampled``) is permitted only when full-log delivery is not yet
+# provisioned.
+source: aws_waf
+category: waf
+ingestion_mode: log_stream       # log_stream (preferred) | sdk_sampled (fallback)
+
+# Log-stream autoloader surface (preferred)
+log_stream:
+  bucket_secret_scope: mvp-connectors
+  bucket_secret: waf_log_bucket
+  prefix: waf/firehose/          # Firehose-to-S3 prefix; autoloader consumes recursively
+  hwm:
+    strategy: event_timestamp    # max(timestamp) observed in Bronze per WebACL
+    column: timestamp
+
+# SDK fallback (boto3 wafv2 GetSampledRequests). Account-scoped IAM credentials.
+sdk_fallback:
+  aws_region: us-east-1          # CloudFront-scoped WebACLs require us-east-1
+  iam_role_secret_scope: mvp-connectors
+  iam_role_secret: aws_waf_iam_role_arn
+  max_items: 500                 # hard cap per GetSampledRequests call
+  time_window_hours: 3           # AWS-imposed ceiling on TimeWindow
+  hwm:
+    strategy: event_timestamp    # last EndTime advanced forward per (WebACL, rule)
+    column: timestamp
+
+# Bronze / Silver targets
+bronze_table: ${catalog}.bronze_aws_waf.events
+silver_table: ${catalog}.silver.waf_events
+
+# Declarative lookups
+severity_map: config/severity/aws_waf.yml   # action-keyed (no source severity field)
+status_map:   config/status/aws_waf.yml     # N/A placeholder (append-only stream)

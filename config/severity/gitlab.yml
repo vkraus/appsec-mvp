@@ -1,0 +1,13 @@
+# GitLab Vulnerabilities-API severity -> canonical four-level model.
+# See https://docs.gitlab.com/ee/user/application_security/vulnerabilities/severities.html
+# and mkdocs/docs/connectors/scm/gitlab.md § Enumerations.
+#
+# `info` and `unknown` have no canonical four-level equivalent and fall
+# through to the connector-configured default (`low` per the connector
+# page § Quirks). Operators override this per deployment if policy dictates.
+critical: critical
+high:     high
+medium:   medium
+low:      low
+info:     low       # no canonical equivalent; configurable default
+unknown:  low       # no canonical equivalent; configurable default

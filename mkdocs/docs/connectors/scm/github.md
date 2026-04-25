@@ -201,18 +201,18 @@ SELECT full_name, default_branch FROM appsec_dev.silver_github.repositories;
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `tests/connectors/github/test_ingest.py::test_pat_resolution_from_secret_scope` | PASS |
-| `REQ-ING-PAG` | `tests/connectors/github/test_ingest.py::test_link_header_pagination_two_pages` | PASS |
-| `REQ-ING-RL` | `tests/connectors/github/test_ingest.py::test_secondary_rate_limit_backoff` | PASS |
-| `REQ-ING-HWM` | `tests/connectors/github/test_ingest.py::test_updated_at_hwm_resume` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/github/test_transform.py::test_ghas_alert_mapping` | PASS |
-| `REQ-TRF-SEV` | `tests/connectors/github/test_transform.py::test_severity_normalization_all_levels` | PASS |
-| `REQ-TRF-STS` | `tests/connectors/github/test_transform.py::test_state_to_status_normalization` | PASS |
-| `REQ-TRF-TS` | `tests/connectors/github/test_transform.py::test_iso8601_to_utc_datetime` | PASS |
-| `REQ-DQ` | `tests/connectors/github/test_transform.py::test_findings_expectation_quarantines_null_repo` | PASS |
-| `REQ-DEDUP` | `tests/connectors/github/test_transform.py::test_dedup_links_against_semgrep_overlap` | PASS |
+| `REQ-ING-AUTH` | `tests/connectors/github/test_ingest.py::test_ingest_resolves_token_from_state_and_rejects_missing_secret` | PASS |
+| `REQ-ING-PAG` | `tests/connectors/github/test_ingest.py::test_fetch_org_repositories_yields_raw_data_per_repo` | PASS |
+| `REQ-ING-RL` | `tests/connectors/github/test_ingest.py::test_github_client_configures_retry_policy` | PASS |
+| `REQ-ING-HWM` | `tests/connectors/github/test_ingest.py::test_fetch_repo_commits_passes_since_as_datetime` | PASS |
+| `REQ-TRF-MAP` | `tests/connectors/github/test_transform.py::test_repositories_to_silver` | PASS |
+| `REQ-TRF-SEV` | — | N/A |
+| `REQ-TRF-STS` | — | N/A |
+| `REQ-TRF-TS` | `tests/connectors/github/test_transform.py::test_repositories_updated_at_is_utc_datetime` | PASS |
+| `REQ-DQ` | `tests/connectors/github/test_transform.py::test_repositories_missing_full_name_raises` | PASS |
+| `REQ-DEDUP` | — | N/A |
 
-Collected 10 requirement-bound tests via `pytest tests/connectors/github/ -v --tb=short` (2026-04-22, 5.1 s wall-clock); 10 passed.
+Collected 7 requirement-bound tests via `py -3.11 -m pytest tests/connectors/github/ -v --tb=short` (2026-04-25, 12.65 s wall-clock); 7 passed, 0 failed, 3 N/A. N/A rationale: GitHub Advanced Security integration not implemented in MVP — entity-only role, so the finding-only REQ-IDs `REQ-TRF-SEV`, `REQ-TRF-STS`, and `REQ-DEDUP` do not bind to entity-shape tests.
 
 ### Tests
 
@@ -220,10 +220,10 @@ Tests live under [`tests/connectors/github/`](https://github.com/vkraus/appsec-m
 
 ## Generation log
 
-This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated generation log row is tracked as a deferred follow-up.
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work; the Reference and Validation sections preserve the original implementation-grounded prose, and the Generation log table records the actual skill runs that produced the reconciled artefacts.
 
-| Stage              | Skill                            | Inputs       | Outputs                                            | Run on     | Skills repo ref |
-|--------------------|----------------------------------|--------------|----------------------------------------------------|------------|-----------------|
-| Source analysis    | `analyze-source` (scm)           | (pre-skill)  | `mkdocs/docs/connectors/scm/github.md` §1–§3       | (pre-skill) | (pre-skill)     |
-| Module generation  | `generate-connector` (scm)       | (pre-skill)  | `src/connectors/github/`, `tests/connectors/github/` | (pre-skill) | (pre-skill)     |
-| Validation         | `validate-implementation` (scm)  | (pre-skill)  | `mkdocs/docs/connectors/scm/github.md` §5          | (pre-skill) | (pre-skill)     |
+| Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (scm)             | name=GitHub; url=https://docs.github.com/en/rest; category=scm        | mkdocs/docs/connectors/scm/github.md §1–§3                                         | 2026-04-25 | 7ab1cb8 (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (scm)         | page hash=ff7421072eb3                                           | src/connectors/github/, tests/connectors/github/, config/severity/github.yml, config/status/github.yml, resources/github-job.yml | 2026-04-25 | 5e5d96f (retrofit-9-connectors)  |
+| Validation         | `validate-implementation` (scm)    | module path=src/connectors/github/                                    | mkdocs/docs/connectors/scm/github.md §5                                            | 2026-04-25 | aadd4ef (retrofit-9-connectors)  |

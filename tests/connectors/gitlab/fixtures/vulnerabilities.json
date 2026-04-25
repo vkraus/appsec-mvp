@@ -1,0 +1,107 @@
+[
+  {
+    "id": 5001,
+    "name": "Predictable pseudorandom number generator (PRNG)",
+    "severity": "high",
+    "state": "detected",
+    "report_type": "sast",
+    "confidence": "high",
+    "location": {
+      "file": "src/auth/tokens.py",
+      "start_line": 42,
+      "end_line": 42
+    },
+    "cve": null,
+    "identifiers": [
+      {"external_type": "cwe", "external_id": "338", "name": "CWE-338"},
+      {"external_type": "semgrep_id", "external_id": "python.lang.security.audit.weak-prng"}
+    ],
+    "created_at": "2026-04-10T12:00:00.000Z",
+    "updated_at": "2026-04-19T09:15:00.000Z"
+  },
+  {
+    "id": 5002,
+    "name": "AWS Access Key committed",
+    "severity": "critical",
+    "state": "confirmed",
+    "report_type": "secret_detection",
+    "confidence": "confirmed",
+    "location": {
+      "file": ".env.sample",
+      "start_line": 3,
+      "end_line": 3
+    },
+    "cve": null,
+    "identifiers": [
+      {"external_type": "gitleaks_rule_id", "external_id": "aws-access-token"}
+    ],
+    "created_at": "2026-04-11T08:00:00.000Z",
+    "updated_at": "2026-04-12T10:30:00.000Z"
+  },
+  {
+    "id": 5003,
+    "name": "CVE-2024-12345 in lodash",
+    "severity": "medium",
+    "state": "resolved",
+    "report_type": "dependency_scanning",
+    "confidence": "medium",
+    "location": {
+      "file": "package-lock.json",
+      "start_line": null,
+      "end_line": null,
+      "dependency": {
+        "package": {"name": "lodash"},
+        "version": "4.17.20"
+      }
+    },
+    "cve": "CVE-2024-12345",
+    "identifiers": [
+      {"external_type": "cve", "external_id": "CVE-2024-12345", "name": "CVE-2024-12345"}
+    ],
+    "created_at": "2026-04-05T14:00:00.000Z",
+    "updated_at": "2026-04-18T09:00:00.000Z"
+  },
+  {
+    "id": 5004,
+    "name": "Informational finding",
+    "severity": "info",
+    "state": "dismissed",
+    "report_type": "sast",
+    "confidence": "low",
+    "location": {
+      "file": "src/util/logging.py",
+      "start_line": 10,
+      "end_line": 10
+    },
+    "cve": null,
+    "identifiers": [
+      {"external_type": "semgrep_id", "external_id": "generic.info"}
+    ],
+    "created_at": "2026-04-01T12:00:00.000Z",
+    "updated_at": "2026-04-02T12:00:00.000Z"
+  },
+  {
+    "id": 5005,
+    "name": "Unknown-severity SCA finding without top-level CVE",
+    "severity": "unknown",
+    "state": "detected",
+    "report_type": "dependency_scanning",
+    "confidence": "unknown",
+    "location": {
+      "file": "requirements.txt",
+      "start_line": null,
+      "end_line": null,
+      "dependency": {
+        "package": {"name": "django"},
+        "version": "3.2.0"
+      }
+    },
+    "cve": null,
+    "identifiers": [
+      {"external_type": "cve", "external_id": "CVE-2023-99999", "name": "CVE-2023-99999"},
+      {"external_type": "cwe", "external_id": "79", "name": "CWE-79"}
+    ],
+    "created_at": "2026-04-09T10:00:00.000Z",
+    "updated_at": "2026-04-15T10:00:00.000Z"
+  }
+]

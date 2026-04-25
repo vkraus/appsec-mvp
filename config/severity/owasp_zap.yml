@@ -1,0 +1,15 @@
+# OWASP ZAP severity lookup.
+#
+# ZAP emits a four-level risk vocabulary on its `risk` field:
+# Informational, Low, Medium, High. The canonical finding severity
+# model is four-level (critical, high, medium, low, plus info);
+# ZAP has no direct `critical` equivalent. Promotion of a High ZAP
+# risk to `critical` is driven downstream by CWE class and KEV
+# overlap rules in the canonical-mapping layer, not here.
+#
+# Undocumented native values fall through to the default `medium`
+# with a data-quality warning (see src/common/silver.py::normalize_severity).
+Informational: info
+Low: low
+Medium: medium
+High: high

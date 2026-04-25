@@ -1,0 +1,12 @@
+source: sonarqube
+category: sast
+base_url: https://sonarqube.internal
+auth:
+  type: bearer
+  token_secret: sonarqube_token
+pagination:
+  strategy: offset
+  page_size: 500
+hwm:
+  strategy: updated_at
+  column: updateDate

@@ -1,0 +1,17 @@
+{
+  "DetectorName": "GenericApiKey",
+  "DetectorType": 99,
+  "DecoderName": "PLAIN",
+  "Verified": false,
+  "VerificationError": "",
+  "Raw": "abcd1234",
+  "RawV2": "",
+  "Redacted": "abcd****",
+  "ExtraData": {},
+  "SourceID": 1,
+  "SourceType": 16,
+  "SourceName": "trufflehog - git",
+  "SourceMetadata": {
+    "Data": {}
+  }
+}

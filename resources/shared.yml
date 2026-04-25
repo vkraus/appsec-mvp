@@ -12,6 +12,21 @@ resources:
     bronze_semgrep:
       catalog_name: ${var.catalog}
       name: bronze_semgrep
+    bronze_gitlab:
+      catalog_name: ${var.catalog}
+      name: bronze_gitlab
+    bronze_sonarqube:
+      catalog_name: ${var.catalog}
+      name: bronze_sonarqube
+    bronze_dependency_track:
+      catalog_name: ${var.catalog}
+      name: bronze_dependency_track
+    bronze_trufflehog:
+      catalog_name: ${var.catalog}
+      name: bronze_trufflehog
+    bronze_aws_waf:
+      catalog_name: ${var.catalog}
+      name: bronze_aws_waf
     silver_github:
       catalog_name: ${var.catalog}
       name: silver_github

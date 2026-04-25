@@ -1,3 +1,8 @@
+# Canonical two-task Lakeflow Job for the GitHub connector.
+# Shape per mkdocs/docs/platform/reference/connector-job-template.md:
+# ingest produces bronze; transform depends_on: ingest and produces silver.
+# Connector page Configuration section documents the scheduled cadence
+# (every 3 hours) for the MVP SCM subset.
 resources:
   jobs:
     github-connector:
@@ -10,24 +15,31 @@ resources:
         - name: hwm_reset
           default: "false"
       schedule:
-        quartz_cron_expression: "0 */15 * * * ?"
+        quartz_cron_expression: "0 0 */3 * * ?"
         timezone_id: "UTC"
       tasks:
         - task_key: ingest
           notebook_task:
             notebook_path: ../src/connectors/github/ingest_entry.py
+            base_parameters:
+              source_name: "{{job.parameters.source_name}}"
+              target_catalog: "{{job.parameters.target_catalog}}"
+              hwm_reset: "{{job.parameters.hwm_reset}}"
           job_cluster_key: shared
           max_retries: 3
-          min_retry_interval_millis: 2000
+          min_retry_interval_millis: 30000
           retry_on_timeout: true
         - task_key: transform
           depends_on:
             - task_key: ingest
           notebook_task:
             notebook_path: ../src/connectors/github/transform_entry.py
+            base_parameters:
+              source_name: "{{job.parameters.source_name}}"
+              target_catalog: "{{job.parameters.target_catalog}}"
           job_cluster_key: shared
           max_retries: 3
-          min_retry_interval_millis: 2000
+          min_retry_interval_millis: 30000
           retry_on_timeout: true
       job_clusters:
         - job_cluster_key: shared

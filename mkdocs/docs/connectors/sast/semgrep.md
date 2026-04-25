@@ -201,18 +201,20 @@ Both paths land in the same `silver.findings` table under `tool_source='semgrep'
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
-| `REQ-ING-AUTH` | `tests/connectors/semgrep/test_ingest.py::test_api_token_resolution` | PASS |
-| `REQ-ING-PAG` | `tests/connectors/semgrep/test_ingest.py::test_cursor_pagination_two_pages` | PASS |
-| `REQ-ING-RL` | `tests/connectors/semgrep/test_ingest.py::test_429_backoff_retries` | PASS |
-| `REQ-ING-HWM` | `tests/connectors/semgrep/test_ingest.py::test_findings_since_hwm_resume` | PASS |
-| `REQ-TRF-MAP` | `tests/connectors/semgrep/test_transform.py::test_finding_mapping` | PASS |
-| `REQ-TRF-SEV` | `tests/connectors/semgrep/test_transform.py::test_severity_normalization_all_levels` | PASS |
-| `REQ-TRF-STS` | `tests/connectors/semgrep/test_transform.py::test_triage_state_to_status_normalization` | PASS |
-| `REQ-TRF-TS` | `tests/connectors/semgrep/test_transform.py::test_created_at_to_utc_datetime` | PASS |
-| `REQ-DQ` | `tests/connectors/semgrep/test_transform.py::test_findings_expectation_quarantines_null_rule_id` | PASS |
-| `REQ-DEDUP` | `tests/connectors/semgrep/test_transform.py::test_dedup_links_against_sonarqube_overlap` | PASS |
+| `REQ-ING-AUTH` | — | N/A (CLI-artefact path — "no API auth, pagination, or rate limit" per catalog) |
+| `REQ-ING-PAG` | — | N/A (CLI-artefact path — "no API auth, pagination, or rate limit" per catalog) |
+| `REQ-ING-RL` | — | N/A (CLI-artefact path — "no API auth, pagination, or rate limit" per catalog) |
+| `REQ-ING-HWM` | `tests/connectors/semgrep/test_prefix_reader.py::test_classify_prefix[periodic/...]`, `::test_classify_prefix[cicd/...]`, `::test_classify_prefix_rejects_unknown` | PASS |
+| `REQ-TRF-MAP` | — | (pending) — transform stub; bound test pending real transform implementation |
+| `REQ-TRF-SEV` | — | (pending) — transform stub; bound test pending real transform implementation |
+| `REQ-TRF-STS` | — | (pending) — transform stub; bound test pending real transform implementation |
+| `REQ-TRF-TS` | — | (pending) — transform stub; bound test pending real transform implementation |
+| `REQ-DQ` | — | (pending) — transform stub; bound test pending real transform implementation |
+| `REQ-DEDUP` | — | (pending) — transform stub; bound test pending real transform implementation |
+| `REQ-FW-CONTRACT` | `tests/connectors/semgrep/test_contract_wrappers.py::test_ingest_wrapper_has_contract_signature`, `::test_transform_wrapper_has_contract_signature` | PASS |
+| `REQ-FW-BRONZE-ENVELOPE` | `tests/connectors/semgrep/test_contract_wrappers.py::test_run_ingest_pipeline_accepts_run_id_kwarg` | PASS |
 
-Collected 10 requirement-bound tests via `pytest tests/connectors/semgrep/ -v --tb=short` (2026-04-22, 4.2 s wall-clock); 10 passed.
+Collected 6 requirement-bound tests via `pytest tests/connectors/semgrep/ -v --tb=short` (2026-04-25, 0.29 s wall-clock); 6 passed; 3 marked N/A (CLI-artefact path — no API auth, pagination, or rate limit per `mkdocs/docs/platform/reference/catalog.md` § "Per-source traceability matrix"); 6 marked (pending) because the transform implementation is deferred — aspirational REQ bindings (`REQ-TRF-MAP`, `REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-TRF-TS`, `REQ-DQ`, `REQ-DEDUP`) are documented under §4 Future Work and will be bound once the real transform ships. Phase 2 retrofit deliberately did not add aspirational tests for unimplemented transform code.
 
 ### Tests
 
@@ -220,10 +222,10 @@ Tests live under [`tests/connectors/semgrep/`](https://github.com/vkraus/appsec-
 
 ## Generation log
 
-This connector was authored prior to the formalization of the connector-lifecycle skills. It conforms to the contract documented at [Connector skills](../../platform/reference/connector-skills.md). A retrofit producing a generated generation log row is tracked as a deferred follow-up.
+This connector page was reconciled by the connector-lifecycle skills under the retrofit-9-connectors work; the Reference and Validation sections preserve the original implementation-grounded prose, and the Generation log table records the actual skill runs that produced the reconciled artefacts.
 
-| Stage              | Skill                            | Inputs       | Outputs                                            | Run on     | Skills repo ref |
-|--------------------|----------------------------------|--------------|----------------------------------------------------|------------|-----------------|
-| Source analysis    | `analyze-source` (sast)          | (pre-skill)  | `mkdocs/docs/connectors/sast/semgrep.md` §1–§3     | (pre-skill) | (pre-skill)     |
-| Module generation  | `generate-connector` (sast)      | (pre-skill)  | `src/connectors/semgrep/`, `tests/connectors/semgrep/` | (pre-skill) | (pre-skill)     |
-| Validation         | `validate-implementation` (sast) | (pre-skill)  | `mkdocs/docs/connectors/sast/semgrep.md` §5        | (pre-skill) | (pre-skill)     |
+| Stage              | Skill                              | Inputs                                                                | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (sast)            | name=Semgrep; url=https://semgrep.dev/api/v1/docs; category=sast      | mkdocs/docs/connectors/sast/semgrep.md §1–§3                                       | 2026-04-25 | d47eb26 (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (sast)        | page hash=72c0eb36b9f8                                           | src/connectors/semgrep/, tests/connectors/semgrep/, config/severity/semgrep.yml, config/status/semgrep.yml, resources/semgrep-job.yml | 2026-04-25 | 15935ca (retrofit-9-connectors)  |
+| Validation         | `validate-implementation` (sast)   | module path=src/connectors/semgrep/                                   | mkdocs/docs/connectors/sast/semgrep.md §5                                          | 2026-04-25 | ef600a8 (retrofit-9-connectors)          |
