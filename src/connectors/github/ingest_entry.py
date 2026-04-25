@@ -7,7 +7,8 @@ job_run_id from the notebook context, loads the connector state, and
 calls src.connectors.github.ingest.ingest(run_id, state).
 
 The transform task is a separate notebook (transform_entry.py) wired in
-resources/github-job.yml with depends_on: ingest per thesis section 2.4.2.
+src/connectors/github/resources/job.yml with depends_on: ingest per
+thesis section 2.4.2.
 """
 
 from src.connectors.github.ingest import ingest

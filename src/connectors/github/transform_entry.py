@@ -6,7 +6,7 @@ target_catalog and hands the dataframe to
 src.connectors.github.transform.transform, which parses
 ``_raw_payload`` and projects onto silver_repositories. The DAG wiring
 (depends_on: ingest, retries per section 2.4.2) lives in
-resources/github-job.yml.
+src/connectors/github/resources/job.yml.
 """
 
 from pyspark.sql import SparkSession

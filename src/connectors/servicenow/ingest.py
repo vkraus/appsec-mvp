@@ -1,8 +1,8 @@
 """ServiceNow ingestion.
 
 Per thesis section 2.4.1, ingestion is delegated to Lakeflow Connect. The
-pipeline is declared in ``mvp/resources/servicenow-pipeline.yml`` as a
-Databricks Asset Bundle ``pipelines`` resource. The wrapper below exists
+pipeline is declared in ``src/connectors/servicenow/resources/pipeline.yml``
+as a Databricks Asset Bundle ``pipelines`` resource. The wrapper below exists
 only to surface the framework contract at the Python call-site.
 """
 from __future__ import annotations
