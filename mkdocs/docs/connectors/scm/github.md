@@ -198,6 +198,12 @@ The github-connector job is created by [Bundle deploy](../../platform/bundle-dep
 databricks bundle run github-connector --target dev
 ```
 
+For a one-shot orchestration (load secrets + run + verify counts), use the wrapper:
+
+```bash
+bash src/connectors/github/scripts/install.sh
+```
+
 The job runs two tasks: `ingest` (PyGithub to `bronze_github` tables) and `transform` (`bronze_github` to `silver_github` and `silver.repositories`). First run behavior: full enumeration of the org via `GET /orgs/{org}/repos`. Incremental runs use the `updated_at` high water mark stored in `silver.hwm`.
 
 Expected duration: ~1 minute for a small org (≤ 10 repos), longer for larger orgs.

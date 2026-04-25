@@ -157,6 +157,12 @@ This connector currently has **no scheduled job**. The bundle deploys the bronze
 databricks bundle run semgrep-connector --target dev
 ```
 
+For a one-shot orchestration (load secrets + run + verify counts), use the wrapper:
+
+```bash
+bash src/connectors/semgrep/scripts/install.sh
+```
+
 To populate Bronze in the meantime, ensure scan artifacts land in the volume prefix:
 
 **Periodic (optional runtime):** wait for the next CronJob firing, or force one:

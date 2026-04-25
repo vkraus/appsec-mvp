@@ -97,6 +97,12 @@ The OWASP ZAP connector ingests scan artifacts from the `zap_artifacts` external
 
 Like semgrep, this connector currently has **no scheduled job**. The bundle deploys the bronze schema and volume so the ingest path exists, but the connector ingest entry point is scaffolded as a notebook stub. The on demand SDK path is also a stub.
 
+Once the job resource lands, the one-shot orchestration wrapper is:
+
+```bash
+bash src/connectors/owasp_zap/scripts/install.sh
+```
+
 To populate Bronze in the meantime, ensure scan artifacts land in the prefix of the volume.
 
 **On demand path** (against an user running ZAP daemon and live target):

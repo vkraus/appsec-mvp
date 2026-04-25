@@ -139,6 +139,12 @@ The ServiceNow ingestion is a **Lakeflow Connect pipeline** rather than a notebo
 databricks bundle run servicenow_ingest --target dev --refresh-all
 ```
 
+For a one-shot orchestration (load secrets + run + verify counts), use the wrapper:
+
+```bash
+bash src/connectors/servicenow/scripts/install.sh
+```
+
 Or via the Databricks CLI directly:
 
 ```bash

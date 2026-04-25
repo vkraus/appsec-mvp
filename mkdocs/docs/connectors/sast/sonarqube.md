@@ -217,6 +217,12 @@ Then trigger the Databricks job:
 databricks bundle run sonarqube-connector --target dev
 ```
 
+For a one-shot orchestration (load secrets + run + verify counts), use the wrapper:
+
+```bash
+bash src/connectors/sonarqube/scripts/install.sh
+```
+
 The job is declared in `src/connectors/sonarqube/resources/job.yml` (job key `sonarqube-connector`), runs on a 30-minute cron once enabled, and has two tasks: `ingest` (REST → Bronze) and `transform` (Bronze → `silver.findings`). For a small SonarCloud organization expect end-to-end completion in ~5 minutes.
 
 !!! warning "Skeleton-only behaviour"
