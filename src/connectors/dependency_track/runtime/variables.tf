@@ -25,7 +25,7 @@ variable "dependency_track_apikey_secret_scope" {
 }
 
 variable "dependency_track_apikey_secret_key" {
-  description = "Secret-key under the scope holding the Dependency-Track API key."
+  description = "Secret-key under the scope holding the Dependency-Track API key. Default matches config.yml's token_secret."
   type        = string
-  default     = "dependency_track_apikey"
+  default     = "dependency_track_api_key"
 }

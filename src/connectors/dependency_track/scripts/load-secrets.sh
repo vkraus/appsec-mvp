@@ -19,6 +19,6 @@ set -euo pipefail
 
 SCOPE="mvp-connectors"
 
-databricks secrets put-secret "$SCOPE" dependency_track_apikey --string-value "$DT_APIKEY"
+databricks secrets put-secret "$SCOPE" dependency_track_api_key --string-value "$DT_APIKEY"
 
 echo "OK: dependency_track secrets loaded into scope $SCOPE"
