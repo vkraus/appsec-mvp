@@ -1,0 +1,24 @@
+# SonarQube issue status+resolution -> canonical.
+# Per mkdocs/docs/connectors/sast/sonarqube.md, "Enumerations > Issue status
+# and resolution". When status is RESOLVED or CLOSED, resolution refines; the
+# composite key is encoded as STATUS-RESOLUTION. When status is OPEN /
+# CONFIRMED / REOPENED, resolution is absent and the bare status is used.
+# Hotspot status (TO_REVIEW / REVIEWED-FIXED / REVIEWED-SAFE /
+# REVIEWED-ACKNOWLEDGED) is included here since hotspots project into the
+# same silver.findings table.
+OPEN: open
+REOPENED: open
+CONFIRMED: confirmed
+RESOLVED-FIXED: resolved
+RESOLVED-FALSE-POSITIVE: false_positive
+RESOLVED-WONTFIX: wontfix
+RESOLVED-REMOVED: resolved
+CLOSED-FIXED: resolved
+CLOSED-REMOVED: resolved
+CLOSED-FALSE-POSITIVE: false_positive
+CLOSED-WONTFIX: wontfix
+# Hotspot vocabulary
+TO_REVIEW: open
+REVIEWED-FIXED: resolved
+REVIEWED-SAFE: false_positive
+REVIEWED-ACKNOWLEDGED: wontfix

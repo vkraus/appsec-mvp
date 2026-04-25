@@ -1,0 +1,8 @@
+{
+  "paging": {"pageIndex": 1, "pageSize": 3, "total": 3},
+  "rules": [
+    {"key": "java:S2259", "name": "Null pointer dereference", "severity": "BLOCKER", "type": "VULNERABILITY"},
+    {"key": "javascript:S1488", "name": "Local variables should not shadow class fields", "severity": "MAJOR", "type": "BUG"},
+    {"key": "python:S3649", "name": "Database queries should not be vulnerable to injection attacks", "severity": "CRITICAL", "type": "VULNERABILITY"}
+  ]
+}

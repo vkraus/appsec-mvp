@@ -1,0 +1,7 @@
+# GitLab Vulnerabilities-API lifecycle state -> canonical status.
+# See https://docs.gitlab.com/ee/user/application_security/vulnerabilities/
+# and mkdocs/docs/connectors/scm/gitlab.md § Enumerations.
+detected:  open
+confirmed: confirmed
+dismissed: false_positive
+resolved:  resolved
