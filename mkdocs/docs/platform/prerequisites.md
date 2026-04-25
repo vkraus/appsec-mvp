@@ -52,10 +52,12 @@ stands up the following resources out-of-band before running [Bundle deploy](bun
 | **IAM role for IRSA** (semgrep CronJob) — assumable by the `semgrep` Kubernetes service account, granted `s3:PutObject`, `s3:GetObject`, `s3:ListBucket` on `ARTIFACT_BUCKET`. | Lets the Semgrep CronJob write scan results to the artifact bucket without long-lived AWS keys. Required only if the operator runs the semgrep runtime. | Role ARN (consumed by the semgrep runtime, not the platform DAB). |
 | **IAM role for the UC external location** — assumable by the Databricks Unity Catalog managed-storage principal, granted `s3:GetObject`, `s3:ListBucket`, `s3:PutObject` on `ARTIFACT_BUCKET`. The trust policy must follow the [Databricks UC storage credential trust policy](https://docs.databricks.com/aws/en/connect/unity-catalog/storage-credentials.html). | Lets Unity Catalog read scanner artifacts from the bucket as a UC external location. The platform bootstrap script creates the storage credential + external location pointing at this role. | `EXTERNAL_LOCATION_ROLE_ARN` env var (consumed by `src/platform/scripts/bootstrap.sh`). |
 
-Provision these via your existing IaC tooling, by copying the legacy
-`infra/terraform/modules/aws-foundation/` outputs into your own module, or by
-hand. The redesigned platform DAB has no opinions about how — it only reads
-the bucket name and IAM role ARN.
+Provision these via your existing IaC tooling or by hand. The redesigned
+platform DAB has no opinions about how — it only reads the bucket name and
+IAM role ARN. (The repository previously shipped an `infra/terraform/`
+module that did this provisioning; that module was removed in the
+Databricks-centric redesign and operators are expected to bring their own
+backbone.)
 
 ## Local tooling
 

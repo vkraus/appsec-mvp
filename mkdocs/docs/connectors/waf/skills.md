@@ -114,7 +114,7 @@ A connector module at `src/connectors/{source}/` containing:
 ## Preconditions
 
 - The per-connector page exists at `mkdocs/docs/connectors/<category>/<source-slug>.md` and has been reviewed for completeness.
-- The framework's shared utilities (auth helpers, pagination handlers, normalization helpers under `src/common/`) are present.
+- The framework's shared utilities (auth helpers, pagination handlers, normalization helpers under `src/platform/`) are present.
 
 ## Steps
 
@@ -133,7 +133,7 @@ A connector module at `src/connectors/{source}/` containing:
 
 - No file is written outside `src/connectors/{source}/`, `src/connectors/{source}/tests/`, or `src/connectors/{source}/resources/job.yml`. The connector generation is self-contained.
 - Every REQ-ID applicable to the category (from `platform/reference/catalog`) has at least one bound test function.
-- All imports from `src/common/` reference only functions that already exist in that module; new shared helpers are not introduced by this skill.
+- All imports from `src/platform/` reference only functions that already exist in that module; new shared helpers are not introduced by this skill.
 ````
 
 ## `validate-implementation`
