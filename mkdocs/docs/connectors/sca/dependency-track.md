@@ -1,5 +1,7 @@
 # Dependency-Track
 
+This connector page is produced by the connector-lifecycle skills. The Generation log table records the skill runs that produce the page, the connector module, and the validation report.
+
 ## Overview
 
 The Dependency-Track connector is the dedicated SCA source for organizations operating an on-premises software composition analysis platform rather than GitHub's hosted Dependabot. Operational pattern: **periodic-global** — the Dependency-Track server continuously re-evaluates the SBOMs it holds against fresh advisory feeds, and the connector polls via its REST API with a `lastOccurrence` high-water mark. It populates `silver.findings` with projects, components, and per-component findings. Dependency-Track is an OWASP project that ingests CycloneDX or SPDX SBOMs and correlates them against NVD, OSV, GitHub Advisories, and VulnDB. Because it accepts SBOMs from any pipeline, it covers ecosystems and internal registries not reachable by SCM-hosted scanners, complementing rather than substituting for Dependabot.
@@ -105,3 +107,11 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 !!! info "Not implemented in MVP"
     See the Prerequisites admonition above.
+
+## Generation log
+
+| Stage              | Skill                              | Inputs                                                                                          | Outputs                                                                            | Run on     | Skills repo ref                          |
+|--------------------|------------------------------------|-------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
+| Source analysis    | `analyze-source` (sca)             | name=Dependency-Track; url=https://docs.dependencytrack.org/integrations/rest-api/; category=sca | mkdocs/docs/connectors/sca/dependency-track.md §1–§3                               | 2026-04-25 | b3af2e0 (retrofit-9-connectors)          |
+| Module generation  | `generate-connector` (sca)         | (pending)                                                                                       | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation         | `validate-implementation` (sca)    | (pending)                                                                                       | (pending)                                                                          | (pending)  | (pending)                                |
