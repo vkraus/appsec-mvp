@@ -84,10 +84,14 @@ Each connector under `src/connectors/<source>/scripts/` ships its own
 | Connector | Script | Env vars consumed | Secret keys written |
 |---|---|---|---|
 | github | `src/connectors/github/scripts/load-secrets.sh` | `GITHUB_PAT`, `GITHUB_ORG` | `github_token`, `github_org` |
+| gitlab | `src/connectors/gitlab/scripts/load-secrets.sh` | `GITLAB_BASE_URL`, `GITLAB_TOKEN` | `gitlab_base_url`, `gitlab_token` |
 | servicenow | `src/connectors/servicenow/scripts/load-secrets.sh` | `SERVICENOW_URL`, `SERVICENOW_USERNAME`, `SERVICENOW_PASSWORD` | `servicenow_url`, `servicenow_username`, `servicenow_password` |
 | sonarqube | `src/connectors/sonarqube/scripts/load-secrets.sh` | `SONARQUBE_URL`, `SONARQUBE_TOKEN` | `sonarqube_url`, `sonarqube_token` |
 | semgrep | `src/connectors/semgrep/scripts/load-secrets.sh` | `ARTIFACT_BUCKET`, `SEMGREP_PREFIX` (default `semgrep/`) | `semgrep_artifact_bucket`, `semgrep_artifact_prefix` |
+| dependency_track | `src/connectors/dependency_track/scripts/load-secrets.sh` | `DT_APIKEY` | `dependency_track_api_key` |
+| trufflehog | `src/connectors/trufflehog/scripts/load-secrets.sh` | `TRUFFLEHOG_ARTIFACT_BUCKET`, optionally `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` | `trufflehog_artifact_bucket`, optionally `trufflehog_aws_credentials` (JSON blob `{access_key_id, secret_access_key}`) |
 | owasp_zap | `src/connectors/owasp_zap/scripts/load-secrets.sh` | `ZAP_URL`, `ZAP_API_KEY` | `zap_url`, `zap_api_key` |
+| aws_waf | `src/connectors/aws_waf/scripts/load-secrets.sh` | `WAF_LOG_BUCKET`, `AWS_WAF_IAM_ROLE_ARN` | `waf_log_bucket`, `aws_waf_iam_role_arn` |
 
 Run each only when you're ready to install that connector. The page for
 each connector under [Install connectors](../connectors/index.md) documents the
@@ -107,6 +111,104 @@ bash src/connectors/github/scripts/load-secrets.sh
 ```bash
 databricks secrets list-secrets mvp-connectors
 ```
+
+## Security posture
+
+Secret handling in the MVP is functional but not yet production-grade. The bullets below mark what the loaders and runbooks already do correctly, and what a production deployment must layer on top before going live with real credentials.
+
+### What the loaders do already
+
+- **No secret values in terraform state.** Connector runtimes (gitlab, dependency_track, trufflehog, aws_waf) declare only the *handles* (`*_secret_scope` / `*_secret_key`) for their secrets in `variables.tf`; the values are loaded directly into the Databricks scope by `load-secrets.sh` and never traverse terraform. Connector runtimes that *do* take credential variables (github, sonarqube, semgrep, owasp_zap — all pass AWS keys to provision EKS/RDS/IAM) mark every credential variable `sensitive = true`, which suppresses plan/apply printing and masks the value in human-readable state output.
+- **Single workspace-level scope.** All connector secrets live under one named scope (`mvp-connectors`), making it possible to revoke or audit access in one operation rather than chasing per-connector scopes.
+- **Idempotent loaders.** `load-secrets.sh` re-runs overwrite existing values — rotation is just `export NEW_VAL=...; bash load-secrets.sh`, no delete-then-create dance.
+
+### What you must add before production
+
+#### 1. Avoid leaving secret values in your shell history
+
+The runbooks ask you to `export TOKEN_VAR="..."` before running each loader. That `export` line is recorded in `~/.bash_history` (or zsh equivalent) for the lifetime of the shell session and is readable by anything that can read your home directory. Three patterns that don't leave a trace:
+
+```bash
+# Read interactively without echo (does not enter history):
+read -rs -p "GITHUB_PAT: " GITHUB_PAT && export GITHUB_PAT
+bash src/connectors/github/scripts/load-secrets.sh
+
+# Or pipe from a credential manager (1Password CLI shown):
+export GITHUB_PAT="$(op read 'op://AppSec/GitHub PAT/credential')"
+bash src/connectors/github/scripts/load-secrets.sh
+
+# Or temporarily disable history before the export:
+set +o history
+export GITHUB_PAT="github_pat_..."
+bash src/connectors/github/scripts/load-secrets.sh
+set -o history
+```
+
+The same applies to the AWS keys exported before applying connector runtimes that need them (github, sonarqube, semgrep, owasp_zap).
+
+#### 2. Don't pass secrets via `bundle deploy --var`
+
+The ServiceNow connector page documents a recovery path where you re-deploy the bundle with `--var "servicenow_password=..."`. That puts the password on the `databricks` CLI command line — visible in `ps aux` to any other user on the same machine, and recorded in shell history. Prefer one of:
+
+- a `.tfvars`-style approach: declare the variable in a `variables.yml` checked-in *without* the secret value, and resolve it from a Databricks secret reference (`{{secrets/mvp-connectors/servicenow_password}}`) in `databricks.yml`. The secret value never leaves the workspace.
+- pass via env var: `DATABRICKS_BUNDLE_VAR_servicenow_password="..." databricks bundle deploy ...`. Env-var passing keeps the value off `argv` (it lives in `/proc/<pid>/environ`, only readable by the same UID).
+
+#### 3. Configure scope ACLs
+
+Out of the box, only the user who created the scope (and workspace admins) can read its secrets. As soon as you grant another principal `READ` or `MANAGE` on `mvp-connectors`, that principal sees every connector's credentials. Lock the scope down to the connector job's service principal:
+
+```bash
+# Find the principal the connector jobs run as:
+databricks jobs get <job-id> --output JSON | jq '.run_as'
+
+# Grant READ to that principal only; revoke from the human user who bootstrapped:
+databricks secrets put-acl mvp-connectors <service-principal-id> READ
+databricks secrets delete-acl mvp-connectors <bootstrap-user-email>
+```
+
+If multiple connectors with separate trust boundaries share the workspace (e.g. one connector accesses a high-blast-radius source like ServiceNow), split per-connector scopes (`mvp-github`, `mvp-servicenow`, …) and grant each job's service principal `READ` on only its own scope.
+
+#### 4. Use Databricks audit logs
+
+Workspace audit logs include `secrets.getSecret` events. Stand up a regular review (or a dashboard query) to spot:
+
+- secret reads from principals other than the connector job's service principal,
+- bursts of reads outside the connector's scheduled window,
+- reads that don't correlate with a connector run.
+
+Enable system-table delivery and query `system.access.audit` directly, or pipe the workspace audit log to your SIEM.
+
+#### 5. Rotate on a defined cadence
+
+Static credentials silently lose blast-radius accountability the longer they live. Recommended cadences for the credential types in the MVP:
+
+| Credential | Rotate every | Rotation procedure |
+|---|---|---|
+| GitHub PAT (`github_token`) | 90 days, or immediately on suspected compromise | Generate new fine-grained PAT in GitHub UI → re-run `load-secrets.sh` with the new value → revoke old PAT after one successful job run. |
+| GitLab PAT (`gitlab_token`) | 90 days | Same flow against GitLab → re-run loader → revoke old. |
+| ServiceNow password | per the corporate password policy of the user (typically 90 days) | Rotate in ServiceNow → re-run loader → re-deploy bundle if Lakeflow connection caches the value. |
+| SonarQube user token (`sonarqube_token`) | 90 days | Generate new token in SonarQube **My Account → Security** → re-run loader → revoke old. |
+| Dependency-Track API key (`dependency_track_api_key`) | 90 days | Generate new key for the connector team in DT → re-run loader → delete old. |
+| ZAP API key (`zap_api_key`) | 30 days (especially if the daemon is internet-reachable) | Restart the daemon with `-config api.key=<new>` → re-run loader. |
+| AWS access keys (used by github/sonarqube/semgrep/owasp_zap runtimes and trufflehog log-secrets) | 30 days | Generate new key pair in IAM → update terraform `tfvars` → `terraform apply` → re-run loader for trufflehog → deactivate old key after one successful pipeline run. |
+
+#### 6. Plan the migration off long-lived static credentials
+
+The MVP uses long-lived static credentials uniformly (PATs, passwords, AWS access keys). Production deployments should migrate each to its short-lived counterpart:
+
+| Source | MVP credential | Production target |
+|---|---|---|
+| GitHub | Personal Access Token | GitHub App with installation tokens (1-hour TTL) |
+| GitLab | Personal Access Token | GitLab project access token with expiry, or OAuth client credentials |
+| ServiceNow | Username + password (Basic auth) | OAuth 2.0 client credentials flow (the connector code already supports it; only the loader is single-credential-style) |
+| SonarQube | User token | Project analysis token scoped to the connector's read paths |
+| AWS | Access key ID + secret access key | IAM role assumed via STS — either an instance profile on the Databricks workspace AWS service credential, or `AssumeRoleWithWebIdentity` from a workload identity. The trufflehog loader's JSON blob shape (`{access_key_id, secret_access_key}`) becomes a session token after migration. |
+
+These are out of MVP scope but should land before the first real-data run.
+
+#### 7. Loader argv exposure (low-priority)
+
+`load-secrets.sh` invokes `databricks secrets put-secret SCOPE KEY --string-value "$VAR"`, so the secret value briefly appears in `argv` of the `databricks` process and is visible to anything with `ps` access during that window. On a single-user developer machine the risk is negligible. On a shared CI runner or a multi-user dev VM, prefer a stdin-fed loader pattern; track the upgrade as a follow-on.
 
 ## Common errors
 

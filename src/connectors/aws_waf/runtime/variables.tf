@@ -19,14 +19,9 @@ variable "aws_waf_log_bucket_arn" {
   type        = string
 }
 
-variable "aws_waf_credential_secret_scope" {
-  description = "Databricks secret scope holding AWS WAF credentials."
-  type        = string
-  default     = "mvp-connectors"
-}
-
-variable "aws_waf_credential_secret_key" {
-  description = "Databricks secret key holding AWS WAF credentials."
-  type        = string
-  default     = "aws_waf_credentials"
-}
+# Note: secret values for the AWS WAF connector live in the Databricks
+# `mvp-connectors` scope under keys `waf_log_bucket` (log-stream mode) and
+# `aws_waf_iam_role_arn` (SDK fallback mode), loaded by
+# `src/connectors/aws_waf/scripts/load-secrets.sh`. They do NOT flow through
+# this terraform module — main.tf only manages the S3 bucket policy. Keeping
+# secret values out of terraform state is intentional.
