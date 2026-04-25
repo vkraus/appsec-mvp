@@ -11,7 +11,7 @@
 | Semgrep        | sast     | (pre-skill)    | (pre-skill)        | (pre-skill)              | Conformant              |
 | OWASP ZAP      | dast     | (pre-skill)    | (pre-skill)        | (pre-skill)              | Conformant              |
 
-Cells link to the corresponding row in each connector page's Provenance section. Future rows are added when new connectors are generated.
+Future cells will link to the corresponding row in each connector page's Provenance section. Today's `(pre-skill)` rows reference connectors authored before skill formalization. New rows are added when subsequent connectors are generated.
 
 ## The three skills
 

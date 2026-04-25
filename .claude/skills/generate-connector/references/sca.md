@@ -44,7 +44,7 @@ Selection depends on deployment style; encode in `config.yml`:
 
 ## Deduplication key
 
-`(repository_id, package_name, cve_id)` per `mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements`. Encode this tuple literally in `transform.py`:
+The dedup tuple `(repository_id, package_name, cve_id)` matches the SCA capability surface at [`mkdocs/docs/connectors/sca/index.md`](../../../../mkdocs/docs/connectors/sca/index.md) § "Canonical mapping contribution" and is consistent with the canonical Silver Finding shape at [`mkdocs/docs/platform/reference/canonical-mapping.md`](../../../../mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements). Encode this tuple literally in `transform.py`:
 
 ```python
 dedup_key = (row["repository_id"], row["package_name"], row["cve_id"])

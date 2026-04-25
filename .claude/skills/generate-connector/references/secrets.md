@@ -47,7 +47,7 @@ Full-reload only. Encode in `config.yml`:
 
 ## Deduplication key
 
-`(repository_id, commit_sha, secret_type, file_path)` per `mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements`. Encode this tuple literally in `transform.py`:
+The dedup tuple `(repository_id, commit_sha, secret_type, file_path)` matches the Secrets capability surface at [`mkdocs/docs/connectors/secrets/index.md`](../../../../mkdocs/docs/connectors/secrets/index.md) § "Canonical mapping contribution" and is consistent with the canonical Silver Finding shape at [`mkdocs/docs/platform/reference/canonical-mapping.md`](../../../../mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements). Encode this tuple literally in `transform.py`:
 
 ```python
 dedup_key = (row["repository_id"], row["commit_sha"], row["secret_type"], row["file_path"])

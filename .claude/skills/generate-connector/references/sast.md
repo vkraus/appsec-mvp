@@ -42,7 +42,7 @@ Selection depends on deployment style; encode in `config.yml`:
 
 ## Deduplication key
 
-`(repository_id, file_path, rule_id)` per `mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements`. Encode this tuple literally in `transform.py` when building `dedup_links` rows:
+The dedup tuple `(repository_id, file_path, rule_id)` matches the SAST capability surface at [`mkdocs/docs/connectors/sast/index.md`](../../../../mkdocs/docs/connectors/sast/index.md) § "Canonical mapping contribution" and is consistent with the canonical Silver Finding shape at [`mkdocs/docs/platform/reference/canonical-mapping.md`](../../../../mkdocs/docs/platform/reference/canonical-mapping.md#silver-finding-mapping-requirements). Encode this tuple literally in `transform.py` when building `dedup_links` rows:
 
 ```python
 dedup_key = (row["repository_id"], row["file_path"], row["rule_id"])
