@@ -9,7 +9,7 @@ that are fully rewritten), ``_hwm_value`` is omitted.
 For sources where the bronze schema is not framework-owned (Lakeflow
 Connect pipelines), the envelope is synthesized in a downstream SQL
 view that reads the Lakeflow-managed ingestion columns; see
-``sql/views/*_envelope.sql``.
+``src/connectors/<source>/sql/*_envelope.sql``.
 """
 from __future__ import annotations
 
