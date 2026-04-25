@@ -48,6 +48,10 @@ resource "terraform_data" "input_validation" {
       condition     = var.eks_cluster_oidc_provider_arn != ""
       error_message = "var.eks_cluster_oidc_provider_arn is required — the IRSA trust policy for the Semgrep service account references it directly."
     }
+    precondition {
+      condition     = var.github_pat_for_clone != ""
+      error_message = "var.github_pat_for_clone is required — files/semgrep-scan.sh enforces $${GH_PAT:?set GH_PAT} and clones every repo via the token URL, even public ones."
+    }
   }
 }
 

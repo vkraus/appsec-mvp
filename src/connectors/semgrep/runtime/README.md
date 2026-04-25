@@ -28,6 +28,8 @@ Apply this module if you want appsec-mvp to provision a periodic Semgrep scan ru
 | `eks_cluster_oidc_provider_arn` | ARN of the IAM OIDC provider associated with the cluster (output by your EKS module as `oidc_provider_arn`). Required to mint the IRSA trust policy. Must reference the same cluster as `eks_cluster_name`. |
 | `artifact_bucket` | S3 bucket name where the CronJob writes findings JSON. The IRSA role is granted `s3:PutObject` / `s3:GetObject` / `s3:ListBucket` on this bucket and its objects. |
 
+> **Tip:** for hand-rolled EKS clusters, the OIDC provider ARN is the `.arn` attribute of an `aws_iam_openid_connect_provider` resource (Terraform) or visible in the EKS console under "Configuration → OpenID Connect provider URL".
+
 ### Optional
 
 | Variable | Description | Default |
