@@ -1,0 +1,15 @@
+# Dependency-Track status lookup.
+#
+# Dependency-Track tracks finding-level analysis state via
+# `analysis.state` on the per-finding record. Vocabulary:
+# NOT_SET, EXPLOITABLE, IN_TRIAGE, FALSE_POSITIVE, NOT_AFFECTED, RESOLVED.
+# Source: Dependency-Track REST API docs, /api/v1/analysis endpoint.
+#
+# Suppressed findings (isSuppressed == true) are collapsed to `wontfix`
+# in transform.normalize_status before this table is consulted.
+NOT_SET:         open
+IN_TRIAGE:       open
+EXPLOITABLE:     confirmed
+RESOLVED:        resolved
+FALSE_POSITIVE:  false_positive
+NOT_AFFECTED:    wontfix

@@ -1,0 +1,58 @@
+# Dependency-Track /api/v1/finding/project/{uuid} → silver.findings.
+#
+# The projection below mirrors the consumed-fields table on the
+# connector page. Severity goes through the per-source lookup; the CVSS
+# derivation rule is applied in transform.py when the native label is
+# missing or UNASSIGNED. The SCA dedup key collapses duplicates across
+# advisory sources post-projection (see transform.build_dedup_key).
+source_key: dependency_track
+fields:
+  finding_id:
+    expr: >
+      concat_ws(
+        "::",
+        "dependency-track",
+        repository_id,
+        package_name,
+        coalesce(cve_id, vuln_id_native)
+      ) + "@" + coalesce(advisory_source, "UNKNOWN")
+  tool_source:        "dependency_track"
+  category:           "sca"
+  severity_canonical:
+    # Label lookup wins; UNASSIGNED falls through to the CVSS rule
+    # below, then to the framework default (medium) with a DQ warning.
+    source_path: severity_native
+    lookup:      config/severity/dependency_track.yml
+    cvss_score_path: cvss_v3
+    cvss_rule:
+      - threshold: 9.0
+        severity:  critical
+      - threshold: 7.0
+        severity:  high
+      - threshold: 4.0
+        severity:  medium
+      - threshold: 0.0
+        severity:  low
+  status_canonical:
+    source_path: analysis.state
+    lookup:      config/status/dependency_track.yml
+    default:     open
+  cwe_id:             cweId
+  rule_id_native:     vuln_id_native
+  trigger_context:    "periodic"
+  # SCA dedup anchor: (repository_id, package_name, cve_id). See
+  # src/connectors/dependency_track/transform.py::build_dedup_key and
+  # the SCA category reference at
+  # .claude/skills/generate-connector/references/sca.md.
+  repository_id:      repository_id
+  package_name:       component.name
+  package_version:    component.version
+  ecosystem:          purl  # parsed via extract_ecosystem_from_purl
+  purl:               component.purl
+  cve_id:             vulnerability.vulnId  # reduced to CVE when advisory source is NVD, else pulled from aliases
+  advisory_source:    vulnerability.source
+  file_path:          null  # SCA is package-level, not file-level
+  start_line:         null
+  url:                null
+  first_seen_at:      attribution.attributedOn
+  last_seen_at:       attribution.attributedOn

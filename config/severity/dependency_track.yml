@@ -1,0 +1,17 @@
+# Dependency-Track severity lookup.
+#
+# Source vocabulary is six-level: CRITICAL, HIGH, MEDIUM, LOW, INFO, UNASSIGNED.
+# See mkdocs/docs/connectors/sca/dependency-track.md § "Enumerations".
+#
+# UNASSIGNED is intentionally omitted from this table — it is the
+# expected value for advisories without a CVSS score (common in OSV and
+# NVD for older CVEs). Omitting it routes the record through the
+# fallback chain in transform.normalize_severity: (1) CVSS v3 score
+# bucket -> critical/high/medium/low; (2) otherwise default `medium`
+# with a data-quality warning via src/common/silver.py. Dropping these
+# records would suppress real vulnerabilities.
+CRITICAL: critical
+HIGH:     high
+MEDIUM:   medium
+LOW:      low
+INFO:     low
