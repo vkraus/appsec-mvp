@@ -143,6 +143,7 @@ def flatten_to_silver_row(
         "severity_canonical": severity,
         "status_canonical": status,
         "cwe_id": str(cwe_id) if cwe_id is not None else None,
+        "cve_id": cve_id,  # CVE identifier from the dedup key tuple
         "rule_id_native": bronze_row.get("vuln_id_native"),
         "trigger_context": "periodic",
         "repository_id": repo_id,

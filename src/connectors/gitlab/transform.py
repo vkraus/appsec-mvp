@@ -59,6 +59,22 @@ def parse_iso_utc(ts: str | None) -> datetime | None:
     return dt.astimezone(UTC)
 
 
+def _extract_cwe_id(raw: dict[str, Any]) -> str | None:
+    """Extract a CWE class identifier from a GitLab vulnerability row.
+
+    Returns ``"CWE-NNN"`` for the first CWE-typed identifier in
+    ``identifiers``; ``None`` if none present. CVE-typed identifiers go
+    to ``cve_id`` instead (silver_findings has both columns).
+    """
+    for ident in raw.get("identifiers") or []:
+        if (ident.get("external_type") or "").lower() == "cwe":
+            value = ident.get("external_id") or ident.get("name")
+            if value:
+                value_str = str(value)
+                return value_str if value_str.upper().startswith("CWE-") else f"CWE-{value_str}"
+    return None
+
+
 def project_to_repository(raw: dict[str, Any]) -> dict[str, Any]:
     """Project a GitLab ``/projects`` row to a ``silver.repositories`` row.
 
@@ -155,7 +171,7 @@ def _dedup_key_for(category: str, row: dict[str, Any]) -> tuple:
         return (
             row.get("repository_id"),
             row.get("package_name"),
-            row.get("cwe_id"),  # CVE id lives here when present, see below.
+            row.get("cve_id"),  # canonical SCA dedup tuple per silver-finding-mapping-requirements
         )
     # dast / container / other: fall back to the finding_id as the dedup key.
     return (row.get("finding_id"),)
@@ -191,7 +207,8 @@ def vulnerability_to_finding(
         "report_type": report_type,
         "severity_native": raw.get("severity"),
         "status_native": raw.get("state"),
-        "cwe_id": cve,
+        "cwe_id": _extract_cwe_id(raw),
+        "cve_id": cve,
         "rule_id_native": raw.get("name"),
         "repository_id": str(project_id),
         "file_path": location.get("file"),
