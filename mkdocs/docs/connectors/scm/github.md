@@ -136,7 +136,7 @@ The fields below are the subset consumed by the connector.
 
 **Code-scanning alert state.** `state` takes `open` (detected, unaddressed), `dismissed` (acknowledged with a dismissal reason, code not fixed), and `fixed` (code corrected and finding no longer appears). The connector maps all three to `silver.findings.status`, where the canonical vocabulary resolves them.
 
-**Code-scanning severity.** `rule.severity` encodes the rule's interpretive level: `none`, `note`, `warning`, `error` (CodeQL-specific; reflects review importance, not security risk). `rule.security_severity_level`, present only on security rules, uses `low`, `medium`, `high`, `critical`. `config/severity/github.yml` uses `security_severity_level` when present, with `rule.severity` as fallback.
+**Code-scanning severity.** `rule.severity` encodes the rule's interpretive level: `none`, `note`, `warning`, `error` (CodeQL-specific; reflects review importance, not security risk). `rule.security_severity_level`, present only on security rules, uses `low`, `medium`, `high`, `critical`. `src/connectors/github/severity.yml` uses `security_severity_level` when present, with `rule.severity` as fallback.
 
 **Secret-scanning alert state.** `state` is binary: `open` or `resolved` (dismissed or secret revoked). `validity` provides an extra signal for supported secret types: `active` (GitHub verified with the provider), `inactive` (revoked or expired), `unknown` (provider does not support validity checks). `validity` is preserved in `silver.findings.validity_status` and feeds gold-layer risk scoring.
 
@@ -144,7 +144,7 @@ The fields below are the subset consumed by the connector.
 
 ### Quirks
 
-**Dual severity fields on code-scanning alerts.** Alerts carry `rule.severity` (`none`, `note`, `warning`, `error`) and `rule.security_severity_level` (`low`, `medium`, `high`, `critical`; security rules only). The two use different vocabularies for different purposes. `config/severity/github.yml` gives precedence to `security_severity_level` when present, falling back to `rule.severity`, so that non-security rules still receive a canonical severity rather than being dropped.
+**Dual severity fields on code-scanning alerts.** Alerts carry `rule.severity` (`none`, `note`, `warning`, `error`) and `rule.security_severity_level` (`low`, `medium`, `high`, `critical`; security rules only). The two use different vocabularies for different purposes. `src/connectors/github/severity.yml` gives precedence to `security_severity_level` when present, falling back to `rule.severity`, so that non-security rules still receive a canonical severity rather than being dropped.
 
 **Dependabot ecosystem values.** `dependency.package.ecosystem` uses package-manager identifiers: `npm`, `pip`, `maven`, `rubygems`, `cargo`, `nuget`, `composer`, `go`, `actions`, `docker`. These are not part of the canonical schema but matter for triage. The connector preserves them verbatim in `silver.findings.ecosystem` so gold-layer queries can filter by ecosystem.
 

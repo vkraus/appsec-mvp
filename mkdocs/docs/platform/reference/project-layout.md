@@ -14,12 +14,11 @@ repo/
 │   │       ├── ingest.py       # implements ingest(run_id, state) -> batch
 │   │       ├── transform.py    # implements transform(bronze_df) -> silver_df
 │   │       ├── mapping.yml     # bronze-to-silver column expressions
-│   │       └── config.yml      # endpoints, pagination, HWM column
+│   │       ├── config.yml      # endpoints, pagination, HWM column
+│   │       ├── severity.yml    # native-severity → canonical-severity lookup
+│   │       └── status.yml      # native-status → canonical-status lookup
 │   ├── analytics/              # silver-to-gold computations, grouped by gold table
 │   └── common/                 # shared auth, pagination, normalization helpers
-├── config/
-│   ├── severity/               # per-source severity lookups (one YAML per source)
-│   └── status/                 # per-source status lookups (one YAML per source)
 └── tests/
     └── connectors/
         └── github/
@@ -41,4 +40,4 @@ A co-located `src/connectors/{source}/tests/` subfolder carries the fixtures and
 
 ## Configuration separation
 
-Severity and status lookups live at `config/severity/{source}.yml` and `config/status/{source}.yml` so tuning them does not require touching pipeline code. Secrets (API tokens, service account credentials) are stored in the platform's secret scope and referenced by name in pipeline code; they never appear in source files or bundle configuration.
+Severity and status lookups live alongside each connector at `src/connectors/{source}/severity.yml` and `src/connectors/{source}/status.yml` so tuning them does not require touching pipeline code. Secrets (API tokens, service account credentials) are stored in the platform's secret scope and referenced by name in pipeline code; they never appear in source files or bundle configuration.

@@ -70,7 +70,7 @@ TruffleHog emits one JSON object per line. The fields below are the subset consu
 
 ### Quirks
 
-**No severity field; all findings mapped to `high` by convention.** TruffleHog emits no severity. The reference implementation maps every finding to `severity=high` on the premise that a committed secret is a critical exposure regardless of detector. The default is in `config/severity/trufflehog.yml` and is overridable per deployment (e.g., low-entropy `GenericApiKey` to `medium`).
+**No severity field; all findings mapped to `high` by convention.** TruffleHog emits no severity. The reference implementation maps every finding to `severity=high` on the premise that a committed secret is a critical exposure regardless of detector. The default is in `src/connectors/trufflehog/severity.yml` and is overridable per deployment (e.g., low-entropy `GenericApiKey` to `medium`).
 
 **`Raw` and `RawV2` must not enter the Silver layer.** The connector drops `Raw` and `RawV2` before Bronze-to-Silver, keeping only `Redacted`. This is mandatory, not configurable. For deployments needing raw values for automated remediation, the reference implementation provides an optional Unity Catalog column-level access policy on the Bronze `Raw`/`RawV2` columns restricted to the `secrets_raw_reader` group.
 

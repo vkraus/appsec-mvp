@@ -82,9 +82,9 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 ### Enumerations
 
-The `business_criticality` field uses integer-backed choice values. Default labels are `most_critical` (1), `somewhat_critical` (2), `less_critical` (3), and `not_critical` (4). Production deployments often extend or relabel these; the per-source `config/severity/servicenow.yml` lookup must be reviewed per instance before production use.
+The `business_criticality` field uses integer-backed choice values. Default labels are `most_critical` (1), `somewhat_critical` (2), `less_critical` (3), and `not_critical` (4). Production deployments often extend or relabel these; the per-source `src/connectors/servicenow/severity.yml` lookup must be reviewed per instance before production use.
 
-The `operational_status` field uses a separate integer choice list. Default labels are `operational` (1), `non-operational` (2), `ready` (3), `retired` (6), `pipeline` (7), and `in_maintenance` (8). Values are instance-configurable; `config/status/servicenow.yml` must be reviewed per deployment. The framework's canonical vocabulary maps all non-operational and retired values to a single `inactive` status to reduce branching in gold-layer computations.
+The `operational_status` field uses a separate integer choice list. Default labels are `operational` (1), `non-operational` (2), `ready` (3), `retired` (6), `pipeline` (7), and `in_maintenance` (8). Values are instance-configurable; `src/connectors/servicenow/status.yml` must be reviewed per deployment. The framework's canonical vocabulary maps all non-operational and retired values to a single `inactive` status to reduce branching in gold-layer computations.
 
 ### Quirks
 

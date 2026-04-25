@@ -88,13 +88,13 @@ Hotspots model a different concept from issues: a hotspot flags a security-sensi
 
 ### Enumerations
 
-**Issue severity.** Issues use a five-value scale: BLOCKER (blocks the build or causes data corruption), CRITICAL (high severity, immediate attention), MAJOR (substantial quality impact), MINOR (limited impact), INFO (negligible). `config/severity/sonarqube.yml` maps BLOCKER→`critical`, CRITICAL→`high`, MAJOR→`medium`, MINOR→`low`, INFO→`low` (direct mapping avoids the fallback rule, because INFO is defined rather than unmapped).
+**Issue severity.** Issues use a five-value scale: BLOCKER (blocks the build or causes data corruption), CRITICAL (high severity, immediate attention), MAJOR (substantial quality impact), MINOR (limited impact), INFO (negligible). `src/connectors/sonarqube/severity.yml` maps BLOCKER→`critical`, CRITICAL→`high`, MAJOR→`medium`, MINOR→`low`, INFO→`low` (direct mapping avoids the fallback rule, because INFO is defined rather than unmapped).
 
-**Issue status and resolution.** `status` has five values: OPEN (unaddressed), CONFIRMED (reviewed as true positive), REOPENED (previously closed, reinstated), RESOLVED (addressed; see `resolution`), CLOSED (no longer detectable). When RESOLVED or CLOSED, `resolution` refines: FALSE-POSITIVE, WONTFIX, FIXED, REMOVED. `config/status/sonarqube.yml` composes them: OPEN/REOPENED→`open`; CONFIRMED→`confirmed`; RESOLVED+FIXED→`resolved`; RESOLVED+FALSE-POSITIVE→`false_positive`; RESOLVED+WONTFIX→`wontfix`; CLOSED+REMOVED→`resolved`.
+**Issue status and resolution.** `status` has five values: OPEN (unaddressed), CONFIRMED (reviewed as true positive), REOPENED (previously closed, reinstated), RESOLVED (addressed; see `resolution`), CLOSED (no longer detectable). When RESOLVED or CLOSED, `resolution` refines: FALSE-POSITIVE, WONTFIX, FIXED, REMOVED. `src/connectors/sonarqube/status.yml` composes them: OPEN/REOPENED→`open`; CONFIRMED→`confirmed`; RESOLVED+FIXED→`resolved`; RESOLVED+FALSE-POSITIVE→`false_positive`; RESOLVED+WONTFIX→`wontfix`; CLOSED+REMOVED→`resolved`.
 
 **Issue type.** `type` classifies: BUG (coding error), VULNERABILITY (exploitable security weakness), CODE_SMELL (maintainability). The Bronze table stores all three; the Silver transform filters to BUG and VULNERABILITY for `silver.findings`, because CODE_SMELL is not a security finding. `type` is preserved as a domain column for gold-layer quality metrics.
 
-**Hotspot status and resolution.** Hotspots use a two-value status: TO_REVIEW and REVIEWED. When REVIEWED, `resolution` is FIXED, SAFE (not exploitable in context), or ACKNOWLEDGED (deferred). `vulnerabilityProbability` (HIGH, MEDIUM, LOW) encodes exploitability; the connector maps it via `config/severity/sonarqube-hotspots.yml`.
+**Hotspot status and resolution.** Hotspots use a two-value status: TO_REVIEW and REVIEWED. When REVIEWED, `resolution` is FIXED, SAFE (not exploitable in context), or ACKNOWLEDGED (deferred). `vulnerabilityProbability` (HIGH, MEDIUM, LOW) encodes exploitability; the connector maps it via `src/connectors/sonarqube/severity-hotspots.yml`.
 
 ### Quirks
 
@@ -145,8 +145,8 @@ fields:
 
 ### Notes on non-obvious mappings
 
-- **Severity translation.** SonarQube uses a five-level scale (BLOCKER, CRITICAL, MAJOR, MINOR, INFO) while the canonical model has four levels. The lookup in `config/severity/sonarqube.yml` collapses both MINOR and INFO to `low`. INFO maps directly rather than falling through to the default, because it is a defined value. Direct mapping avoids data-quality warnings on high-volume informational findings.
-- **Status composition.** SonarQube splits lifecycle state across two fields: `status` (OPEN, CONFIRMED, REOPENED, RESOLVED, CLOSED) and `resolution` (FALSE-POSITIVE, WONTFIX, FIXED, REMOVED), where `resolution` is only present when `status` is RESOLVED or CLOSED. The lookup in `config/status/sonarqube.yml` treats the pair as a composite key. For example, RESOLVED+FALSE-POSITIVE maps to `false_positive` and CLOSED+REMOVED maps to `resolved`.
+- **Severity translation.** SonarQube uses a five-level scale (BLOCKER, CRITICAL, MAJOR, MINOR, INFO) while the canonical model has four levels. The lookup in `src/connectors/sonarqube/severity.yml` collapses both MINOR and INFO to `low`. INFO maps directly rather than falling through to the default, because it is a defined value. Direct mapping avoids data-quality warnings on high-volume informational findings.
+- **Status composition.** SonarQube splits lifecycle state across two fields: `status` (OPEN, CONFIRMED, REOPENED, RESOLVED, CLOSED) and `resolution` (FALSE-POSITIVE, WONTFIX, FIXED, REMOVED), where `resolution` is only present when `status` is RESOLVED or CLOSED. The lookup in `src/connectors/sonarqube/status.yml` treats the pair as a composite key. For example, RESOLVED+FALSE-POSITIVE maps to `false_positive` and CLOSED+REMOVED maps to `resolved`.
 - **File path extraction.** The `component` field encodes both the project key and the relative file path as `project-key:relative/path`. The Silver transform splits on the first colon to obtain `file_path`. Project keys cannot contain colons, so the split is unambiguous.
 - **CWE derivation.** The issues endpoint does not return CWE identifiers directly. `src/common/cwe.py` derives CWE from the rule identifier using a pre-loaded rule-metadata table (populated from `/api/rules/search`). The `mapping.yml` records `cwe_id: null` to indicate the field is not read directly from the source record; the transform layer enriches it from the side table.
 

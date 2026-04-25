@@ -106,9 +106,9 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 ### Enumerations
 
-**Vulnerability severity.** `severity` uses six values: `info`, `unknown`, `low`, `medium`, `high`, `critical`. `info` and `unknown` do not map to the framework's four-level canonical scale; both resolve to the connector-configured default severity. `config/severity/gitlab.yml` documents this mapping and must be reviewed per deployment.
+**Vulnerability severity.** `severity` uses six values: `info`, `unknown`, `low`, `medium`, `high`, `critical`. `info` and `unknown` do not map to the framework's four-level canonical scale; both resolve to the connector-configured default severity. `src/connectors/gitlab/severity.yml` documents this mapping and must be reviewed per deployment.
 
-**Vulnerability state.** `state` takes `detected` (identified, unreviewed), `confirmed` (true positive), `dismissed` (suppressed without remediation), and `resolved` (remediated). The connector maps these via `config/status/gitlab.yml`.
+**Vulnerability state.** `state` takes `detected` (identified, unreviewed), `confirmed` (true positive), `dismissed` (suppressed without remediation), and `resolved` (remediated). The connector maps these via `src/connectors/gitlab/status.yml`.
 
 **Report type.** `report_type` identifies the scanner category: `sast`, `dependency_scanning`, `container_scanning`, `dast`, `secret_detection`, `coverage_fuzzing`, `api_fuzzing`, `cluster_image_scanning`. The connector maps `report_type` to the canonical `category` column in `silver.findings`: `sast`→`sast`, `secret_detection`→`secret`, `dependency_scanning`→`sca`, `dast`→`dast`, `container_scanning`→`container`. Other report types land with `report_type` preserved as a domain column and the nearest canonical `category`.
 
@@ -120,7 +120,7 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 **Ultimate-tier requirement for the Vulnerabilities API.** `/projects/{id}/vulnerabilities` and the Security Dashboard require GitLab Ultimate. On lower tiers, findings must be retrieved from CI pipeline artifacts (SARIF or GitLab JSON) via `/projects/{id}/jobs/{job_id}/artifacts`, requiring the connector to enumerate pipeline runs, identify security-producing jobs, and fetch and parse each artifact. This pipeline-level path is documented in the connector's `README`.
 
-**Severity fallback for `info` and `unknown`.** `info` (informational, no exploitability) and `unknown` (undetermined) have no canonical four-level equivalent. Both resolve to the connector-configured default. Operators should set this to `low` in `config/severity/gitlab.yml` unless policy dictates otherwise.
+**Severity fallback for `info` and `unknown`.** `info` (informational, no exploitability) and `unknown` (undetermined) have no canonical four-level equivalent. Both resolve to the connector-configured default. Operators should set this to `low` in `src/connectors/gitlab/severity.yml` unless policy dictates otherwise.
 
 **Merge request versus pull request terminology.** GitLab's *merge request* is GitHub's *pull request*. The silver schema uses `pull_requests` uniformly; the connector maps `iid` to `pull_request.number` and records `gitlab` in `source` for platform filtering.
 

@@ -92,11 +92,11 @@ The CLI JSON output (`semgrep scan --json`) uses a different top-level structure
 
 ### Enumerations
 
-**Severity vocabularies.** Cloud Platform and CLI use distinct severity vocabularies that cannot be unified without loss. Cloud Platform: `high`, `medium`, `low`, `info`, `experiment`. CLI: `ERROR`, `WARNING`, `INFO`. The reference implementation maintains `config/severity/semgrep-cloud.yml` and `config/severity/semgrep-cli.yml`, selected by the connector's `deployment_mode`. Two files keep each vocabulary independently reviewable and avoid conditional branching.
+**Severity vocabularies.** Cloud Platform and CLI use distinct severity vocabularies that cannot be unified without loss. Cloud Platform: `high`, `medium`, `low`, `info`, `experiment`. CLI: `ERROR`, `WARNING`, `INFO`. The reference implementation maintains `src/connectors/semgrep/severity-cloud.yml` and `src/connectors/semgrep/severity-cli.yml`, selected by the connector's `deployment_mode`. Two files keep each vocabulary independently reviewable and avoid conditional branching.
 
 > **Verify:** Confirm the complete Cloud Platform severity vocabulary (`high`, `medium`, `low`, `info`, `experiment`) against the current Semgrep Cloud Platform API documentation; the `experiment` value in particular may be a transitional label that has been retired or renamed.
 
-**Finding state.** Cloud Platform findings have a `state` field with documented values `open` (active, unaddressed) and `removed` (no longer detected, typically due to code change). The connector maps these via `config/status/semgrep.yml`.
+**Finding state.** Cloud Platform findings have a `state` field with documented values `open` (active, unaddressed) and `removed` (no longer detected, typically due to code change). The connector maps these via `src/connectors/semgrep/status.yml`.
 
 > **Verify:** Confirm the full enumeration of the `state` field on Cloud Platform findings; additional lifecycle values (e.g., `fixed`) may exist in the current API that are not reflected here.
 
@@ -184,7 +184,7 @@ Both paths land in the same `silver.findings` table under `tool_source='semgrep'
 
 **Normalization spot-check.**
 
-- Semgrep CLI `severity = 'ERROR'` → `severity_canonical = 'high'` (via `config/severity/semgrep-cli.yml`).
+- Semgrep CLI `severity = 'ERROR'` → `severity_canonical = 'high'` (via `src/connectors/semgrep/severity-cli.yml`).
 - Semgrep `extra.metadata.cwe = ['CWE-89']` → `cwe_id = 'CWE-89'`.
 
 **Troubleshooting.**

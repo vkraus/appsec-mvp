@@ -49,8 +49,8 @@ The shared library implements the patterns the connector contract prescribes. Ea
 
 - **[`bronze.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/common/bronze.py)** — ingestion primitives: HTTP client with retry/rate-limit, pagination iterator, high-water-mark arithmetic.
 - **[`silver.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/common/silver.py)** — declarative Bronze-to-Silver mapping engine driven by per-connector `mapping.yml`.
-- **[`severity.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/common/severity.py)** — loads `config/severity/{source}.yml` and applies the canonical four-level scale with DQ warning on fallthrough.
-- **[`status.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/common/status.py)** — loads `config/status/{source}.yml` and applies the canonical five-state lifecycle model.
+- **[`severity.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/common/severity.py)** — loads `src/connectors/{source}/severity.yml` and applies the canonical four-level scale with DQ warning on fallthrough.
+- **[`status.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/common/status.py)** — loads `src/connectors/{source}/status.yml` and applies the canonical five-state lifecycle model.
 - **[`dedup.py`](https://github.com/vkraus/appsec-mvp/blob/main/src/common/dedup.py)** — cross-tool deduplication for the Silver Finding table.
 
 Per-connector modules import from `src/common/` and implement only the source-specific bits.
@@ -65,13 +65,13 @@ Each connector at `src/connectors/{source}/` is a self-contained unit:
 | `ingest.py` | Implements `ingest(run_id, state) -> batch`. LakeFlow Connect connectors leave this empty; SDK and dlt-based connectors fill it. |
 | `transform.py` | Implements `transform(bronze_df) -> silver_df` using the shared mapping engine. |
 | `mapping.yml` | Declarative Bronze-to-Silver column expressions. |
+| `severity.yml` | Native-severity → canonical-severity lookup. |
+| `status.yml` | Native-status → canonical-status lookup. |
 
-Corresponding side-car files:
+Corresponding side-car files outside the connector module:
 
 | File | Purpose |
 |---|---|
-| `config/severity/{source}.yml` | Native-severity → canonical-severity lookup. |
-| `config/status/{source}.yml` | Native-status → canonical-status lookup. |
 | `resources/{source}-job.yml` | DAB job bundle fragment (two-task ingest → transform). |
 | `src/connectors/{source}/tests/` | Connector tests with `@pytest.mark.requirement("REQ-...")` markers. |
 

@@ -74,7 +74,7 @@ The fields below are the subset consumed by the connector; complete schemas are 
 
 ### Enumerations
 
-**Severity.** `vulnerability.severity` uses six values: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`, `UNASSIGNED`. `config/severity/dependency-track.yml` maps CRITICAL→`critical`, HIGH→`high`, MEDIUM→`medium`, LOW→`low`, INFO→`low`. `UNASSIGNED` is common for advisories without a CVSS score; it falls through to the severity-fallback rule, which substitutes the connector's default severity (medium unless overridden).
+**Severity.** `vulnerability.severity` uses six values: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`, `UNASSIGNED`. `src/connectors/dependency_track/severity.yml` maps CRITICAL→`critical`, HIGH→`high`, MEDIUM→`medium`, LOW→`low`, INFO→`low`. `UNASSIGNED` is common for advisories without a CVSS score; it falls through to the severity-fallback rule, which substitutes the connector's default severity (medium unless overridden).
 
 **Vulnerability source.** `vulnerability.source` identifies the advisory database: `NVD`, `OSV`, `GITHUB`, `VULNDB`, or `INTERNAL` (manually entered).
 

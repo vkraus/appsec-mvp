@@ -105,8 +105,8 @@ A connector module at `src/connectors/{source}/` containing:
 - `config.yml` — base URL, endpoints, pagination, HWM column, target Bronze table, credential reference.
 - `ingest.py` — implements `ingest(run_id, state) -> batch` per the connector contract in `platform/reference/catalog`.
 - `transform.py` — implements `transform(bronze_df) -> silver_df` per the normalization rules in `platform/reference/canonical-mapping`.
-- `mapping.yml` — declarative Bronze-to-Silver column expressions referencing `config/severity/{source}.yml` and `config/status/{source}.yml`.
-- `config/severity/{source}.yml` and `config/status/{source}.yml` — per-source lookups covering every source value documented in the connector page.
+- `mapping.yml` — declarative Bronze-to-Silver column expressions referencing `src/connectors/{source}/severity.yml` and `src/connectors/{source}/status.yml`.
+- `src/connectors/{source}/severity.yml` and `src/connectors/{source}/status.yml` — per-source lookups covering every source value documented in the connector page.
 - `resources/{source}-job.yml` — canonical two-task Lakeflow job bundle fragment.
 - `src/connectors/{source}/tests/test_ingest.py` and `test_transform.py` — pytest suite covering every REQ-ID from `platform/reference/catalog` applicable to the connector's category.
 - `src/connectors/{source}/tests/fixtures/` — JSON fixtures named `{endpoint}_{scenario}.json`.
@@ -123,7 +123,7 @@ A connector module at `src/connectors/{source}/` containing:
 3. Select a connector category (LakeFlow Connect / SDK / REST-with-dlt-tool) per the preference order in `platform/reference/catalog` (Lakeflow Connect → SDK → dlt).
 4. Emit `ingest.py` against the chosen category. LakeFlow Connect connectors leave the file empty and declare the ingestion resource in the bundle fragment. SDK connectors use the source's SDK. REST-with-dlt-tool connectors compose dlt components.
 5. Emit `mapping.yml` with canonical-field → `{source_path, cast, lookup?}` blocks for every canonical Silver field defined in `platform/reference/canonical-mapping` (entities or findings schema, whichever applies).
-6. Emit `config/severity/{source}.yml` and `config/status/{source}.yml` with every source value covered. For undocumented values, insert the configurable default and a comment flagging the DQ warning path.
+6. Emit `src/connectors/{source}/severity.yml` and `src/connectors/{source}/status.yml` with every source value covered. For undocumented values, insert the configurable default and a comment flagging the DQ warning path.
 7. Emit `transform.py` applying mapping plus normalization rules from `platform/reference/canonical-mapping`.
 8. Emit the bundle fragment at `resources/{source}-job.yml` using the canonical two-task shape documented in `platform/reference/catalog`, substituting the source name.
 9. Emit the test suite: one test function per REQ-ID applicable to the connector category, each marked with `@pytest.mark.requirement("REQ-...")`. Fixtures follow the `{endpoint}_{scenario}.json` naming convention.
@@ -131,7 +131,7 @@ A connector module at `src/connectors/{source}/` containing:
 
 ## Invariants
 
-- No file is written outside `src/connectors/{source}/`, `src/connectors/{source}/tests/`, `config/severity/{source}.yml`, `config/status/{source}.yml`, or `resources/{source}-job.yml`. The connector generation is self-contained.
+- No file is written outside `src/connectors/{source}/`, `src/connectors/{source}/tests/`, or `resources/{source}-job.yml`. The connector generation is self-contained.
 - Every REQ-ID applicable to the category (from `platform/reference/catalog`) has at least one bound test function.
 - All imports from `src/common/` reference only functions that already exist in that module; new shared helpers are not introduced by this skill.
 ````
