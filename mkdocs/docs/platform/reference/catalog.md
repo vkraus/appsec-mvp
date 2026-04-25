@@ -25,16 +25,16 @@ Rows are `REQ-*` IDs; columns are the nine selected sources spanning static test
 
 | REQ | ServiceNow | GitHub | GitLab | SonarQube | Semgrep | Dep-Track | TruffleHog | ZAP | AWS WAF |
 |---|---|---|---|---|---|---|---|---|---|
-| `REQ-ING-AUTH` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | N/A | N/A |
-| `REQ-ING-PAG` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | N/A | N/A |
-| `REQ-ING-RL` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | N/A | N/A |
-| `REQ-ING-HWM` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
-| `REQ-TRF-MAP` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
-| `REQ-TRF-SEV` | N/A | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
-| `REQ-TRF-STS` | N/A | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
-| `REQ-TRF-TS` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
-| `REQ-DQ` | PASS | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
-| `REQ-DEDUP` | N/A | PASS | N/A | PASS | PASS | N/A | N/A | PASS | N/A |
+| `REQ-ING-AUTH` | PASS | PASS | N/A | (pending) | PASS | N/A | N/A | N/A | N/A |
+| `REQ-ING-PAG` | PASS | PASS | N/A | (pending) | PASS | N/A | N/A | N/A | N/A |
+| `REQ-ING-RL` | PASS | PASS | N/A | (pending) | PASS | N/A | N/A | N/A | N/A |
+| `REQ-ING-HWM` | PASS | PASS | N/A | (pending) | PASS | N/A | N/A | PASS | N/A |
+| `REQ-TRF-MAP` | PASS | PASS | N/A | (pending) | PASS | N/A | N/A | PASS | N/A |
+| `REQ-TRF-SEV` | N/A | PASS | N/A | (pending) | PASS | N/A | N/A | PASS | N/A |
+| `REQ-TRF-STS` | N/A | PASS | N/A | (pending) | PASS | N/A | N/A | PASS | N/A |
+| `REQ-TRF-TS` | PASS | PASS | N/A | (pending) | PASS | N/A | N/A | PASS | N/A |
+| `REQ-DQ` | PASS | PASS | N/A | (pending) | PASS | N/A | N/A | PASS | N/A |
+| `REQ-DEDUP` | N/A | PASS | N/A | (pending) | PASS | N/A | N/A | PASS | N/A |
 
 Cells marked `N/A` indicate a REQ-ID that does not apply to a source — either because the category does not exercise the requirement (for example, `REQ-DEDUP` does not apply to the CMDB category, which emits no findings subject to cross-tool deduplication; the CLI-artifact ingestion path used by OWASP ZAP has no API auth, pagination, or rate limit) or because the source is documented but not built in the MVP (GitLab, Dependency-Track, TruffleHog, AWS WAF). The per-source Implementation reports linked from each connector page are the authoritative record of which tests were bound to which REQ-ID.
 
