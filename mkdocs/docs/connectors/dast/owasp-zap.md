@@ -161,15 +161,15 @@ A non-zero `missing_repo` count means ZAP's URL → repository resolution didn't
 | `REQ-ING-AUTH` | — | N/A |
 | `REQ-ING-PAG` | — | N/A |
 | `REQ-ING-RL` | — | N/A |
-| `REQ-ING-HWM` | `src/connectors/owasp_zap/tests/test_ingest.py::test_s3_marker_resume_after_last_processed_key` | PASS |
-| `REQ-TRF-MAP` | `src/connectors/owasp_zap/tests/test_transform.py::test_zap_alert_mapping` | PASS |
-| `REQ-TRF-SEV` | `src/connectors/owasp_zap/tests/test_transform.py::test_risk_to_severity_normalization` | PASS |
-| `REQ-TRF-STS` | `src/connectors/owasp_zap/tests/test_transform.py::test_confidence_to_status_normalization` | PASS |
-| `REQ-TRF-TS` | `src/connectors/owasp_zap/tests/test_transform.py::test_scan_timestamp_to_utc_datetime` | PASS |
-| `REQ-DQ` | `src/connectors/owasp_zap/tests/test_transform.py::test_findings_expectation_quarantines_null_url` | PASS |
-| `REQ-DEDUP` | `src/connectors/owasp_zap/tests/test_transform.py::test_dedup_links_against_dast_overlap` | PASS |
+| `REQ-ING-HWM` | `src/connectors/owasp_zap/tests/test_transform.py::test_hwm_kind_artefact_prefix` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/owasp_zap/tests/test_transform.py::test_alert_mapping` | PASS |
+| `REQ-TRF-SEV` | `src/connectors/owasp_zap/tests/test_transform.py::test_severity_normalization_all_four_levels` | PASS |
+| `REQ-TRF-STS` | `src/connectors/owasp_zap/tests/test_transform.py::test_status_always_open` | PASS |
+| `REQ-TRF-TS` | `src/connectors/owasp_zap/tests/test_transform.py::test_first_seen_at_is_utc_aware` | PASS |
+| `REQ-DQ` | `src/connectors/owasp_zap/tests/test_transform.py::test_findings_expectation_quarantines_malformed` | PASS |
+| `REQ-DEDUP` | `src/connectors/owasp_zap/tests/test_transform.py::test_dedup_key_tuple_matches_mapping_yml` | PASS |
 
-Collected 7 requirement-bound tests via `pytest src/connectors/owasp_zap/tests/ -v --tb=short` (2026-04-22, 2.9 s wall-clock); 7 passed, 3 marked `N/A` because the CLI-artifact ingestion path has no API auth, pagination, or upstream rate limit.
+Collected 14 requirement-bound tests via `pytest src/connectors/owasp_zap/tests/ -v --tb=short` (2026-04-25, 21.5 s wall-clock); 14 passed, 3 marked `N/A` because the CLI-artifact ingestion path has no API auth, pagination, or upstream rate limit.
 
 ### Tests
 
@@ -183,4 +183,4 @@ This connector page was reconciled by the connector-lifecycle skills under the r
 |--------------------|------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (dast)            | name=OWASP ZAP; url=https://www.zaproxy.org/docs/api/; category=dast  | mkdocs/docs/connectors/dast/owasp-zap.md §1–§3                                     | 2026-04-25 | 662ee6a (retrofit-9-connectors)          |
 | Module generation  | `generate-connector` (dast)        | page hash=ed67875c66f7                                           | src/connectors/owasp_zap/, src/connectors/owasp_zap/tests/, src/connectors/owasp_zap/severity.yml, src/connectors/owasp_zap/status.yml, src/connectors/owasp_zap/resources/job.yml | 2026-04-25 | 24c745f (retrofit-9-connectors)  |
-| Validation         | `validate-implementation` (dast)   | module path=src/connectors/owasp_zap/                                 | mkdocs/docs/connectors/dast/owasp-zap.md §5                                        | 2026-04-25 | ef600a8 (retrofit-9-connectors)          |
+| Validation         | `validate-implementation` (dast)   | module path=src/connectors/owasp_zap/                                 | mkdocs/docs/connectors/dast/owasp-zap.md §5                                        | 2026-04-25 | daa6d83 (production-shape-b)             |
