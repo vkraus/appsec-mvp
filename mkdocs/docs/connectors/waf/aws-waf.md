@@ -118,8 +118,26 @@ The lookup MUST cover every documented action; undocumented values fall through 
 
 ## Validation
 
-!!! info "Not implemented in MVP"
-    See the Prerequisites admonition above.
+### Implementation report
+
+| Requirement | Bound test | Outcome |
+|---|---|---|
+| `REQ-ING-AUTH` | `tests/connectors/aws_waf/test_ingest.py::test_ingest_contract_rejects_missing_aws_credential_ref` | PASS |
+| `REQ-ING-PAG` | — | N/A |
+| `REQ-ING-RL` | — | N/A |
+| `REQ-ING-HWM` | `tests/connectors/aws_waf/test_ingest.py::test_event_timestamp_hwm_round_trip` | PASS |
+| `REQ-TRF-MAP` | `tests/connectors/aws_waf/test_transform.py::test_normalise_event_projects_log_record_onto_silver_shape` | PASS |
+| `REQ-TRF-SEV` | `tests/connectors/aws_waf/test_transform.py::test_severity_lookup_covers_every_documented_action_value` | PASS |
+| `REQ-TRF-STS` | — | N/A |
+| `REQ-TRF-TS` | `tests/connectors/aws_waf/test_transform.py::test_epoch_ms_timestamp_normalises_to_utc_datetime` | PASS |
+| `REQ-DQ` | `tests/connectors/aws_waf/test_transform.py::test_unmatched_webacl_leaves_application_id_null` | PASS |
+| `REQ-DEDUP` | — | N/A |
+
+Collected 6 requirement-bound applicable REQs via `pytest tests/connectors/aws_waf/ -v --tb=short` (2026-04-25, 0.41 s wall-clock); 25 passed, 0 failed, 5 skipped; 6 applicable REQs PASS, 4 marked N/A. N/A rationale: `REQ-ING-PAG` and `REQ-ING-RL` — log-stream mode has no API pagination or rate limit (SDK fallback is single-page `GetSampledRequests` with boto3-native throttling); `REQ-TRF-STS` — WAF events are an append-only edge-event stream with no lifecycle state; `REQ-DEDUP` — no cross-tool overlap in MVP scope, and the within-source replay-window dedup on `(timestamp, rule_id, source_ip, request_id)` is asserted under `REQ-DQ` instead.
+
+### Tests
+
+Tests live under [`tests/connectors/aws_waf/`](https://github.com/vkraus/appsec-mvp/tree/main/tests/connectors/aws_waf). The report table above is the per-REQ outcome.
 
 ## Generation log
 
@@ -129,4 +147,4 @@ This connector page is produced by the connector-lifecycle skills. The Generatio
 |--------------------|------------------------------------|-----------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (waf)             | name=AWS WAF; url=https://docs.aws.amazon.com/waf/latest/APIReference/Welcome.html; category=waf    | mkdocs/docs/connectors/waf/aws-waf.md §1–§3                                        | 2026-04-25 | d47eb26 (retrofit-9-connectors)          |
 | Module generation  | `generate-connector` (waf)         | page hash=af12c04263dc                                                                              | src/connectors/aws_waf/, tests/connectors/aws_waf/, config/severity/aws_waf.yml, config/status/aws_waf.yml, resources/aws_waf-job.yml | 2026-04-25 | 5e5d96f (retrofit-9-connectors)          |
-| Validation         | `validate-implementation` (waf)    | (pending)                                                                                           | (pending)                                                                          | (pending)  | (pending)                                |
+| Validation         | `validate-implementation` (waf)    | module path=src/connectors/aws_waf/                                                                 | mkdocs/docs/connectors/waf/aws-waf.md §5                                           | 2026-04-25 | aadd4ef (retrofit-9-connectors)          |
