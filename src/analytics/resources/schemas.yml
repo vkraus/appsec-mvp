@@ -1,0 +1,6 @@
+resources:
+  schemas:
+    gold:
+      catalog_name: ${var.catalog}
+      name: gold
+      comment: "Cross-source analytics outputs (analytics-owned)"

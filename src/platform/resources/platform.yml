@@ -1,0 +1,10 @@
+resources:
+  catalogs:
+    appsec:
+      name: ${var.catalog}
+      comment: "AppSec MVP — Bronze/Silver/Gold layers (platform-owned catalog)"
+  schemas:
+    silver:
+      catalog_name: ${var.catalog}
+      name: silver
+      comment: "Cross-source canonical silver: findings, hwm, repositories, app_repo"

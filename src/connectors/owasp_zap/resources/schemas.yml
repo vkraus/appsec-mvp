@@ -1,0 +1,5 @@
+resources:
+  schemas:
+    bronze_owasp_zap:
+      catalog_name: ${var.catalog}
+      name: bronze_owasp_zap

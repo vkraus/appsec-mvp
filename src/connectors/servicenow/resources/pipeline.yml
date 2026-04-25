@@ -9,7 +9,7 @@ resources:
         quartz_cron_expression: "0 0 * * * ?"
         timezone_id: UTC
       ingestion_definition:
-        connection_name: ${var.servicenow_connection}
+        connection_name: servicenow
         objects:
           - table:
               source_schema: default

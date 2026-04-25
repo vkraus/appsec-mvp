@@ -15,7 +15,7 @@ resources:
       tasks:
         - task_key: ingest
           notebook_task:
-            notebook_path: ../src/connectors/github/ingest_entry.py
+            notebook_path: ../ingest_entry.py
           job_cluster_key: shared
           max_retries: 3
           min_retry_interval_millis: 2000
@@ -24,7 +24,7 @@ resources:
           depends_on:
             - task_key: ingest
           notebook_task:
-            notebook_path: ../src/connectors/github/transform_entry.py
+            notebook_path: ../transform_entry.py
           job_cluster_key: shared
           max_retries: 3
           min_retry_interval_millis: 2000
