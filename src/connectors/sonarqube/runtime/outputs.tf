@@ -8,6 +8,11 @@ output "sonarqube_namespace" {
   value       = kubernetes_namespace.sonarqube.metadata[0].name
 }
 
+output "sonarqube_db_secret_name" {
+  description = "Name of the kubernetes secret holding SonarQube's JDBC credentials (for debug: `kubectl get secret -n sonarqube <name>`)."
+  value       = kubernetes_secret.sonarqube_db.metadata[0].name
+}
+
 output "sonarqube_project_token" {
   description = "Long-lived random opaque value emitted as the project analysis token. Register it with SonarQube post-install (the chart does not support declarative token creation) and surface to the cross-scanner CI workflow."
   value       = random_password.sonarqube_token.result

@@ -35,6 +35,28 @@ provider "helm" {
 }
 
 # ---------------------------------------------------------------------------
+# Input validation. Cross-variable contracts are easier to express as
+# preconditions on a no-op `terraform_data` sentinel than as `validation`
+# blocks (which can only see a single variable). These fire at plan time,
+# turning otherwise opaque runtime errors (empty JDBC password causing
+# Sonar to fail boot inside the 900s Helm timeout; aws_db_subnet_group
+# rejecting an empty subnet list) into clear messages.
+# ---------------------------------------------------------------------------
+
+resource "terraform_data" "input_validation" {
+  lifecycle {
+    precondition {
+      condition     = var.rds_endpoint == "" || (var.rds_password != "" && var.rds_username != "")
+      error_message = "When rds_endpoint is set (operator-supplied Postgres path), rds_username and rds_password are required."
+    }
+    precondition {
+      condition     = var.rds_endpoint != "" || (var.vpc_id != "" && length(var.vpc_subnet_ids) > 0 && var.vpc_cidr_block != "")
+      error_message = "When rds_endpoint is empty (this module creates RDS), vpc_id, vpc_subnet_ids, and vpc_cidr_block are required."
+    }
+  }
+}
+
+# ---------------------------------------------------------------------------
 # RDS Postgres backing store for SonarQube. Conditional: created only when
 # the operator did not supply a pre-existing `rds_endpoint`.
 # (Migrated from infra/terraform/modules/aws-foundation/main.tf — the
@@ -51,6 +73,8 @@ locals {
   rds_db_name_resolved  = local.create_rds ? aws_db_instance.sonarqube[0].db_name : var.rds_db_name
 }
 
+# special = false: defense-in-depth — no special chars in case the password
+# is ever embedded in a JDBC URL string by future code.
 resource "random_password" "rds" {
   count   = local.create_rds ? 1 : 0
   length  = 32
@@ -61,6 +85,7 @@ resource "aws_db_subnet_group" "sonarqube" {
   count      = local.create_rds ? 1 : 0
   name       = "${var.project_prefix}-rds"
   subnet_ids = var.vpc_subnet_ids
+  tags       = { Name = "${var.project_prefix}-rds" }
 }
 
 resource "aws_security_group" "rds" {
@@ -69,6 +94,8 @@ resource "aws_security_group" "rds" {
   description = "Allow Postgres traffic from the EKS VPC"
   vpc_id      = var.vpc_id
 
+  # Ingress is VPC-CIDR-wide, matching the original aws-foundation behavior.
+  # Tighten to the EKS cluster SG if/when this runtime is repurposed beyond demo use.
   ingress {
     from_port   = 5432
     to_port     = 5432
@@ -82,6 +109,15 @@ resource "aws_security_group" "rds" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = { Name = "${var.project_prefix}-rds" }
+}
+
+resource "aws_db_parameter_group" "sonarqube" {
+  count  = local.create_rds ? 1 : 0
+  name   = "${var.project_prefix}-sonarqube"
+  family = var.rds_parameter_group_family
+  tags   = { Name = "${var.project_prefix}-sonarqube" }
 }
 
 resource "aws_db_instance" "sonarqube" {
@@ -102,10 +138,16 @@ resource "aws_db_instance" "sonarqube" {
   vpc_security_group_ids = [aws_security_group.rds[0].id]
   db_subnet_group_name   = aws_db_subnet_group.sonarqube[0].name
 
-  parameter_group_name = "default.${var.rds_parameter_group_family}"
+  parameter_group_name = aws_db_parameter_group.sonarqube[0].name
+
+  storage_encrypted       = true
+  backup_retention_period = 0 # demo: no PITR (bumped from community-module default 7)
+  copy_tags_to_snapshot   = true
 
   skip_final_snapshot = true
   deletion_protection = false
+
+  tags = { Name = "${var.project_prefix}-sonarqube" }
 }
 
 # ---------------------------------------------------------------------------
@@ -149,7 +191,10 @@ resource "helm_release" "sonarqube" {
       jdbcSecretName        = kubernetes_secret.sonarqube_db.metadata[0].name
       jdbcSecretPasswordKey = "jdbcPassword"
     }
-    service            = { type = "LoadBalancer" }
+    service = { type = "LoadBalancer" }
+    account = {
+      adminPassword = var.sonarqube_admin_password
+    }
     monitoringPasscode = var.sonarqube_admin_password
     resources = {
       requests = { cpu = "500m", memory = "2Gi" }

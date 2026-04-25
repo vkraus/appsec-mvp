@@ -12,7 +12,7 @@ Apply this module if you want appsec-mvp to provision SonarQube end-to-end (Helm
 
 - A SonarQube Helm release in the `sonarqube` Kubernetes namespace on your EKS cluster, exposed via a LoadBalancer Service on port 9000.
 - A `sonarqube-db` Kubernetes Secret holding the JDBC connection string Sonar reads at boot.
-- (Optional, when `rds_endpoint` is empty) A dedicated RDS Postgres instance (`db.t3.small`, 20 GiB, Postgres 15), a DB subnet group, a security group allowing port 5432 from the supplied VPC CIDR, and a random 32-char password.
+- (Optional, when `rds_endpoint` is empty) A dedicated RDS Postgres instance (`db.t3.small`, 20 GiB, Postgres 15, encrypted at rest, no PITR backups, `skip_final_snapshot = true`), a custom DB parameter group (family `postgres15`, tunable), a DB subnet group, a security group allowing port 5432 from the supplied VPC CIDR, and a random 32-char password.
 - A 40-char random opaque value emitted as `sonarqube_project_token` for use as the project analysis token (the Helm chart does not support declarative token creation, so the operator registers it with SonarQube post-install).
 
 ## Operator-supplied inputs
@@ -24,7 +24,7 @@ Apply this module if you want appsec-mvp to provision SonarQube end-to-end (Helm
 | `aws_region` | AWS region for EKS + (optional) RDS. Must match the region of `eks_cluster_name`. |
 | `aws_access_key_id`, `aws_secret_access_key` | AWS credentials (sensitive). |
 | `eks_cluster_name` | EKS cluster where SonarQube is installed. Must be in `var.aws_region`. |
-| `sonarqube_admin_password` | Initial Sonar admin / monitoring passcode (sensitive). |
+| `sonarqube_admin_password` | Initial value applied to both the SonarQube admin web-UI password (`account.adminPassword`) and the JMX-style monitoring passcode (sensitive). |
 
 ### Optional
 
@@ -56,6 +56,8 @@ Operators write their own `terraform.tfvars`. The legacy `infra/terraform/terraf
 
 ## Teardown
 
+> **Warning:** RDS is created with `skip_final_snapshot = true` and `deletion_protection = false`, and the instance has `backup_retention_period = 0` so no automated PITR backups exist. Running `terraform destroy` will permanently lose all SonarQube data. Take a manual snapshot first if you need it.
+
 ```bash
 cd src/connectors/sonarqube/runtime
 terraform destroy
@@ -69,3 +71,5 @@ Caveats:
 ## Independence
 
 This module references only operator-supplied inputs and the AWS / Kubernetes / Helm provider APIs. It does not depend on any other connector's runtime — per the redesign's no-inter-connector-dependency rule. Cross-runtime references that previously came from `aws-foundation` outputs (`eks_cluster_name`, `vpc_id`, `vpc_subnet_ids`, `vpc_cidr_block`) become operator-supplied variables.
+
+This module is intended to be used as a **root** module, not a child module. It declares its own `aws`, `kubernetes`, and `helm` provider blocks; using it via `module "..."` from a parent module will collide with the parent's providers.

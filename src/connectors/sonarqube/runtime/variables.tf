@@ -40,7 +40,7 @@ variable "eks_cluster_name" {
 # ---------------------------------------------------------------------------
 
 variable "sonarqube_admin_password" {
-  description = "Initial SonarQube admin / monitoring passcode. Sensitive."
+  description = "Initial value applied to both the SonarQube admin web-UI password (account.adminPassword) and the JMX-style monitoring passcode. Sensitive."
   type        = string
   sensitive   = true
 }
