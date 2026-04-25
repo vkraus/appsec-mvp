@@ -26,7 +26,8 @@ The platform ingests from AppSec sources via a connector for each source, normal
 flowchart LR
   subgraph Sources["Sources"]
     direction TB
-    GH[GitHub / GitLab]
+    GH[GitHub]
+    GL[GitLab]
     SN[ServiceNow CMDB]
     SQ[SonarQube]
     SG[Semgrep]
@@ -38,7 +39,8 @@ flowchart LR
 
   subgraph Bronze["Bronze (raw)"]
     direction TB
-    BG[bronze_github / _gitlab]
+    BG[bronze_github]
+    BGL[bronze_gitlab]
     BSN[bronze_servicenow]
     BSQ[bronze_sonarqube]
     BSG[bronze_semgrep]
@@ -61,6 +63,7 @@ flowchart LR
   end
 
   GH --> BG
+  GL --> BGL
   SN --> BSN
   SQ --> BSQ
   SG --> BSG
@@ -70,6 +73,7 @@ flowchart LR
   WAF --> BWAF
 
   BG --> SR
+  BGL --> SR
   BSN --> SAR
   BSQ --> SF
   BSG --> SF

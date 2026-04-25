@@ -42,7 +42,8 @@ This repository stores the MVP implementation part of my master's thesis. The co
 flowchart LR
   subgraph Sources["Sources"]
     direction TB
-    GH[GitHub / GitLab]
+    GH[GitHub]
+    GL[GitLab]
     SN[ServiceNow CMDB]
     SQ[SonarQube]
     SG[Semgrep]
@@ -54,7 +55,8 @@ flowchart LR
 
   subgraph Bronze["Bronze (raw)"]
     direction TB
-    BG[bronze_github / _gitlab]
+    BG[bronze_github]
+    BGL[bronze_gitlab]
     BSN[bronze_servicenow]
     BSQ[bronze_sonarqube]
     BSG[bronze_semgrep]
@@ -66,7 +68,7 @@ flowchart LR
 
   subgraph Silver["Silver (standard)"]
     SR["silver.repositories"]
-    SAR["silver.app_repo"]
+    SAR["silver.app_repo_mapping"]
     SF["silver.findings"]
     SHW["silver.hwm"]
   end
@@ -77,6 +79,7 @@ flowchart LR
   end
 
   GH --> BG
+  GL --> BGL
   SN --> BSN
   SQ --> BSQ
   SG --> BSG
@@ -86,6 +89,7 @@ flowchart LR
   WAF --> BWAF
 
   BG --> SR
+  BGL --> SR
   BSN --> SAR
   BSQ --> SF
   BSG --> SF

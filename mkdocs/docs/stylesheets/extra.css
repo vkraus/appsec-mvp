@@ -77,9 +77,13 @@
   margin: 1rem auto 0;
 }
 
+/* Mermaid stamps an intrinsic max-width inline on its <svg>, which wins
+   over a normal selector by inline-style specificity. Override with
+   !important so the diagram scales up to the wrapper's max-width. */
 .landing-overview .mermaid svg {
-  width: 100%;
-  height: auto;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
 }
 
 /* Tighten hero on small screens */
