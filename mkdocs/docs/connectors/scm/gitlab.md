@@ -1,18 +1,22 @@
 # GitLab
 
-## Overview
+!!! info "Placeholder — not implemented in MVP"
+    A reference GitLab connector is not part of the MVP. This page is a
+    scaffolding placeholder framing the intended runbook structure; the
+    Reference section below documents the integration per the category
+    capability surface. Follow the [SCM skills](skills.md) to generate the
+    connector when needed.
+
+## What this connector ingests
 
 The GitLab connector plays a dual SCM and integrated-security role analogous to GitHub, but reflects GitLab's architecture. As SCM source it populates `silver.repositories` from `/projects`, `silver.commits` from the per-project commits endpoint, `silver.pull_requests` from merge requests, and `silver.branch_policies` from protected branches. GitLab Secure — available on the Ultimate tier for both SaaS and self-managed — embeds SAST, Secret Detection, and Dependency Scanning in the CI pipeline and exposes results through a Vulnerabilities API. On Ultimate, the connector additionally writes into `silver.findings` with three category values (`sast`, `secret`, `sca`) from a single source. Without Ultimate, the same findings are available in SARIF or GitLab JSON format as CI pipeline artifacts, retrievable via the jobs artifacts endpoint.
 
 **Category:** SCM + platform-integrated SAST / SCA · **Integration pattern:** SDK (python-gitlab)
 
-## Prerequisites
+## Dependencies
 
-!!! info "Not implemented in MVP"
-    A reference GitLab connector is not part of the MVP. The
-    Reference section above documents the intended integration per
-    the category capability surface; follow the SCM skills
-    to generate a connector when needed.
+- **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md).
+- **No upstream connector dependency.** GitLab is an SCM connector — like GitHub it is a source-of-truth for `silver.repositories`. Install at least one SCM connector (this one or [GitHub](github.md)) **before** any non-SCM connector.
 
 ## Reference
 

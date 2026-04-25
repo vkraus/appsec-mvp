@@ -1,21 +1,56 @@
 # ServiceNow
 
-## Overview
+## What this connector ingests
 
-The ServiceNow connector is the authoritative source for application inventory. It populates `silver.applications` from the `cmdb_ci_business_app` CI class, `silver.teams` from `sys_user_group`, and `silver.app_repo_mapping` by resolving relationships in `cmdb_rel_ci`. These CMDB objects provide the application-to-team ownership graph and the application-to-repository linkage the framework needs to attribute findings to accountable teams.
+The ServiceNow connector is the authoritative source for application inventory. It ingests `cmdb_ci_business_app` (business applications), `cmdb_rel_ci` (CI relationships), and optionally `sys_user_group` (owning teams) into Bronze via Lakeflow Connect, then projects to `silver.app_repo` (application-to-repository mapping) and `silver_servicenow.applications`. These CMDB objects provide the application-to-team ownership graph and the application-to-repository linkage the framework needs to attribute findings to accountable teams.
 
-**Category:** CMDB · **Integration pattern:** LakeFlow Connect (ServiceNow adapter)
+**Category:** CMDB · **Integration pattern:** Lakeflow Connect (ServiceNow adapter)
 
-## Prerequisites
+Bronze schema: `bronze_servicenow`. Silver projection schema: `silver_servicenow`. Cross-source contribution: `silver.app_repo`.
 
-Platform-level prerequisites (AWS, Databricks workspace, Terraform tooling) are covered once in [Platform → Prerequisites](../../platform/prerequisites.md). The ServiceNow-specific handoffs required before `terraform apply` are:
+## Dependencies
 
-- **ServiceNow tenant.** Register a [Personal Developer Instance (PDI)](https://developer.servicenow.com/) or use a licensed tenant. Capture the instance URL and an admin credential (`servicenow_instance_url`, `servicenow_admin_username`, `servicenow_admin_password` in `terraform.tfvars`).
-- **Admin read access** to the CMDB tables consumed by the connector: `cmdb_ci_business_app`, `cmdb_rel_ci`, and `sys_user_group`.
-- **Credential scopes.** Basic authentication requires the service account be granted the `rest_service` and `cmdb_read` roles. OAuth 2.0 client-credentials flow is also supported for deployments that prohibit long-lived passwords; credentials are stored in Databricks Secrets (`mvp-connectors` scope, keys `servicenow_url`, `servicenow_username`, `servicenow_password`) and injected at runtime.
+- **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, the `silver` schema, and the `servicenow` UC connection (deployed by `bundle deploy` from `src/connectors/servicenow/resources/connection.yml`) must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** The CMDB connector populates `silver.app_repo` with `(app_id, repository_id)` rows that reference SCM-populated `silver.repositories.repository_id`. Without an SCM connector running first, the join from `silver.app_repo` to `silver.repositories` will not resolve and downstream gold-layer rollups (e.g. business-application rollup) will return empty results.
+
+## Operator inputs
+
+| Input | Where to obtain | Used as |
+|---|---|---|
+| ServiceNow instance URL | Operator's tenant. For demos, register a [Personal Developer Instance (PDI)](https://developer.servicenow.com/) and read the URL from the activation email. | Env var `SERVICENOW_URL` consumed by `src/connectors/servicenow/scripts/load-secrets.sh`; also passed as DAB var `servicenow_host` (without scheme) at `bundle deploy`. |
+| ServiceNow service-account username | A user granted the `rest_service` + `cmdb_read` roles. | Env var `SERVICENOW_USERNAME`; DAB var `servicenow_username`. |
+| ServiceNow service-account password | Same user's password. | Env var `SERVICENOW_PASSWORD`; DAB var `servicenow_password`. |
 
 !!! warning "ServiceNow PDI caveat"
-    The operator procedure assumes the ServiceNow tenant supports Databricks Lakeflow Connect. PDIs may or may not expose the necessary interfaces — if the Lakeflow pipeline fails to authenticate, fall back to a licensed tenant.
+    The operator procedure assumes the ServiceNow tenant supports Databricks Lakeflow Connect. PDIs may or may not expose the necessary interfaces — if the pipeline fails to authenticate, fall back to a licensed tenant.
+
+## Optional source runtime
+
+If you want appsec-mvp to seed *demo* CMDB business-app records in your tenant (two `cmdb_ci_business_app` records, three `cmdb_ci_appl` records, plus relationship rows in `cmdb_rel_ci`), apply the optional runtime under `src/connectors/servicenow/runtime/`. See [`src/connectors/servicenow/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/servicenow/runtime) for variables and apply notes (the runtime requires `bash`, `curl`, and `jq` on the operator's PATH).
+
+Operators with a populated CMDB skip the runtime — wire the existing instance URL and credentials directly via the next section.
+
+## Secrets
+
+Loaded into the `mvp-connectors` secret scope by `src/connectors/servicenow/scripts/load-secrets.sh`:
+
+| Secret key | Source env var | Purpose |
+|---|---|---|
+| `servicenow_url` | `SERVICENOW_URL` | Instance URL the connector calls. |
+| `servicenow_username` | `SERVICENOW_USERNAME` | Service-account username. |
+| `servicenow_password` | `SERVICENOW_PASSWORD` | Service-account password. |
+
+The Lakeflow connection itself reads its values from DAB variables (`servicenow_host`, `servicenow_username`, `servicenow_password`) at deploy time. Loading them into the secret scope as well lets ad-hoc connector code (e.g. one-off REST calls, debug notebooks) read them via `dbutils.secrets`.
+
+Run from repo root after Phase 1 completes:
+
+```bash
+export SERVICENOW_URL="https://devXXXXX.service-now.com"
+export SERVICENOW_USERNAME="appsec_mvp_svc"
+export SERVICENOW_PASSWORD="..."
+bash src/connectors/servicenow/scripts/load-secrets.sh
+# OK: servicenow secrets loaded into scope mvp-connectors
+```
 
 ## Reference
 
@@ -96,58 +131,57 @@ The `operational_status` field uses a separate integer choice list. Default labe
 
 **Time zone normalization.** `sys_updated_on` and `sys_created_on` are rendered in the calling user's display time zone. The Bronze-to-Silver transform applies a `CONVERT_TIMEZONE` cast to UTC using the instance's known offset, stored as a connector configuration parameter. Operators must set this correctly per instance.
 
-## Setup
+## Run the job
 
-### Configuration
-
-Terraform provisions the ServiceNow integration automatically:
-
-- `appsec_dev.bronze_servicenow.business_applications` and `appsec_dev.bronze_servicenow.app_cis` tables, fed by a Databricks **Lakeflow Connect** pipeline.
-- `mvp-connectors` secret scope keys: `servicenow_url`, `servicenow_username`, `servicenow_password`.
-- Two `cmdb_ci_business_app` records ("AppSec Demo Frontend", "AppSec Demo Backend") plus `cmdb_ci_appl` records for each seed repo, linked via `cmdb_rel_ci`.
-
-### Bundle deployment
-
-The Lakeflow Connect pipeline and Silver-transform job are created by `terraform apply` in `infra/terraform`. See [Platform → Bundle deploy](../../platform/bundle-deploy.md) for the full apply order.
-
-### First run
-
-Lakeflow Connect pipelines run on their own schedule once the connection is enabled; force a manual run:
+The ServiceNow ingestion is a **Lakeflow Connect pipeline** rather than a notebook job. The pipeline is named `servicenow_ingest` (declared in `src/connectors/servicenow/resources/pipeline.yml`) and runs on a daily cron once enabled. Trigger an on-demand full refresh:
 
 ```bash
-PIPE_ID=$(terraform -chdir=infra/terraform output -raw servicenow_pipeline_id)
+databricks bundle run servicenow_ingest --target dev --refresh-all
+```
+
+Or via the Databricks CLI directly:
+
+```bash
+PIPE_ID=$(databricks pipelines list-pipelines --output JSON | jq -r '.[] | select(.name=="servicenow_ingest") | .pipeline_id')
 databricks pipelines start --pipeline-id "$PIPE_ID" --full-refresh
 ```
 
-Wait ~2 minutes for the pipeline to complete. Check status in the Databricks UI under **Workflows → Lakeflow Pipelines**.
-
-Observe bronze → silver:
-
-```sql
--- Bronze: raw CMDB rows
-SELECT * FROM appsec_dev.bronze_servicenow.business_applications LIMIT 10;
-
--- Silver (populated by the silver transform, scheduled separately)
-SELECT application_id, name, owner_email, criticality FROM appsec_dev.silver_servicenow.applications;
-```
-
-Expected: 2 rows in `silver.applications` matching the two business-app names seeded by Terraform.
-
-**Role in the evidence story.** Supplies the `silver.applications` and `silver.app_repo_mapping` rows that the [business-application rollup query](../../analytics/evidence.md#evidence-2-business-application-rollup) reads. Without ServiceNow, the "which business app has unresolved critical findings?" story collapses to just repo-level findings.
+Wait ~2 minutes. Pipeline status is visible under **Workflows → Lakeflow Pipelines** in the Databricks UI.
 
 **Normalization spot-check.**
 
 - Raw ServiceNow `business_criticality = '1 - critical'` → silver `criticality = 'critical'`.
 - Raw `business_criticality = '2 - high'` → silver `criticality = 'high'`.
 
-**Troubleshooting.**
+## Verify
+
+```sql
+-- Bronze: raw CMDB rows landed by Lakeflow Connect.
+SELECT count(*) FROM appsec_dev.bronze_servicenow.business_applications;
+SELECT count(*) FROM appsec_dev.bronze_servicenow.app_cis;
+
+-- Cross-source canonical app_repo — joins app_id (CMDB) to repository_id (SCM).
+SELECT app_id, repository_id, source FROM appsec_dev.silver.app_repo;
+
+-- Cross-source dependency check — every silver.app_repo row should join to a
+-- silver.repositories row populated by an SCM connector.
+SELECT ar.app_id, ar.repository_id, r.full_name
+  FROM appsec_dev.silver.app_repo ar
+  LEFT JOIN appsec_dev.silver.repositories r USING (repository_id)
+  ORDER BY ar.app_id;
+```
+
+For the demo runtime, expect 2 rows in `business_applications` and 3 rows in `app_cis`. Rows in `silver.app_repo` whose `r.full_name` is `NULL` indicate the SCM connector has not yet ingested the referenced repositories — install [GitHub](../scm/github.md) (or another SCM) first.
+
+## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| Pipeline stuck on schema inference | Check `databricks_connection.servicenow` options; verify the admin user has read access to `cmdb_ci_business_app`. |
-| `401 Unauthorized` | Rotate the admin password in tfvars, `terraform apply`, re-run pipeline. |
-| 0 rows in bronze after successful run | PDI may lack the tables; confirm by hitting `/api/now/table/cmdb_ci_business_app?sysparm_limit=1` directly. |
-| Silver transform job unscheduled | Verify `databricks_job.connector["servicenow"]` is running on schedule (see `terraform output connector_job_ids`). |
+| Pipeline stuck on schema inference | Open the connection definition in the Databricks UI (**Catalog → External Data → Connections → servicenow**) and verify the admin user has read access to `cmdb_ci_business_app`. |
+| `401 Unauthorized` from the pipeline | Rotate the password in ServiceNow, re-run `bash src/connectors/servicenow/scripts/load-secrets.sh` *and* re-deploy the bundle with the new `--var "servicenow_password=..."` value, then trigger a new pipeline run. |
+| 0 rows in bronze after a successful run | PDI may not expose the CMDB tables. Confirm by hitting `https://<host>/api/now/table/cmdb_ci_business_app?sysparm_limit=1` with `curl -u $USER:$PASS`. If the call returns 404, fall back to a licensed tenant. |
+| `silver.app_repo` empty | Connector-side population of `silver.app_repo` is deferred; the existing transform writes to `silver.app_repo_mapping`. See [Platform bootstrap job → connector-side population](../../platform/platform-bootstrap-job.md#note-on-connector-side-population). |
+| `silver.app_repo` rows have `repository_id` values not present in `silver.repositories` | Install at least one SCM connector and run it before expecting the cross-source join to resolve. See [SCM category](../scm/index.md). |
 
 ## Validation
 

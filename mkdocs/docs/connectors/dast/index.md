@@ -2,6 +2,12 @@
 
 DAST connectors ingest dynamic-scan findings against deployed services.
 
+!!! note "SCM-first dependency"
+    Connectors in this category depend on at least one SCM connector being
+    installed first; their findings reference `silver.repositories.repository_id`
+    populated by SCM (resolved through `silver.deployments`). Walk the
+    [SCM category](../scm/index.md) before installing a DAST connector.
+
 ## Capability surface
 
 DAST sources emit findings scoped to a target URL, application, or API endpoint rather than to a source file. The canonical key is `(target, alert_id, uri_path)`: `target` identifies the scanned deployment (host, base URL), `alert_id` is the scanner-internal rule identifier, and `uri_path` disambiguates multiple hits of the same rule across paths of the same target. Severity vocabularies are shorter than SAST (typically four levels, for example `Informational`, `Low`, `Medium`, `High`), and the specification requires per-tool lookup tables mapping each source value to the canonical four-level severity.

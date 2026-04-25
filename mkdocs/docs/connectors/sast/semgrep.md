@@ -1,23 +1,28 @@
 # Semgrep
 
-## Overview
+## What this connector ingests
 
 Semgrep is the primary standalone SAST tool in the reference implementation. Operational pattern: **CI/CD-step** in Docker-hosted mode (per-commit or per-CI/CD-run scans, commit SHA as high-water mark); **periodic-global** in Cloud Platform mode (server-side `updated_at` polling). The reference implementation targets the free open-source Semgrep engine running in a long-lived Docker container, which is the free-tier path most enterprises will actually run. Findings populate `silver.findings`.
 
-Two modes are supported. In the canonical **Docker-hosted mode** the Semgrep CLI runs inside a container deployed either as a CI/CD step or as a long-running service; the container writes JSON or SARIF scan artifacts to a known output location (a mounted volume, an artifact store, or a lightweight HTTP fetcher layered on top of the container), and the connector collects them on a schedule. In **Cloud Platform mode** the connector authenticates to Semgrep Cloud Platform and pulls findings via its REST API. Cloud Platform is optional and adds persistent finding state, triage history, and SCA findings; it requires a paid subscription. Organizations with only the free tier use Docker-hosted mode exclusively and rely on Bronze-to-Silver deduplication to reconstruct finding continuity across scans.
+Two modes are supported. In the canonical **Docker-hosted mode** the Semgrep CLI runs inside a container deployed either as a CI/CD step or as a long-running service; the container writes JSON or SARIF scan artifacts to a known output location (a mounted volume, an artifact store, or a lightweight HTTP fetcher layered on top of the container), and the connector collects them on a schedule. In **Cloud Platform mode** the connector authenticates to Semgrep Cloud Platform and pulls findings via its REST API.
 
 **Category:** SAST (Cloud server + Docker CLI; CI/CD-step) · **Integration pattern:** REST + dlt (Cloud); artifact path (Docker)
 
-The MVP connector implements the Docker-hosted artifact-path mode only: the bronze reader ingests JSON scan outputs written by an EKS CronJob (periodic) and by the Juice Shop GitHub Actions pipeline (CI/CD-step) under two S3 prefixes, distinguished by `trigger_context`. Cloud Platform mode is documented under Reference as intended scope but is not implemented in the MVP.
+Bronze schema: `bronze_semgrep` with the `semgrep_artifacts` external volume reading from `s3://${ARTIFACT_BUCKET}/semgrep/`. Cross-source contribution: `silver.findings` with `tool_source = 'semgrep'`.
 
-## Prerequisites
+The MVP connector implements the Docker-hosted artifact-path mode only: the bronze reader ingests JSON scan outputs written under the `semgrep/` S3 prefix, distinguished by `trigger_context` (e.g. `periodic` vs `cicd`). Cloud Platform mode is documented under Reference as intended scope but is not implemented in the MVP.
 
-Platform-level prerequisites (AWS, Databricks workspace, Terraform tooling) are covered once in [Platform → Prerequisites](../../platform/prerequisites.md). The Semgrep-specific handoffs required before `terraform apply` are:
+## Dependencies
 
-- **Shared artifact bucket.** Terraform provisions a single S3 bucket that receives Semgrep scan artifacts under two prefixes: `periodic/semgrep/` (written by the EKS CronJob) and `cicd/semgrep/` (written by the Juice Shop GitHub Actions pipeline). Both land in the same bronze table distinguished by `trigger_context`.
-- **Periodic scanner on EKS.** Terraform deploys a Semgrep namespace on the EKS cluster with a CronJob (fires every 6 hours) and an IRSA role granting the pod S3 write access. Requires a `GH_PAT` in the `semgrep-env` secret with read access to the SAST seed repos so the pod can `git clone` before scanning.
-- **CI/CD-step integration.** The Juice Shop repo's `.github/workflows/cicd.yml` runs `semgrep scan` on each push and uploads results to S3 via an OIDC-assumed role. Terraform creates the trust policy binding GitHub Actions to the artifact bucket ARN.
-- **Credential provisioning.** The `mvp-connectors` Databricks secret scope holds the shared credentials used by the Databricks ingest job to read the S3 artifact bucket.
+- **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, the `silver` schema, and the UC external location pointing at `s3://${ARTIFACT_BUCKET}/` (created by [Secrets bootstrap](../../platform/secrets-bootstrap.md)) must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** Semgrep findings are keyed by `(repository_id, file_path, rule_id)`; the `repository_id` value must resolve to a row in `silver.repositories` for downstream rollups to attribute findings to a repository (and through `silver.app_repo`, to a business application).
+
+## Operator inputs
+
+| Input | Where to obtain | Used as |
+|---|---|---|
+| Artifact bucket name | The S3 bucket the operator created in [Prerequisites → AWS backbone](../../platform/prerequisites.md#aws-backbone-the-operator-brings) and registered as a UC external location in [Secrets bootstrap](../../platform/secrets-bootstrap.md). | Env var `ARTIFACT_BUCKET` consumed by `src/connectors/semgrep/scripts/load-secrets.sh`; written to secret key `semgrep_artifact_bucket`. Also passed to `bundle deploy` as DAB var `artifact_bucket` so the volume's `storage_location` resolves. |
+| S3 prefix | Convention: `semgrep/`. The optional runtime writes under this prefix; CI/CD-step uploads should use the same prefix (or a sub-prefix). | Env var `SEMGREP_PREFIX` (default `semgrep/`); written to secret key `semgrep_artifact_prefix`. |
 
 ## Reference
 
@@ -116,84 +121,89 @@ The CLI JSON output (`semgrep scan --json`) uses a different top-level structure
 
 > **Verify:** Confirm that Semgrep registry rule identifiers consistently use the `p/<registry-id>` prefix format and that custom rule identifiers use the relative file path; the exact format may differ for rules installed from private registries or rule packs.
 
-## Setup
+## Optional source runtime
 
-### Configuration
+If you want appsec-mvp to run Semgrep on your EKS cluster as a periodic CronJob (clones a list of repos, runs `semgrep scan`, writes JSON findings to the artifact S3 bucket via IRSA), apply the optional runtime under `src/connectors/semgrep/runtime/`. See [`src/connectors/semgrep/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/semgrep/runtime) for variables (cluster, OIDC provider ARN, repo list, GitHub PAT for cloning), CronJob schedule, and IRSA setup.
 
-Terraform provisions the Semgrep integration automatically:
+Operators with their own Semgrep deployment skip the runtime — point any scanner that writes JSON results into `s3://${ARTIFACT_BUCKET}/semgrep/` (same prefix the connector reads from) and the connector picks them up.
 
-- Semgrep namespace on EKS with a CronJob (`*/6 hours`).
-- IRSA role granting the Semgrep pod S3 write access.
-- Juice Shop repo's `.github/workflows/cicd.yml` with a Semgrep step + S3 upload.
-- Shared artifact bucket and the `mvp-connectors` secret scope.
-- Scheduled `mvp-semgrep` Databricks job.
+For CI/CD-step usage, the cross-scanner workflow at `examples/end-to-end-demo/.github/workflows/scan.yml` shows a Semgrep step that uploads to `s3://<bucket>/cicd/semgrep/`. The end-to-end demo writes under `cicd/semgrep/`; periodic runners write under `periodic/semgrep/`. Both prefixes are subdirectories of the connector's `semgrep/` root and are picked up by the same volume.
 
-### Bundle deployment
+## Secrets
 
-The Semgrep Databricks job is created by `terraform apply` in `infra/terraform`. See [Platform → Bundle deploy](../../platform/bundle-deploy.md) for the full apply order.
+Loaded into the `mvp-connectors` secret scope by `src/connectors/semgrep/scripts/load-secrets.sh`:
 
-### First run
+| Secret key | Source env var | Purpose |
+|---|---|---|
+| `semgrep_artifact_bucket` | `ARTIFACT_BUCKET` | S3 bucket name (no `s3://` prefix). |
+| `semgrep_artifact_prefix` | `SEMGREP_PREFIX` (default `semgrep/`) | Prefix within the bucket the connector reads. |
 
-**Periodic:** wait for the next CronJob firing, or force one:
+Run from repo root after Phase 1 completes:
+
+```bash
+export ARTIFACT_BUCKET="my-appsec-mvp-artifacts"
+# SEMGREP_PREFIX defaults to "semgrep/"; override only if non-default.
+bash src/connectors/semgrep/scripts/load-secrets.sh
+# OK: semgrep secrets loaded into scope mvp-connectors
+```
+
+## Run the job
+
+The semgrep connector ingests scan artifacts from the `semgrep_artifacts` external volume. The volume points at `s3://${var.artifact_bucket}/semgrep/` and is created by `bundle deploy` (declared in `src/connectors/semgrep/resources/volumes.yml`).
+
+This connector currently has **no scheduled job** — the bundle deploys the bronze schema and volume so the ingest path exists, but the connector ingest entry-point is scaffolded as a notebook stub. Once a job resource is added under `src/connectors/semgrep/resources/`, run it via:
+
+```bash
+databricks bundle run semgrep-connector --target dev
+```
+
+To populate Bronze in the meantime, ensure scan artifacts land in the volume's prefix:
+
+**Periodic (optional runtime):** wait for the next CronJob firing, or force one:
 
 ```bash
 kubectl -n semgrep create job --from=cronjob/semgrep-periodic semgrep-manual-1
 kubectl -n semgrep logs -f job/semgrep-manual-1
 ```
 
-**CI/CD-step:** push a commit (or empty commit) to the Juice Shop repo:
+**CI/CD-step:** push to a repository whose pipeline includes the Semgrep step from `examples/end-to-end-demo/.github/workflows/scan.yml`. Watch the workflow in the GitHub Actions UI; ~6 minutes end-to-end.
 
-```bash
-git clone "https://github.com/<org>/juiceshop" && cd juiceshop
-git commit --allow-empty -m "trigger cicd"
-git push
-```
-
-Watch the workflow in GitHub Actions UI; ~6 minutes end-to-end.
-
-Then trigger the Databricks ingest:
-
-```bash
-JOB_ID=$(terraform -chdir=infra/terraform output -json connector_job_ids | jq -r '.semgrep')
-databricks jobs run-now --job-id "$JOB_ID"
-```
-
-Observe bronze → silver:
-
-```sql
--- Periodic
-SELECT count(*) FROM appsec_dev.silver.findings
-  WHERE tool_source='semgrep' AND trigger_context='periodic';
-
--- CI/CD-step
-SELECT count(*) FROM appsec_dev.silver.findings
-  WHERE tool_source='semgrep' AND trigger_context='cicd';
-
--- Both contexts, same rule on same line — the cross-context dedup surface
-SELECT trigger_context, count(*)
-  FROM appsec_dev.silver.findings
-  WHERE tool_source='semgrep' GROUP BY trigger_context;
-```
-
-**Role in the evidence story.** Dedup partner B for the [cross-tool deduplication evidence](../../analytics/evidence.md#evidence-1-cross-tool-deduplication) *and* the CI/CD-step exemplar for operational-pattern coverage. Runs in **two modes** simultaneously:
-
-1. **Periodic-global** — an EKS CronJob scans all registered seed repos every 6 hours, writing results to `s3://<bucket>/periodic/semgrep/`.
-2. **CI/CD-step** — the Juice Shop GitHub Actions pipeline runs `semgrep scan` on each push, writing results to `s3://<bucket>/cicd/semgrep/`.
-
-Both paths land in the same `silver.findings` table under `tool_source='semgrep'`, distinguished by `trigger_context`.
-
-**Normalization spot-check.**
+**Normalization spot-check (target behaviour).**
 
 - Semgrep CLI `severity = 'ERROR'` → `severity_canonical = 'high'` (via `src/connectors/semgrep/severity-cli.yml`).
 - Semgrep `extra.metadata.cwe = ['CWE-89']` → `cwe_id = 'CWE-89'`.
 
-**Troubleshooting.**
+## Verify
+
+```sql
+-- Inspect raw scan artifacts via the volume.
+LIST '/Volumes/appsec_dev/bronze_semgrep/semgrep_artifacts/';
+
+-- Periodic vs CI/CD-step contexts (once the silver transform lands).
+SELECT trigger_context, count(*)
+  FROM appsec_dev.silver.findings
+  WHERE tool_source='semgrep'
+  GROUP BY trigger_context;
+
+-- Cross-source dependency check — every semgrep finding's repository_id
+-- should join to a silver.repositories row populated by an SCM connector.
+SELECT count(*) AS missing_repo
+  FROM appsec_dev.silver.findings f
+  LEFT JOIN appsec_dev.silver.repositories r USING (repository_id)
+  WHERE f.tool_source='semgrep' AND r.repository_id IS NULL;
+```
+
+A non-zero `missing_repo` count means Semgrep reports findings for repositories the SCM connector has not yet ingested. Run [GitHub](../scm/github.md) (or another SCM) before relying on the rollups in [Evidence scenarios](../../analytics/evidence.md).
+
+## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| Periodic pod `CrashLoopBackoff` | Inspect logs; most commonly `git clone` fails — verify `GH_PAT` in the `semgrep-env` secret has read access to the seed repos. |
-| CI/CD step `AccessDenied` on S3 upload | GitHub Actions OIDC role not trusted for the artifact bucket — check `aws_iam_role_policy.github_actions` resource Region allowlist for the S3 bucket ARN. |
-| 0 rows in bronze after successful runs | Bronze reader only scans `periodic/semgrep/` + `cicd/semgrep/` — make sure the script is writing under those exact prefixes. |
+| `LIST` against the volume returns empty | No scan artifacts have landed under the volume's S3 prefix yet. Trigger a scan via the optional runtime's CronJob, or push a commit to a repo whose CI pipeline uploads to `s3://<bucket>/semgrep/cicd/`. |
+| Periodic pod `CrashLoopBackoff` (optional runtime) | Inspect logs; most commonly `git clone` fails — verify `GH_PAT` (`github_pat_for_clone`) in the runtime's secret has read access to the target repos. |
+| CI/CD-step `AccessDenied` on S3 upload | GitHub Actions OIDC role not trusted for the artifact bucket. Verify the trust policy binds the workflow's repo + branch to a role with `s3:PutObject` on the bucket ARN — see the github runtime's `optional` variable wiring at [`src/connectors/github/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/github/runtime). |
+| Volume create fails on `bundle deploy` | UC external location not yet created — run [Secrets bootstrap](../../platform/secrets-bootstrap.md) first, then re-deploy. |
+| No rows in `silver.repositories` | No SCM connector has run yet. Install [GitHub](../scm/github.md) or another SCM connector and trigger its job before relying on the cross-source join. |
 
 ## Validation
 

@@ -1,21 +1,27 @@
 # OWASP ZAP
 
-## Overview
+## What this connector ingests
 
 OWASP ZAP is the reference DAST source in the framework. Operational pattern: **on-demand scan-lifecycle** — each spider, active, or passive scan is a discrete job, orchestrated by the connector against target URLs drawn from the application inventory and read back as alert sets after scan completion. The connector populates `silver.findings` from the ZAP alerts API, with findings linked to applications via target URL reverse-resolved against `silver.deployments`.
 
 **Category:** DAST · **Integration pattern:** SDK (python-owasp-zap-v2.4) for the on-demand path; artifact path for the CI/CD-step path.
 
-The MVP connector implements the CI/CD-step artifact-path mode only: the bronze reader ingests JSON alert dumps written by the Juice Shop GitHub Actions pipeline under `s3://<bucket>/cicd/zap/`, tagged with `trigger_context = 'cicd'`. The on-demand SDK-driven path against a long-lived ZAP daemon is documented under Reference as intended scope and is scaffolded in `src/connectors/owasp_zap/ingest.py`, but is not wired into the MVP ingest run.
+Bronze schema: `bronze_owasp_zap` with the `zap_artifacts` external volume reading from `s3://${ARTIFACT_BUCKET}/zap/`. Cross-source contribution: `silver.findings` with `tool_source = 'owasp_zap'` and `file_path = NULL` (URL-based findings).
 
-## Prerequisites
+The MVP connector implements the CI/CD-step artifact-path mode: the bronze reader ingests JSON alert dumps written under the `zap/` S3 prefix, tagged with `trigger_context = 'cicd'`. The on-demand SDK-driven path against a long-lived ZAP daemon is documented under Reference as intended scope and is scaffolded in `src/connectors/owasp_zap/ingest.py`, but is not wired into the MVP ingest run.
 
-Platform-level prerequisites (AWS, Databricks workspace, Terraform tooling) are covered once in [Platform → Prerequisites](../../platform/prerequisites.md). The OWASP ZAP-specific handoffs required before `terraform apply` are:
+## Dependencies
 
-- **Long-lived ZAP daemon.** Terraform provisions a ZAP daemon Deployment in the `zap` namespace, exposed via LoadBalancer (see `terraform output zap_url`).
-- **Credentials.** The `mvp-connectors` Databricks secret scope holds the `zap_url` and `zap_api_key` keys used by the connector.
-- **CI/CD-step integration.** The Juice Shop repo's `.github/workflows/cicd.yml` runs a ZAP baseline step (`zap-baseline.py`) against the freshly-deployed app and uploads results to `s3://<bucket>/cicd/zap/` via the same OIDC-assumed role used by the Semgrep CI/CD step.
-- **Scheduled job.** A scheduled `mvp-owasp-zap` Databricks job is created by Terraform to drive ingestion.
+- **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, the `silver` schema, and the UC external location pointing at `s3://${ARTIFACT_BUCKET}/` (created by [Secrets bootstrap](../../platform/secrets-bootstrap.md)) must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** ZAP findings carry a target URL rather than a repository directly; the canonical join goes URL → `silver.deployments` → application → `silver.app_repo` → `silver.repositories`. Without an SCM connector first, the cross-source rollups in [Evidence scenarios](../../analytics/evidence.md) cannot resolve.
+
+## Operator inputs
+
+| Input | Where to obtain | Used as |
+|---|---|---|
+| ZAP daemon URL | Operator's running ZAP instance, or the `zap_url` output of the optional source runtime. | Env var `ZAP_URL` consumed by `src/connectors/owasp_zap/scripts/load-secrets.sh`; written to secret key `zap_url`. |
+| ZAP API key | The 40-char value configured at daemon startup via `-config api.key=<value>`. The optional runtime mints a random key and stores it in a Kubernetes secret. | Env var `ZAP_API_KEY`; written to secret key `zap_api_key`. |
+| Artifact bucket | Same `ARTIFACT_BUCKET` registered in [Secrets bootstrap](../../platform/secrets-bootstrap.md). The `zap_artifacts` volume's storage location reads `s3://${var.artifact_bucket}/zap/`. | DAB var `artifact_bucket` at `bundle deploy`. |
 
 ## Reference
 
@@ -61,81 +67,90 @@ ZAP alerts are scan-scoped. The connector uses the numeric scan `scanId` as the 
 
 **Scans are expensive; orchestration is per-deployment, not per-commit.** Active scans measured in minutes-to-hours preclude per-commit invocation. The reference implementation schedules ZAP scans on deployment events (new environment, release promotion) or nightly against staging environments, not on every commit.
 
-## Setup
+## Optional source runtime
 
-### Configuration
+If you want appsec-mvp to deploy a long-lived ZAP daemon on your EKS cluster (exposed via LoadBalancer with a randomly-generated 40-char API key), apply the optional runtime under `src/connectors/owasp_zap/runtime/`. See [`src/connectors/owasp_zap/runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/owasp_zap/runtime) for variables and the public-LB security note (the upstream demo configuration whitelists all caller IPs against the ZAP API and relies on the API key for access control — production deployments should harden this).
 
-Terraform provisions the OWASP ZAP integration automatically:
+Operators with their own ZAP instance skip the runtime — wire the existing daemon's URL and API key directly via the next section.
 
-- Long-lived ZAP daemon Deployment in the `zap` namespace, exposed via LoadBalancer (see `terraform output zap_url`).
-- `mvp-connectors` secret scope keys: `zap_url`, `zap_api_key`.
-- Juice Shop `.github/workflows/cicd.yml` includes a ZAP baseline step that uploads to `s3://<bucket>/cicd/zap/`.
-- Scheduled `mvp-owasp-zap` Databricks job.
+## Secrets
 
-### Bundle deployment
+Loaded into the `mvp-connectors` secret scope by `src/connectors/owasp_zap/scripts/load-secrets.sh`:
 
-The OWASP ZAP Databricks job is created by `terraform apply` in `infra/terraform`. See [Platform → Bundle deploy](../../platform/bundle-deploy.md) for the full apply order.
+| Secret key | Source env var | Purpose |
+|---|---|---|
+| `zap_url` | `ZAP_URL` | Public URL of the ZAP daemon (e.g. `http://lb-host:8080`). |
+| `zap_api_key` | `ZAP_API_KEY` | 40-character API key configured on the daemon at startup. |
 
-### First run
-
-**On-demand path** (against an already-deployed Juice Shop):
+Run from repo root after Phase 1 completes:
 
 ```bash
-ZAP_URL=$(terraform -chdir=infra/terraform output -raw zap_url)
-ZAP_KEY=$(terraform -chdir=infra/terraform output -raw zap_api_key)
-TARGET="http://$(terraform -chdir=infra/terraform output -raw juiceshop_ingress_host)"
+export ZAP_URL="http://zap.example.com:8080"
+export ZAP_API_KEY="..."
+bash src/connectors/owasp_zap/scripts/load-secrets.sh
+# OK: owasp_zap secrets loaded into scope mvp-connectors
+```
 
+## Run the job
+
+The OWASP ZAP connector ingests scan artifacts from the `zap_artifacts` external volume. The volume points at `s3://${var.artifact_bucket}/zap/` and is created by `bundle deploy` (declared in `src/connectors/owasp_zap/resources/volumes.yml`).
+
+Like semgrep, this connector currently has **no scheduled job** — the bundle deploys the bronze schema and volume so the ingest path exists, but the connector ingest entry-point is scaffolded as a notebook stub. The on-demand SDK path is also a stub.
+
+To populate Bronze in the meantime, ensure scan artifacts land in the volume's prefix.
+
+**On-demand path** (against an operator-running ZAP daemon and live target):
+
+```bash
+TARGET="http://my-target-app.example.com"
 # Start a spider+active-scan; then pull alerts.
-curl "$ZAP_URL/JSON/spider/action/scan/?apikey=$ZAP_KEY&url=$TARGET"
+curl "$ZAP_URL/JSON/spider/action/scan/?apikey=$ZAP_API_KEY&url=$TARGET"
 sleep 180
-curl "$ZAP_URL/JSON/alert/view/alerts/?apikey=$ZAP_KEY" > zap-alerts.json
+curl "$ZAP_URL/JSON/alert/view/alerts/?apikey=$ZAP_API_KEY" > zap-alerts.json
+# Upload zap-alerts.json to s3://<bucket>/zap/ondemand/<scan-id>/
 ```
 
-**CI/CD-step path:** push to Juice Shop triggers the workflow, which runs ZAP baseline and uploads to `s3://<bucket>/cicd/zap/` (same trigger as Semgrep CI/CD).
+**CI/CD-step path:** the cross-scanner workflow at `examples/end-to-end-demo/.github/workflows/scan.yml` includes a ZAP baseline step that runs `zap-baseline.py` against a freshly-deployed app and uploads results to `s3://<bucket>/zap/cicd/`. Push to a repo whose pipeline includes that step.
 
-Then trigger the Databricks ingest:
+**Normalization spot-check (target behaviour).**
 
-```bash
-JOB_ID=$(terraform -chdir=infra/terraform output -json connector_job_ids | jq -r '.owasp_zap')
-databricks jobs run-now --job-id "$JOB_ID"
-```
+- ZAP `risk = 'High'` → `severity_canonical = 'high'`.
+- ZAP `cweid = '79'` → `cwe_id = 'CWE-79'`.
 
-Before expecting DAST rows, confirm Juice Shop is live:
-
-```bash
-HOST=$(terraform -chdir=infra/terraform output -raw juiceshop_ingress_host)
-curl -fsSL "http://$HOST/" | grep -i 'juice'
-```
-
-If the hostname is still `pending`, the LoadBalancer hasn't provisioned yet — wait and re-check.
-
-Observe bronze → silver:
+## Verify
 
 ```sql
+-- Inspect raw scan artifacts via the volume.
+LIST '/Volumes/appsec_dev/bronze_owasp_zap/zap_artifacts/';
+
+-- Once the silver transform lands, the URL-based finding shape:
 SELECT count(*) FROM appsec_dev.silver.findings
   WHERE tool_source='owasp_zap';
 
 SELECT trigger_context, url, rule_id_native, severity_canonical, file_path
   FROM appsec_dev.silver.findings WHERE tool_source='owasp_zap' LIMIT 10;
+
+-- Cross-source dependency check — every owasp_zap finding's repository_id
+-- (resolved from URL via silver.deployments) should join to silver.repositories.
+SELECT count(*) AS missing_repo
+  FROM appsec_dev.silver.findings f
+  LEFT JOIN appsec_dev.silver.repositories r USING (repository_id)
+  WHERE f.tool_source='owasp_zap' AND r.repository_id IS NULL;
 ```
 
-Expected: `file_path IS NULL` and `url` populated for every row. This is the shape-variety claim for the [finding-shape variety evidence scenario](../../analytics/evidence.md#evidence-3-finding-shape-variety).
+Expected: `file_path IS NULL` and `url` populated for every ZAP row. This is the shape-variety claim for the [finding-shape variety evidence scenario](../../analytics/evidence.md#evidence-3-finding-shape-variety).
 
-**Role in the evidence story.** Supplies the **finding-shape variety** evidence for the [finding-shape variety scenario](../../analytics/evidence.md#evidence-3-finding-shape-variety) — URL-based findings with `file_path = NULL` flowing through the same Silver→Gold pipeline as the code-level SAST findings. Additionally demonstrates the CI/CD-step pattern: the Juice Shop pipeline runs `zap-baseline.py` against the freshly-deployed app.
+A non-zero `missing_repo` count means ZAP's URL → repository resolution didn't complete — typically because the SCM connector hasn't run, or because the URL doesn't appear in `silver.deployments`. Run [GitHub](../scm/github.md) (or another SCM) before relying on the rollups.
 
-**Normalization spot-check.**
-
-- ZAP `risk = 'High'` → `severity_canonical = 'high'`.
-- ZAP `cweid = '79'` → `cwe_id = 'CWE-79'`.
-
-**Troubleshooting.**
+## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| ZAP API `403 Forbidden` | `api.key` mismatch — rotate `random_password.zap_api_key` via `terraform taint`/`apply`. |
-| Scan never completes | Juice Shop deployment not yet running — the CI/CD pipeline must complete before scheduling scans. |
-| Empty `cicd/zap/` prefix | GitHub Actions workflow failed — inspect the GitHub Actions run. |
+| ZAP API `403 Forbidden` | `zap_api_key` secret value doesn't match the daemon's `api.key`. If using the optional runtime, the value is in the `zap-api-key` Kubernetes secret — `kubectl -n zap get secret zap-api-key -o jsonpath='{.data.ZAP_API_KEY}' \| base64 -d`. Re-load via `bash src/connectors/owasp_zap/scripts/load-secrets.sh`. |
+| Scan never completes | Target app not reachable from the ZAP daemon. Confirm the URL responds: `curl -fsSL "$TARGET" \| head`. |
+| Empty `zap/cicd/` prefix | GitHub Actions workflow failed — inspect the run in the GitHub UI. |
 | `file_path` populated (not NULL) | Transform bug — ZAP mapping must leave `file_path` NULL. See `src/connectors/owasp_zap/mapping.yml`. |
+| No rows in `silver.repositories` | No SCM connector has run yet. Install [GitHub](../scm/github.md) or another SCM connector and trigger its job before relying on the cross-source join. |
 
 ## Validation
 

@@ -1,6 +1,13 @@
 # AWS WAF
 
-## Overview
+!!! info "Placeholder — not implemented in MVP"
+    A reference AWS WAF connector is not part of the MVP. This page is a
+    scaffolding placeholder framing the intended runbook structure; the
+    Reference section below documents the integration per the category
+    capability surface. Follow the [WAF skills](skills.md) to generate the
+    connector when needed.
+
+## What this connector ingests
 
 AWS WAF is the reference runtime-security source, representing the third detection tier (distinct from static and dynamic testing). Operational pattern: **runtime telemetry with time-window sampled retrieval** — the connector issues `GetSampledRequests` on a fixed cadence for each rule and WebACL, retrieving matched-request samples over a bounded event-time window. Findings populate `silver.waf_events`, linked to applications through the associated resource ARN (ALB, CloudFront distribution, API Gateway stage) and AWS resource tags.
 
@@ -8,13 +15,10 @@ AWS WAF is the reference runtime-security source, representing the third detecti
 
 **Category:** WAF (runtime, time-window sampled retrieval) · **Integration pattern:** SDK (boto3)
 
-## Prerequisites
+## Dependencies
 
-!!! info "Not implemented in MVP"
-    A reference AWS WAF connector is not part of the MVP. The
-    Reference section above documents the intended integration per
-    the category capability surface; follow the WAF skills
-    to generate a connector when needed.
+- **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md).
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** WAF events resolve to applications through the associated resource ARN, then to repositories via `silver.app_repo`. The chain requires an SCM connector to populate `silver.repositories` upstream.
 
 ## Reference
 

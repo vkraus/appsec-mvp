@@ -2,6 +2,12 @@
 
 SAST connectors ingest static-analysis findings keyed by repository, file, and rule.
 
+!!! note "SCM-first dependency"
+    Connectors in this category depend on at least one SCM connector being
+    installed first; their findings reference `silver.repositories.repository_id`
+    populated by SCM. Walk the [SCM category](../scm/index.md) before installing
+    a SAST connector.
+
 ## Capability surface
 
 SAST sources emit findings keyed by repository, file path, line number, rule identifier, and optional CWE category. Severity scales range from three to five levels, with overlapping but non-identical vocabularies; the specification requires per-tool lookup tables mapping each source value to the canonical four-level severity.

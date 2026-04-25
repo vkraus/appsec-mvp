@@ -2,6 +2,13 @@
 
 WAF connectors ingest edge-layer block and allow events from web application firewalls.
 
+!!! note "SCM-first dependency"
+    Connectors in this category depend on at least one SCM connector being
+    installed first; their findings resolve to applications via the WebACL's
+    associated resource ARN, then to repositories via `silver.app_repo` and
+    `silver.repositories` populated by SCM. Walk the
+    [SCM category](../scm/index.md) before installing a WAF connector.
+
 ## Capability surface
 
 WAF sources emit event-shaped records rather than finding-shaped ones: each record describes a single request observed at the edge, keyed by `(timestamp, rule_id, source_ip, request_id)`. A single record carries the matched rule identifier, the action taken (block, allow, count, challenge, captcha), the source IP and optional geo-IP, request metadata (method, URI, headers), and a sampling weight where the provider returns statistical samples rather than the full stream. Severity is not a first-class field on a WAF event; the canonical severity is derived from the action and rule-group category per a per-source lookup table, similar to the severity-derivation pattern used for secrets.

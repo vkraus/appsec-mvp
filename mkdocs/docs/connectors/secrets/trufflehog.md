@@ -1,18 +1,22 @@
 # TruffleHog
 
-## Overview
+!!! info "Placeholder — not implemented in MVP"
+    A reference TruffleHog connector is not part of the MVP. This page is
+    a scaffolding placeholder framing the intended runbook structure; the
+    Reference section below documents the integration per the category
+    capability surface. Follow the [Secrets skills](skills.md) to generate
+    the connector when needed.
+
+## What this connector ingests
 
 TruffleHog is the dedicated secret-detection tool. Operational pattern: **CI/CD-step** — each `trufflehog` invocation is a complete scan scoped to a commit range, and the connector uses the latest scanned commit SHA per repository as the high-water mark (`--since-commit`). The connector invokes the TruffleHog CLI against each enrolled repository and parses its line-delimited JSON output to populate `silver.findings`. TruffleHog's distinguishing capability is live credential verification: with `--results=verified,unknown`, the tool validates each detected secret against the provider's authentication endpoint and emits a `Verified` boolean. This boolean is the primary signal for the canonical `validity_status` column.
 
 **Category:** Secrets (CLI; CI/CD-step) · **Integration pattern:** Artifact path (CI/CD-step output → Databricks Volume)
 
-## Prerequisites
+## Dependencies
 
-!!! info "Not implemented in MVP"
-    A reference TruffleHog connector is not part of the MVP. The
-    Reference section above documents the intended integration per
-    the category capability surface; follow the Secrets skills
-    to generate a connector when needed.
+- **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md).
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** TruffleHog findings are keyed by `(repository_id, commit_sha, secret_type, file_path)`; `repository_id` must resolve to a row in `silver.repositories` for downstream rollups to attribute findings to a repository (and through `silver.app_repo`, to a business application).
 
 ## Reference
 
