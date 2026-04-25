@@ -1,9 +1,9 @@
 source: sonarqube
 category: sast
-# severity_map / status_map are aspirational pointers — these YAMLs do
-# not yet exist on disk. No code currently loads this connector's
-# config.yml; when the lookups are introduced, drop them at the paths
-# below to keep the convention with other connectors.
+# severity_map / status_map point at the YAML lookup tables on disk.
+# No code currently loads this connector's config.yml; the pointers
+# follow the convention so that when the loader lands, the paths are
+# already stable.
 severity_map: src/connectors/sonarqube/severity.yml
 status_map:   src/connectors/sonarqube/status.yml
 bucket_secret_scope: mvp-connectors

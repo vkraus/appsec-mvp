@@ -7,7 +7,7 @@ resources:
         - { name: target_catalog, default: "${var.catalog}" }
         - { name: hwm_reset,      default: "false" }
       schedule:
-        quartz_cron_expression: "0 15 */3 * * ?"
+        quartz_cron_expression: "0 17 */3 * * ?"
         timezone_id: "UTC"
       tasks:
         - task_key: ingest
