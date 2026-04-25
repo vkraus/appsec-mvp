@@ -16,10 +16,9 @@ dist/
 mkdocs/site/
 .venv/
 
-# Terraform
-infra/terraform/*.tfvars
-infra/terraform/.terraform/
-infra/terraform/terraform.tfstate*
+# Terraform (per-connector runtime/ folders only — top-level infra/terraform/
+# was removed in the Databricks-centric redesign)
+src/connectors/*/runtime/*.tfvars
 src/connectors/*/runtime/.terraform/
 src/connectors/*/runtime/terraform.tfstate*
 src/connectors/*/runtime/.terraform.lock.hcl
