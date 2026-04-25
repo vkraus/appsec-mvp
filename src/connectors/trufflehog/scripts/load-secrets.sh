@@ -1,35 +1,24 @@
 #!/usr/bin/env bash
-# Load TruffleHog artefact-bucket reader credentials into a Databricks secret
-# scope.
+# Populate TruffleHog connector secrets into the mvp-connectors scope.
 #
-# TruffleHog is a CLI-artefact connector — scans run on CI/CD runners and
-# write `--json` line-delimited output to a cloud bucket; the connector
-# ingests those artefacts via a Unity Catalog Volume that maps onto the
-# bucket. The runtime needs read credentials for the bucket so autoloader
-# can pull the JSON. We store them as a single JSON blob under one secret
-# key so the runtime references one secret, not two.
+# TruffleHog is a CLI-artefact connector: scans run on CI/CD runners and
+# write `--json` line-delimited output to a Databricks Volume. The connector
+# reads from that volume; no live TruffleHog API token is required. The
+# only deployment input is the artefact bucket / volume name.
 #
 # Reads from environment variables:
-#   AWS_ACCESS_KEY_ID                         — bucket reader access key
-#   AWS_SECRET_ACCESS_KEY                     — bucket reader secret key
-#   TRUFFLEHOG_ARTIFACT_VOLUME_SECRET_SCOPE   — optional; default mvp-connectors
-#   TRUFFLEHOG_ARTIFACT_VOLUME_SECRET_KEY     — optional; default trufflehog_aws_credentials
+#   TRUFFLEHOG_ARTIFACT_BUCKET — S3 bucket (or volume URI) holding the
+#                                trufflehog/ prefixed line-delimited JSON
+#                                artefacts.
 #
-# Idempotent: re-runs replace the secret value.
+# Idempotent: re-runs update existing secret values.
 
 set -euo pipefail
 
-SCOPE="${TRUFFLEHOG_ARTIFACT_VOLUME_SECRET_SCOPE:-mvp-connectors}"
-KEY="${TRUFFLEHOG_ARTIFACT_VOLUME_SECRET_KEY:-trufflehog_aws_credentials}"
+: "${TRUFFLEHOG_ARTIFACT_BUCKET:?TRUFFLEHOG_ARTIFACT_BUCKET is required}"
 
-: "${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID env var required}"
-: "${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY env var required}"
+SCOPE="mvp-connectors"
 
-CREDS=$(jq -nc \
-  --arg ak "$AWS_ACCESS_KEY_ID" \
-  --arg sk "$AWS_SECRET_ACCESS_KEY" \
-  '{access_key_id:$ak, secret_access_key:$sk}')
+databricks secrets put-secret "$SCOPE" trufflehog_artifact_bucket --string-value "$TRUFFLEHOG_ARTIFACT_BUCKET"
 
-echo "Loading TruffleHog AWS credentials into Databricks secret scope '$SCOPE' key '$KEY'..."
-echo -n "$CREDS" | databricks secrets put-secret --scope "$SCOPE" --key "$KEY"
-echo "OK: TruffleHog artefact-bucket credentials loaded."
+echo "OK: trufflehog secrets loaded into scope $SCOPE"
