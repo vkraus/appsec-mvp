@@ -41,13 +41,13 @@ Rows are `REQ-*` IDs; columns are the nine selected sources spanning static test
 | `REQ-ING-AUTH` | PASS | PASS | PASS | PASS | N/A | PASS | N/A | N/A | PASS |
 | `REQ-ING-PAG` | PASS | PASS | PASS | PASS | N/A | PASS | N/A | N/A | N/A |
 | `REQ-ING-RL` | PASS | PASS | PASS | PASS | N/A | PASS | N/A | N/A | N/A |
-| `REQ-ING-HWM` | PASS | PASS | PASS | PASS | PASS | PASS | N/A | (pending) | PASS |
-| `REQ-TRF-MAP` | PASS | PASS | PASS | PASS | (pending) | PASS | PASS | (pending) | PASS |
-| `REQ-TRF-SEV` | N/A | N/A | PASS | PASS | (pending) | PASS | PASS | (pending) | PASS |
-| `REQ-TRF-STS` | N/A | N/A | PASS | PASS | (pending) | PASS | N/A | (pending) | N/A |
-| `REQ-TRF-TS` | PASS | PASS | PASS | PASS | (pending) | PASS | PASS | (pending) | PASS |
-| `REQ-DQ` | PASS | PASS | PASS | PASS | (pending) | PASS | PASS | (pending) | PASS |
-| `REQ-DEDUP` | N/A | N/A | PASS | PASS | (pending) | PASS | PASS | (pending) | N/A |
+| `REQ-ING-HWM` | PASS | PASS | PASS | PASS | PASS | PASS | N/A | PASS | PASS |
+| `REQ-TRF-MAP` | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `REQ-TRF-SEV` | N/A | N/A | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `REQ-TRF-STS` | N/A | N/A | PASS | PASS | PASS | PASS | N/A | PASS | N/A |
+| `REQ-TRF-TS` | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `REQ-DQ` | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `REQ-DEDUP` | N/A | N/A | PASS | PASS | PASS | PASS | PASS | PASS | N/A |
 
 Cells marked `N/A` indicate a REQ-ID that does not apply to a source — because the category does not exercise the requirement (for example, `REQ-DEDUP` does not apply to the CMDB category, which emits no findings subject to cross-tool deduplication; the CLI-artifact ingestion path has no API auth, pagination, or rate limit). Cells marked `(pending)` indicate that the connector module is generated but the transform implementation is deferred (Future Work) — the bound test asserts against an empty stub. Some greenfield-connector tests are skipped pending live API fixture capture; these are bound to their REQ-IDs via `@pytest.mark.requirement` markers but skip-marked with `pending live fixtures (B follow-up)`. The per-source Implementation reports linked from each connector page are the authoritative record of which tests were bound to which REQ-ID.
 
