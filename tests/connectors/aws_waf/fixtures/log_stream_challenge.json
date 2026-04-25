@@ -1,0 +1,22 @@
+{
+  "timestamp": 1713600002500,
+  "webaclId": "arn:aws:wafv2:eu-west-1:111122223333:regional/webacl/api-stage/def456",
+  "terminatingRuleId": "BotControl_Challenge",
+  "terminatingRuleType": "MANAGED_RULE_GROUP",
+  "action": "CHALLENGE",
+  "httpRequest": {
+    "clientIp": "192.0.2.99",
+    "country": "IE",
+    "uri": "/api/login",
+    "httpMethod": "POST",
+    "requestId": "req-0000000000000003",
+    "headers": []
+  },
+  "ruleGroupList": [
+    {"ruleGroupId": "AWS#AWSManagedRulesBotControlRuleSet"}
+  ],
+  "labels": [
+    {"name": "awswaf:managed:aws:bot-control:bot:category:automated_browser"}
+  ],
+  "responseCodeSent": 202
+}

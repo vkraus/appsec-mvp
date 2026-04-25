@@ -1,0 +1,21 @@
+{
+  "Timestamp": "2026-04-20T10:00:00Z",
+  "Weight": 23,
+  "Action": "BLOCK",
+  "RuleNameWithinRuleGroup": "SQLi_BODY",
+  "ResponseCodeSent": 403,
+  "OverriddenAction": null,
+  "Labels": [
+    {"Name": "awswaf:managed:aws:core-rule-set:SQLi_BODY"}
+  ],
+  "Request": {
+    "ClientIP": "203.0.113.77",
+    "Country": "US",
+    "URI": "/api/orders",
+    "Method": "POST",
+    "Headers": [
+      {"Name": "Host", "Value": "shop.example.com"}
+    ]
+  },
+  "webaclId": "arn:aws:wafv2:us-east-1:111122223333:global/webacl/checkout-frontdoor/abc123"
+}

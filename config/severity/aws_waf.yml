@@ -1,0 +1,24 @@
+# AWS WAF severity lookup.
+#
+# Severity for WAF events is DERIVED, not source-supplied — there is no
+# `severity` field on a WAF log record. This lookup is ACTION-KEYED
+# (block / allow / count / challenge / captcha), not severity-keyed.
+# See mkdocs/docs/connectors/waf/aws-waf.md § "Enumerations" for the
+# reference derivation and references/waf.md for the category contract.
+#
+# Rule-group / rule-type is a secondary axis documented on the connector
+# page (BLOCK on a managed-rule-group match -> high vs. BLOCK on a
+# regular / rate-based rule -> medium). The baseline lookup below keeps
+# the single-axis action default; deployment-specific rule-type overrides
+# are layered in a per-workspace sibling file (future work).
+#
+# Values are normalised to lower-case in transform.derive_severity before
+# lookup (AWS WAF records emit upper-case action values in both surfaces).
+# Undocumented action values fall through to the configured default
+# (`medium` per transform.DEFAULT_SEVERITY) with a data-quality warning
+# per REQ-TRF-SEV.
+block:     high       # BLOCK on managed-rule-group match per reference profile
+count:     medium     # COUNT on managed-rule-group match
+challenge: low
+captcha:   low
+allow:     low        # ingested only when deployment policy opts in

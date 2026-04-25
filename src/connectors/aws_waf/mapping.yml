@@ -1,0 +1,40 @@
+# AWS WAF log record -> silver.waf_events.
+#
+# Target Silver table is silver.waf_events (plural; event-shaped), NOT
+# silver.findings. WAF records describe edge observations with an action,
+# not triaged vulnerabilities. See references/waf.md for the contract.
+#
+# Severity is DERIVED from the action field via the action-keyed lookup
+# table referenced below. There is no source-supplied severity.
+#
+# Status is N/A — WAF events are append-only; no lifecycle state projects
+# into Silver.
+#
+# Application linkage is performed in transform.py: webacl_arn joined
+# against silver.deployments to resolve application_id.
+source_key: aws_waf
+target_table: silver.waf_events
+
+fields:
+  # Event-shape columns, event-shaped (not finding-shape).
+  event_id:            httpRequest.requestId           # edge-assigned unique id
+  tool_source:         "aws_waf"
+  category:            "waf"
+  timestamp:           timestamp                       # epoch ms -> UTC datetime at transform
+  webacl_arn:          webaclId                        # ARN-based; join key for deployments
+  application_id:      null                            # resolved at transform time via ARN join
+  rule_id:             terminatingRuleId
+  rule_type:           terminatingRuleType             # feeds severity-derivation lookup
+  action:              action                          # ALLOW | BLOCK | COUNT | CAPTCHA | CHALLENGE
+  severity_canonical:
+    source_path: action                                # ACTION-KEYED (no source severity)
+    lookup: config/severity/aws_waf.yml
+  status_canonical:    null                            # append-only; no status lifecycle
+  source_ip:           httpRequest.clientIp            # dedup-tuple component
+  country:             httpRequest.country
+  request_uri:         httpRequest.uri
+  http_method:         httpRequest.httpMethod
+  response_code:       responseCodeSent
+  labels:              labels                          # passthrough for downstream classification
+  rule_group_list:     ruleGroupList                   # per-group action; audit-only
+  sampling_weight:     null                            # populated only from SDK-fallback Bronze rows
