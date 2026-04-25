@@ -108,7 +108,7 @@ Terraform provisions the ServiceNow integration automatically:
 
 ### Bundle deployment
 
-The Lakeflow Connect pipeline and Silver-transform job are created by `terraform apply` in `infra/terraform`. See [Platform → Terraform apply](../../platform/terraform-apply.md) for the full apply order.
+The Lakeflow Connect pipeline and Silver-transform job are created by `terraform apply` in `infra/terraform`. See [Platform → Bundle deploy](../../platform/bundle-deploy.md) for the full apply order.
 
 ### First run
 

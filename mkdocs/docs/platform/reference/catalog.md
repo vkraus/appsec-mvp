@@ -2,6 +2,19 @@
 
 The implementation's test suite binds to requirement identifiers through `@pytest.mark.requirement(...)` markers in the co-located [`src/{platform,connectors/<source>}/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src) folders. The catalog below is the authoritative set; the traceability matrix tracks per-source coverage.
 
+## Schemas and tables
+
+Unity Catalog layout under each per-environment catalog (`appsec_dev`, `appsec_staging`, `appsec_prod`):
+
+| Schema | Owner | Tables / objects |
+|---|---|---|
+| `silver` | platform | `findings`, `hwm`, `repositories`, `app_repo` (DDL at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql)) |
+| `bronze_<source>` | per connector | raw landed records, one schema per connector (`bronze_github`, `bronze_servicenow`, `bronze_sonarqube`, `bronze_semgrep`, `bronze_owasp_zap`) |
+| `silver_<source>` | per connector | per-source projection schemas where applicable (`silver_github`, `silver_servicenow`) |
+| `gold` | analytics | cross-source aggregations (placeholder; full analytics implementation is future work) |
+
+The cross-source `silver` schema contains the canonical entities and findings every connector reads or writes. `silver.repositories` is populated by SCM connectors (the SCM-first data dependency); `silver.app_repo` is populated by the CMDB connector. Both table shapes live at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql) and are applied by the `platform-bootstrap` job described at [Platform bootstrap job](../platform-bootstrap-job.md).
+
 ## Requirement catalog
 
 Each `REQ-*` identifier is bound to pytest markers in the reference implementation.

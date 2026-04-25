@@ -74,7 +74,7 @@ Terraform provisions the OWASP ZAP integration automatically:
 
 ### Bundle deployment
 
-The OWASP ZAP Databricks job is created by `terraform apply` in `infra/terraform`. See [Platform → Terraform apply](../../platform/terraform-apply.md) for the full apply order.
+The OWASP ZAP Databricks job is created by `terraform apply` in `infra/terraform`. See [Platform → Bundle deploy](../../platform/bundle-deploy.md) for the full apply order.
 
 ### First run
 

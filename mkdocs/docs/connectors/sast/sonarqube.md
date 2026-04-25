@@ -15,7 +15,7 @@ The MVP documents the SonarQube integration end-to-end (Terraform provisioning, 
 Platform-level prerequisites (AWS, Databricks workspace, Terraform tooling) are covered once in [Platform → Prerequisites](../../platform/prerequisites.md). The SonarQube-specific handoffs required before `terraform apply` are:
 
 - **SonarQube server.** Terraform provisions a SonarQube 10.6 Helm release on the EKS cluster, backed by the RDS Postgres instance, with a LoadBalancer Service exposing the UI (`terraform output sonarqube_url`). No external SonarQube tenancy is required.
-- **Analysis token bootstrap.** On first login to the freshly provisioned SonarQube UI, generate a project-analysis token and register it as the `mvp-connectors/sonarqube_token` Databricks secret. See [Terraform apply → bootstrapping SonarQube's analysis token](../../platform/terraform-apply.md#bootstrapping-sonarqubes-analysis-token). This token is used both by the scanner CLI (to publish scan results) and by the Databricks ingest job (to read findings via `/api/issues/search`).
+- **Analysis token bootstrap.** On first login to the freshly provisioned SonarQube UI, generate a project-analysis token and register it as the `mvp-connectors/sonarqube_token` Databricks secret. See [Bootstrapping the analysis token](#bootstrapping-the-analysis-token) below. This token is used both by the scanner CLI (to publish scan results) and by the Databricks ingest job (to read findings via `/api/issues/search`).
 - **Scanner host.** The first scan of each seed repository is triggered from any machine with Docker and network access to the SonarQube LoadBalancer URL; the canonical sonar-scanner-cli image is used.
 
 ## Reference
@@ -158,12 +158,12 @@ Terraform provisions the SonarQube integration automatically:
 
 - SonarQube 10.6 Helm release running on the EKS cluster, backed by the RDS Postgres instance.
 - LoadBalancer Service exposing the SonarQube UI (see `terraform output sonarqube_url`).
-- Project-analysis token secret key `mvp-connectors/sonarqube_token` — **must be registered on first login**; see [Terraform apply → bootstrapping SonarQube's analysis token](../../platform/terraform-apply.md#bootstrapping-sonarqubes-analysis-token).
+- Project-analysis token secret key `mvp-connectors/sonarqube_token` — **must be registered on first login**; see [Bootstrapping the analysis token](#bootstrapping-the-analysis-token) below.
 - Scheduled `mvp-sonarqube` Databricks job.
 
 ### Bundle deployment
 
-The SonarQube Databricks job is created by `terraform apply` in `infra/terraform`. See [Platform → Terraform apply](../../platform/terraform-apply.md) for the full apply order.
+The SonarQube Databricks job is created by `terraform apply` in `infra/terraform`. See [Platform → Bundle deploy](../../platform/bundle-deploy.md) for the full apply order.
 
 ### First run
 
@@ -210,7 +210,7 @@ SELECT rule_id_native, cwe_id, severity_canonical
 |---|---|
 | Helm release stuck on `pending-install` | RDS not ready — wait ~5 min, `helm status sonarqube -n sonarqube`, re-run `terraform apply`. |
 | `/api/issues/search` returns empty | First scan hasn't run yet; execute the scanner loop above. |
-| `401` from the Databricks job | `sonarqube_token` secret not populated — run the bootstrap in [Terraform apply](../../platform/terraform-apply.md#bootstrapping-sonarqubes-analysis-token). |
+| `401` from the Databricks job | `sonarqube_token` secret not populated — load via `src/connectors/sonarqube/scripts/load-secrets.sh`; see [Secrets bootstrap](../../platform/secrets-bootstrap.md). |
 
 ## Validation
 
