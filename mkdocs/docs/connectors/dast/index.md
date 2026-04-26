@@ -29,7 +29,7 @@ DAST sources populate the Silver `finding` table scoped by `(application_id, tar
 
 ## Skills
 
-Three skills cover the connector lifecycle for DAST sources, with facts for the category at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
+Four skills cover the connector lifecycle for DAST sources, with facts for the category at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## Connectors in this category
 

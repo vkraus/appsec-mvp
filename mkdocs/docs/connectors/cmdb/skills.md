@@ -1,6 +1,6 @@
 # CMDB skills
 
-Three skills cover the connector lifecycle for CMDB sources. Each carries a CMDB specific reference. The procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
+Four skills cover the connector lifecycle for CMDB sources. Each carries a CMDB specific reference. The procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## analyze-source: CMDB reference
 
@@ -48,6 +48,42 @@ Standard preference order applies: Lakeflow Connect, then Databricks SDK, then d
 - **Pagination scale.** Offset based pagination with page sizes in the thousands. Rate limit policy must accommodate the high page count typical of full reload bootstrapping.
 
 *Rendered from `.claude/skills/analyze-source/references/cmdb.md`. Source of truth lives in the skill file.*
+
+## provision-source: CMDB reference
+
+Facts the provision-source skill needs to emit the source-side runtime for a CMDB source. CMDB tenants are SaaS, so the runtime is a thin **Terraform SaaS-seed** module that POSTs demo CMDB records to the user's tenant via the source's REST table API. It is optional. Users with an already-populated CMDB skip it.
+
+### Runtime shape
+
+`runtime_provisioner: terraform-saas-seed`. Provider stack: `hashicorp/http` only. There is no AWS, no Kubernetes, no IRSA — pure HTTP. Mutating writes (POSTs to the table API) flow through `terraform_data` + `local-exec curl` because the ServiceNow / generic-CMDB table API has no first-class Terraform provider.
+
+The runtime emits the standard four-file shape (`main.tf`, `variables.tf`, `outputs.tf`, `versions.tf`) plus `README.md` and `install.sh`. There are no `runtime/files/*` sidecars by default — seeded records are constructed inline in `main.tf` from `var.seed_repo_names` and a hardcoded business-app spec.
+
+### `operational.yml.source_runtime` fields
+
+Required: `runtime_provisioner` (always `terraform-saas-seed` for CMDB), `instance_url_var_name` (default `instance_url`), `admin_username_var_name` (default `admin_username`), `admin_password_var_name` (default `admin_password`).
+
+Optional, with category-baked defaults: `seed_repo_names_default` (`["BenchmarkJava", "BenchmarkPython", "juice-shop"]`), `github_org_default` (`appsec-mvp-demo`), `project_prefix_default` (`appsec-mvp`), `business_apps` (Frontend / Backend split with criticality), `table_endpoints` (`["cmdb_ci_business_app", "cmdb_ci_appl", "cmdb_rel_ci"]`), `relationship_type` (`"Depends on::Used by"`), `apply_prerequisites` (`["bash", "curl", "jq"]`), `terraform_required_version` (`>= 1.7`).
+
+### Variables exposed
+
+Required (no defaults): `instance_url`, `admin_username`, `admin_password` (sensitive). Optional with category defaults: `github_org`, `seed_repo_names`, `project_prefix`.
+
+### Outputs
+
+`business_app_sysids` — map of seeded business-app names to ServiceNow `sys_id` values (looked up via `data "http"` after each POST).
+
+### `runtime/install.sh` shape
+
+Wraps `terraform init` + `terraform apply -auto-approve` with TF_VAR exports drawn from operator-supplied env vars (`{SOURCE_UPPER}_INSTANCE_URL`, `{SOURCE_UPPER}_ADMIN_USERNAME`, `{SOURCE_UPPER}_ADMIN_PASSWORD`, plus optional `SEED_REPO_NAMES` and `PROJECT_PREFIX`). The script enforces `bash`, `curl`, and `jq` on PATH (the `local-exec` provisioners shell out to them) and exits non-zero with a clear message if any required env var is unset.
+
+> **Apply prerequisites note:** on Windows hosts, run from WSL or Git Bash. The `local-exec` provisioners are not idempotent against an already-populated CMDB — re-running against the same tenant skips records whose `triggers_replace` keys are unchanged but does not detect drift if records were edited manually in the UI between applies. Taint the relevant `terraform_data` resources before re-applying if needed.
+
+### Page §Source provisioning section template
+
+Inserted after `## User inputs` and before `## Secrets`. Section heading: `## Optional source runtime`. Body is a two-paragraph operator-facing summary: what the module seeds (demo business-app and CI records via REST), how to run it (`cd src/connectors/{source}/runtime && terraform init && terraform apply -var-file=terraform.tfvars`, or `bash runtime/install.sh`), and a cross-link to `runtime/README.md` for the full variable list. Closes with the apply-prerequisites callout (`bash`, `curl`, `jq`).
+
+*Rendered from `.claude/skills/provision-source/references/cmdb.md`. Source of truth lives in the skill file.*
 
 ## generate-connector: CMDB reference
 
@@ -105,6 +141,22 @@ Standard order: Lakeflow Connect, then Databricks SDK, then dlt. CMDB sources ar
 - **Display vs raw values.** Configure the source request to return raw values (e.g. `sysparm_display_value=false` for ServiceNow) so IDs stay stable across locale and admin renames.
 - **Plural Silver names.** The transform writes to `silver.applications` / `silver.teams` / `silver.app_repo_mapping`. The plurals are authoritative. Singular forms are wrong.
 - **High page count.** Offset based pagination with page sizes in the thousands. The `config.yml` page size knob defaults to 1000 unless the source documents otherwise.
+
+### Databricks-side production-shape
+
+In addition to the eight-file core (`config.yml`, `ingest.py`, `transform.py`, `mapping.yml`, `severity.yml`, `status.yml`, `resources/{source}-job.yml`, and the `tests/` suite), generate-connector also emits the **Databricks-side production-shape** for CMDB connectors. The skill reads `operational.yml.databricks_runtime` (a sibling sub-block to `source_runtime`) to interpolate the templates.
+
+The `databricks_runtime` schema for CMDB is reverse-engineered from the ServiceNow follower's pre-deletion state and covers thirteen fields: `secret_scope` (default `mvp-connectors`), `bronze_schema` (default `bronze_{source}`), `silver_schema` (default `silver_{source}` — CMDB is the only category that emits the silver schema; downstream Silver lives there), `bronze_tables`, `envelope_table`, `cron_schedule`, `uc_catalog_var`, `lakeflow_pipeline_name`, `lakeflow_connection_name`, `lakeflow_source_objects`, `default_target`, `default_catalog`, `secret_env_vars`, and `dab_connection_var_passthrough` (always `true` for CMDB — Lakeflow Connect's UC connection pulls credentials from DAB variables at deploy time, not from the secret scope).
+
+What the production-shape adds on top of the eight-file core:
+
+- **`scripts/load-secrets.sh`** — populates the secret scope from the operator's environment. Iterates over `databricks_runtime.secret_env_vars` (each entry is `{env_var, secret_key}`) and runs `databricks secrets put-secret` per pair.
+- **`scripts/install.sh`** — end-to-end installer wrapping load-secrets + Lakeflow pipeline trigger (`databricks bundle run {lakeflow_pipeline_name} --refresh-all`) + verify-row-counts. CMDB-specific: triggers a **Lakeflow pipeline** (not a notebook job), and the verify step counts rows in each `bronze_tables` entry plus `silver.applications`.
+- **Top-level `install.sh`** — orchestrator chaining `runtime/install.sh` → `scripts/load-secrets.sh` → `databricks bundle deploy --target {default_target}`. Pass `--skip-runtime` to skip the source-side runtime when the source is already provisioned (e.g. SaaS-only CMDB tenants).
+- **`sql/<envelope>.sql`** — Bronze envelope **VIEW overlay** (not `CREATE TABLE`) over the Lakeflow-managed table. Projects the standard §2.2.2 metadata columns (`_ingestion_timestamp`, `_source_system`, `_batch_id`, `_raw_payload`, `_hwm_value`) on top of the source-native columns. CMDB envelopes are views because Lakeflow Connect owns the physical schema.
+- **`resources/` extras** — alongside `resources/{source}-job.yml`, CMDB emits `resources/schemas.yml` (declares both `bronze_{source}` AND `silver_{source}` schemas), `resources/connection.yml` (the UC Lakeflow Connect connection reading from DAB variables `${var.{source}_host}` / `${var.{source}_username}` / `${var.{source}_password}`), and `resources/pipeline.yml` (the Lakeflow Connect pipeline with `ingestion_definition.objects[]` mapping each source table to its bronze destination). `resources/volumes.yml` is N/A for CMDB — Lakeflow Connect handles persistence.
+- **No `*_entry.py` wrappers** — Lakeflow Connect owns the ingest path; the `resources/job.yml` `notebook_path` points to `../ingest.py` and `../transform.py` directly.
+- **Connector page §4–§7 templates** — `generate-connector` also fills in the page sections it owns: §Secrets (table mapping `secret_key` ↔ `env_var` with the load-secrets command), §Run the job (CMDB-specific — triggers a Lakeflow pipeline via `--refresh-all` rather than a notebook job), §Verify (Bronze row counts per Lakeflow-defined table plus `silver.app_repo_mapping` cross-source check), and §Troubleshooting (pipeline-stuck-on-schema-inference, `401 Unauthorized` rotation pointing at `BUNDLE_VAR_{source}_password=...` to keep secrets off `argv`/history, 0-rows-after-success, and the cross-source repository_id resolution path).
 
 *Rendered from `.claude/skills/generate-connector/references/cmdb.md`. Source of truth lives in the skill file.*
 

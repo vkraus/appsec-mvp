@@ -22,7 +22,7 @@ SCA sources populate the Silver `finding` table with SCA dedup key `(repository_
 
 ## Skills
 
-Three skills cover the connector lifecycle for SCA sources, with facts for the category at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
+Four skills cover the connector lifecycle for SCA sources, with facts for the category at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## Connectors in this category
 

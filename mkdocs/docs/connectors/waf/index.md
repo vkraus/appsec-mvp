@@ -25,7 +25,7 @@ WAF sources populate the Silver `waf_event` table scoped by `(application_id, ru
 
 ## Skills
 
-Three skills cover the connector lifecycle for WAF sources, with category-specific facts at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
+Four skills cover the connector lifecycle for WAF sources, with category-specific facts at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## Connectors in this category
 

@@ -1,6 +1,6 @@
 # SCA skills
 
-Three skills cover the connector lifecycle for SCA sources. Each carries a reference specific to SCA. The procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
+Four skills cover the connector lifecycle for SCA sources. Each carries a reference specific to SCA. The procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## analyze-source: SCA reference
 
@@ -53,6 +53,49 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. Serv
 - **Severity scale variation.** Some tools emit numeric CVSS scores instead of (or alongside) named labels. The Reference section MUST disclose whether the connector consumes the named label, the numeric score, or derives one from the other.
 
 *Rendered from `.claude/skills/analyze-source/references/sca.md`. Source of truth lives in the skill file.*
+
+## provision-source: SCA reference
+
+Facts the provision-source skill needs to emit the source-side runtime for an SCA source. SCA tenants (Dependency-Track community-edition v4.10+ via docker on the user's dev VPC, or an existing user-run tenant) are user-provisioned out of band. The runtime is therefore a **references-only** Terraform module: it pins providers, declares user inputs, and uses `data` blocks to fail fast at plan time if the Databricks-side preconditions are missing.
+
+### Runtime shape
+
+`runtime_provisioner: terraform-references-only`. Provider stack: `databricks/databricks` only. There are no `resource` blocks — the runtime references but does not create the SCA tenant, the Bronze schema, or the API-key secret. The plan-time validation comes from two `data` blocks:
+
+- `data "databricks_schema" "bronze_{source}"` — proves `${var.catalog}.bronze_{source}` exists. Created out of band by the platform-wide UC bootstrap (`databricks bundle run uc-schema-bootstrap`).
+- `data "databricks_secret" "{source}_apikey"` — proves the `scope`+`key` pair exists. Populated by `scripts/load-secrets.sh`.
+
+If either is missing at `terraform plan`, apply fails fast with a clear error before the connector job runs.
+
+### `operational.yml.source_runtime` fields
+
+Required: `runtime_provisioner` (always `terraform-references-only` for SCA), `tenant_host_var_name` (default `{source}_host`), `apikey_secret_scope_var_name`, `apikey_secret_key_var_name`, `bronze_schema_name` (default `bronze_{source}`), `catalog_var_name` (default `catalog`). Optional with category defaults: `tenant_host_format` (`FQDN no protocol`), `apikey_secret_scope_default` (`mvp-connectors`), `apikey_secret_key_default` (`{source}_api_key`), `terraform_required_version` (`>= 1.7`).
+
+### Variables exposed
+
+Required: `catalog`, `{source}_host`. Optional with defaults: `{source}_apikey_secret_scope` (`mvp-connectors`), `{source}_apikey_secret_key` (`{source}_api_key`).
+
+### Outputs
+
+`bronze_schema_full_name` (= `${var.catalog}.bronze_{source}`), `{source}_host`, `{source}_apikey_secret_scope`, `{source}_apikey_secret_key` — all useful for downstream `databricks secrets get-secret` calls and for the connector job's catalog/schema variables.
+
+No `runtime/files/*` sidecars. There is nothing to overlay — the runtime only references existing Databricks objects.
+
+### `runtime/install.sh` shape
+
+`terraform init` + `terraform apply -auto-approve` wrapper, with TF_VAR exports for `CATALOG` (e.g. `appsec_dev`) and `{SOURCE_UPPER}_HOST` (FQDN, no protocol). Optional overrides: `{SOURCE_UPPER}_APIKEY_SECRET_SCOPE` and `{SOURCE_UPPER}_APIKEY_SECRET_KEY`.
+
+Prerequisites: the Bronze schema must exist (`databricks bundle run uc-schema-bootstrap --target dev`); the API-key secret must be loaded (`bash scripts/load-secrets.sh`); the Databricks CLI must be authenticated.
+
+### Page §Source provisioning section template
+
+Inserted after `## User inputs` and before `## Secrets`. Section heading: `## Optional source runtime`. Body explains that the module is a references-only validation step (it does not provision an SCA tenant — that is user-provisioned via the community docker image, an existing tenant, or vendor SaaS), with the apply command as a one-liner against `catalog=appsec_dev` and `{source}_host={source}.example.com`. Notes that defaults for `{source}_apikey_secret_scope` and `{source}_apikey_secret_key` match the layout `scripts/load-secrets.sh` writes into; operators with a different secret layout override them. Operators who validate Databricks preconditions out of band (e.g. via a CI smoke test) skip the runtime entirely and proceed to **Secrets**.
+
+### Teardown caveat (carried into the page)
+
+The runtime references but does not own the Bronze schema or the API-key secret. `terraform destroy` removes only the references from local state — to actually delete the schema or rotate the secret, drop the schema via SQL (`DROP SCHEMA IF EXISTS ${catalog}.bronze_{source} CASCADE`) and delete the secret via `databricks secrets delete-secret <scope> <key>`. The SCA tenant is owned by the user and is never touched by Terraform.
+
+*Rendered from `.claude/skills/provision-source/references/sca.md`. Source of truth lives in the skill file.*
 
 ## generate-connector: SCA reference
 
@@ -121,6 +164,22 @@ Standard order: Lakeflow Connect, then Databricks SDK, then dlt.
 - **PURL availability.** Where the source emits a Package URL (`purl`), project it. `package_name`, `package_version`, and `ecosystem` are all derivable from it, but the source-side fields are preferred when present.
 - **Operational pattern axis.** Same CI/CD step vs periodic global split as SAST. The HWM structure in `config.yml` changes between modes. Encode explicitly.
 - **Severity scale variation.** Numeric CVSS vs named labels. The severity lookup or the derivation rule in `mapping.yml` MUST cover the chosen format. Do not leave gaps.
+
+### Databricks-side production-shape
+
+In addition to the eight-file core, generate-connector emits the **Databricks-side production-shape** for SCA connectors. The skill reads `operational.yml.databricks_runtime` to interpolate the templates.
+
+The SCA `databricks_runtime` schema (reverse-engineered from the Dependency-Track follower) covers thirteen fields: `secret_scope`, `bronze_schema`, `bronze_tables`, `envelope_table` (companion to the dlt-managed flattened bronze table), `cron_schedule` (default `0 0 * * * ?` — hourly), `uc_catalog_var`, `job_name` (kebab-case, e.g. `dependency-track-connector`), `default_target`, `default_catalog`, `secret_env_vars` (e.g. `DT_APIKEY → dependency_track_api_key`), `tool_source_label`, `entry_wrappers` (`false` for server-based SCA — the dlt path runs in-notebook from `ingest.py` without widget wrappers), `extra_install_env_vars` (e.g. `DT_HOST` passed as a Terraform var, not a secret).
+
+What the production-shape adds on top of the eight-file core:
+
+- **`scripts/load-secrets.sh`** — populates the secret scope from `databricks_runtime.secret_env_vars`. The host is supplied via the `{source}_host` Terraform variable (provision-source's territory), not via the secret scope; the script only loads the API key.
+- **`scripts/install.sh`** — minimal three-step shape (load-secrets → `databricks bundle run {job_name}` → echo verify). The verify step is documented in the runbook rather than embedded in the script.
+- **Top-level `install.sh`** — orchestrator chaining `runtime/install.sh` → `scripts/load-secrets.sh` → `databricks bundle deploy`. SCA source-side runtime varies (Dependency-Track self-hosted on K8s vs SaaS), driven by the operator's tenant choice.
+- **`sql/<envelope>.sql`** — REQUIRED for SCA. **`CREATE TABLE`** (not `VIEW`, unlike CMDB) — dlt manages a separate flattened bronze table; the envelope is a companion table preserving the standard §2.2.2 metadata (`raw_payload`, `vuln_id_native`, `attributed_on`, `ingested_at`, `run_id`) so downstream consumers can replay the original API response without re-fetching from the source.
+- **No `*_entry.py` wrappers** — `entry_wrappers=false` for server-based SCA. The dlt REST source runs in-notebook from `ingest.py`. Generate-connector emits `*_entry.py` only when `entry_wrappers=true` is explicitly set (e.g. when wiring a platform-integrated SCA that piggy-backs on an SCM source's entry wrappers).
+- **`resources/` extras** — alongside `resources/{source}-job.yml` (hourly cron), SCA emits `resources/schemas.yml` (bronze only — no silver schema). `resources/connection.yml`, `resources/pipeline.yml`, and `resources/volumes.yml` are all N/A: SCA authenticates via API key through `dbutils.secrets`, runs dlt-in-notebook (not Lakeflow Connect), and is server-based with no artefact bucket.
+- **Connector page §4–§7 templates** — §Secrets (table mapping `secret_key` ↔ `env_var` with the host-via-Terraform-var disclaimer), §Run the job (notebook job named `{job_name}` running on the configured cron with two tasks — `ingest` REST/dlt → Bronze and `transform` Bronze → silver.findings), §Verify (Bronze counts plus a `tool_source` AND `category='sca'` filtered Silver count grouped by `severity_canonical`), and §Troubleshooting (`401 Unauthorized` with the API-key-scope hint, 0-rows-after-success with the classifier-filter check, severity-defaulting-to-medium with the lookup-extension path).
 
 *Rendered from `.claude/skills/generate-connector/references/sca.md`. Source of truth lives in the skill file.*
 

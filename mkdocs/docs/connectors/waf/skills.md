@@ -1,6 +1,6 @@
 # WAF skills
 
-Three skills cover the connector lifecycle for WAF sources. Each carries a WAF-specific reference. The procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
+Four skills cover the connector lifecycle for WAF sources. Each carries a WAF-specific reference. The procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## analyze-source: WAF reference
 
@@ -56,6 +56,55 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. For 
 - **Log-stream over SDK.** Prefer log-stream consumption over sampled SDK calls. The Quirks fact in the Reference section MUST disclose the chosen mode and justify any deviation.
 
 *Rendered from `.claude/skills/analyze-source/references/waf.md`. Source-of-truth lives in the skill file.*
+
+## provision-source: WAF reference
+
+Facts the provision-source skill needs to emit the source-side runtime for a WAF source. WAF connectors follow a **bucket-policy-only** runtime shape (canonical follower: AWS WAF). The operator provisions the WebACL, the Kinesis Firehose delivery stream, and the destination S3 bucket out of band; the runtime wires those external resources into the connector by attaching the Firehose-write bucket policy and surfacing the bronze schema name and bucket ARN as outputs.
+
+### Runtime shape
+
+`runtime_provisioner: terraform-aws-bucket-policy`. Provider stack: `hashicorp/aws` + `databricks/databricks` (the latter for `versions.tf` parity, currently unused — kept for forward-compatibility if a future revision adds UC Volume / external location bindings).
+
+Resources / data sources:
+
+- `data "aws_s3_bucket" "waf_logs"` — references the operator-supplied bucket (does NOT create it). Bucket name is parsed out of the ARN via `element(split(":::", var.aws_waf_log_bucket_arn), 1)`.
+- `aws_s3_bucket_policy.waf_logs_firehose` — bucket policy granting the Firehose service principal (`firehose.amazonaws.com`) `s3:PutObject` + `s3:PutObjectAcl` on `${var.aws_waf_log_bucket_arn}/*`, conditioned on `aws:SourceAccount = var.aws_waf_account_id`. Sid `AllowFirehoseWrite`.
+
+It does **not** create the WebACL, the Firehose delivery stream, or the S3 bucket. Those are operator prerequisites.
+
+### `operational.yml.source_runtime` fields
+
+Required: `runtime_provisioner` (always `terraform-aws-bucket-policy` for WAF), `catalog_var_name`, `bronze_schema_name` (default `bronze_aws_waf`), `aws_region_var_name`, `aws_account_id_var_name`, `log_bucket_arn_var_name`. Optional with category defaults: `aws_region_default` (`us-east-1`), `firehose_service_principal` (`firehose.amazonaws.com`), `firehose_actions` (`["s3:PutObject", "s3:PutObjectAcl"]`), `bucket_policy_sid` (`AllowFirehoseWrite`), `secret_keys_external` (`["waf_log_bucket", "aws_waf_iam_role_arn"]` — loaded by `scripts/load-secrets.sh`, NOT by Terraform), `sample_artefact_path` (`runtime/files/sample.json`), `terraform_required_version` (`>= 1.5`).
+
+### Variables exposed
+
+Required: `catalog`, `aws_waf_account_id`, `aws_waf_log_bucket_arn`. Optional: `aws_region` (default `us-east-1`).
+
+### Outputs
+
+`bronze_schema_full_name` (= `${var.catalog}.bronze_aws_waf`), `s3_bucket_arn` (echo of the operator-supplied bucket ARN).
+
+### Operator-authored sidecar
+
+One `runtime/files/*` reference: `runtime/files/sample.json` — a sanitised representative WAFv2 log record. Each S3 object delivered by Firehose contains one or more records in this form, separated by newlines (typically gzipped). The bronze envelope (`sql/event_envelope.sql`) lands the raw payload as a string and extracts the WebACL ID at ingest time for joinability. Operator-authored — the skill emits the README reference but never the file body.
+
+### `runtime/install.sh` shape
+
+`terraform init` + `terraform apply -auto-approve` wrapper, with TF_VAR exports for `CATALOG`, `AWS_WAF_ACCOUNT_ID`, `AWS_WAF_LOG_BUCKET_ARN` (e.g. `arn:aws:s3:::my-org-waf-logs`). Optional override: `AWS_REGION`.
+
+Prerequisites: WAFv2 enabled in `$AWS_WAF_ACCOUNT_ID`, fronting CloudFront, ALB, or API Gateway; WebACL configured with logging enabled, sending logs via Kinesis Firehose to the target S3 bucket; the target bucket exists and is owned by the operator (in the same account as the Firehose); AWS credentials usable from Terraform with permissions to attach an S3 bucket policy on the target bucket; for runtime ingestion, AWS credentials with `s3:GetObject` on the log bucket loaded into the Databricks `mvp-connectors` scope via `bash scripts/load-secrets.sh`.
+
+### Page §Source provisioning section template
+
+Inserted after `## User inputs` and before `## Secrets`. Section heading: `## Optional source runtime`. Body explains that the module wires the operator-owned S3 bucket that Kinesis Firehose delivers WAFv2 log records to into the connector — the runtime **does not** create the WebACL, Firehose, or bucket; what it *does* create is the S3 bucket policy granting the Firehose service principal write access, scoped via `aws:SourceAccount`. Documents the apply command (one-liner against `catalog`, `aws_waf_account_id`, `aws_waf_log_bucket_arn`), with a cross-link to `runtime/files/sample.json` for the log-record format reference.
+
+> **Secrets-out-of-Terraform note (carried into the page):** secret values for the WAF connector (`waf_log_bucket`, `aws_waf_iam_role_arn`) live in the Databricks `mvp-connectors` scope and are loaded by `scripts/load-secrets.sh`. They do NOT flow through this Terraform module — `main.tf` only manages the S3 bucket policy. Keeping secret values out of Terraform state is intentional.
+
+### Teardown caveat
+
+`terraform destroy` removes the bucket policy only. The underlying bucket and any log objects already delivered to it are **not** managed by this module. Delete them out of band if no longer needed. The WebACL and Firehose delivery stream are also not managed by this module.
+
+*Rendered from `.claude/skills/provision-source/references/waf.md`. Source of truth lives in the skill file.*
 
 ## generate-connector: WAF reference
 
@@ -137,6 +186,22 @@ Standard order: Lakeflow Connect → Databricks SDK → dlt.
 - **Append-only stream.** No status lifecycle; do not project a `status` field; do not generate status-transition code. The `src/connectors/{source}/status.yml` lookup MUST exist (per the every-connector-has-both-files contract) and contain `# N/A: WAF events are append-only; no status lifecycle`.
 - **Action vocabulary.** Documented actions include `block`, `allow`, `count`, `challenge`, `captcha`. The severity lookup MUST cover every action the source emits, exhaustive over the documented vocabulary.
 - **Log-stream over SDK.** Prefer log-stream consumption. SDK sampled-request mode is fallback-only; document the deviation in a top-of-file comment in `ingest.py` if used.
+
+### Databricks-side production-shape
+
+In addition to the eight-file core, generate-connector emits the **Databricks-side production-shape** for WAF connectors. The skill reads `operational.yml.databricks_runtime` to interpolate the templates.
+
+The WAF `databricks_runtime` schema (reverse-engineered from the AWS WAF follower) covers seventeen fields: `secret_scope`, `bronze_schema`, `bronze_tables`, `envelope_table` (default `event_envelope`), `cron_schedule` (default `0 */15 * * * ?` — every 15 min), `uc_catalog_var`, `job_name` (kebab-case, e.g. `aws-waf-connector`), `default_target`, `default_catalog`, `secret_env_vars` (e.g. `WAF_LOG_BUCKET → waf_log_bucket`, `AWS_WAF_IAM_ROLE_ARN → aws_waf_iam_role_arn`), `extra_install_env_vars` (typically required: `AWS_WAF_ACCOUNT_ID`, `AWS_WAF_LOG_BUCKET_ARN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), `tool_source_label` (kept for cross-category symmetry — `silver.waf_events` is single-source and has no `tool_source` discriminator currently), `entry_wrappers` (`false` — ingest runs in-notebook from `ingest.py`), `ingestion_mode` (`log_stream` or `sdk_sampled`; default `log_stream`), `log_stream_prefix` (default `waf/firehose/`), `firehose_account_id_env` (default `AWS_WAF_ACCOUNT_ID`), `webacl_log_bucket_arn_env` (default `AWS_WAF_LOG_BUCKET_ARN`).
+
+What the production-shape adds on top of the eight-file core:
+
+- **`scripts/load-secrets.sh`** — populates the secret scope from `databricks_runtime.secret_env_vars`. Iterates over the env-var/secret-key pairs and runs `databricks secrets put-secret` per pair.
+- **`scripts/install.sh`** — streamlined three-step shape (load-secrets → `databricks bundle run {job_name}` → echo verify). The runbook-grade verify-counts-via-SQL-warehouse flow lives in the docs page, not the install script.
+- **Top-level `install.sh`** — orchestrator chaining `runtime/install.sh` → `scripts/load-secrets.sh` → `databricks bundle deploy`. **WAF source-side runtime is mandatory for the log-stream path** — `runtime/install.sh` attaches the Firehose-write S3 bucket policy without which the autoloader has nothing to read.
+- **`sql/<envelope>.sql`** — REQUIRED. **`CREATE TABLE`** shape (companion to the autoloader-managed bronze table). Autoloader reads gzipped JSON files from the S3 bucket and lands them with columns `raw_payload`, `webacl_id` (extracted at ingest from `terminatingRuleArn` or `webaclId` for joinability), `ingested_at`, `run_id`. The transform projects this into `silver.waf_events`.
+- **No `*_entry.py` wrappers** — `entry_wrappers=false`. The `resources/job.yml` `notebook_path` points at `../ingest.py` directly.
+- **`resources/` extras** — alongside `resources/{source}-job.yml` (15-min cron, with an extra `ingestion_mode` job parameter `log_stream | sdk_sampled`), WAF emits `resources/schemas.yml` (bronze only). `resources/connection.yml` is N/A — the workspace AWS service credential reads S3 directly; no UC connection. `resources/pipeline.yml` is N/A — notebook job, not Lakeflow Connect. `resources/volumes.yml` is N/A — the workspace AWS service credential reads from the S3 prefix directly; AWS WAF does not emit a UC Volume.
+- **Connector page §4–§7 templates** — §Secrets (table mapping `secret_key` ↔ `env_var` with the workspace-AWS-service-credential note), §Run the job (notebook job named `{job_name}` with the Firehose-buffer-flush callout — Firehose buffers up to 5 minutes or 5 MiB, so smoke tests should generate blockable requests then wait ~5 minutes before the autoloader picks them up on the next 15-min tick), §Verify (Bronze count plus top-terminating-rules sanity check and severity-distribution-by-WebACL aggregation against `silver.waf_events` — note the schema deviation: WAF writes to `silver.waf_events`, NOT `silver.findings`), and §Troubleshooting (no-records-after-buffer-flush, severity-canonical mis-derived from `action`, missing application linkage when the WebACL ARN → `silver.deployments` join did not match).
 
 *Rendered from `.claude/skills/generate-connector/references/waf.md`. Source-of-truth lives in the skill file.*
 

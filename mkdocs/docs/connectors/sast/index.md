@@ -33,7 +33,7 @@ SAST sources populate the Silver `finding` table scoped by `(repository_id, file
 
 ## Skills
 
-Three skills cover the connector lifecycle for SAST sources, with category specific facts at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
+Four skills cover the connector lifecycle for SAST sources, with category specific facts at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## Connectors in this category
 

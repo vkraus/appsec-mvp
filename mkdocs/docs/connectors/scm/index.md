@@ -20,7 +20,7 @@ SCM sources populate the Silver `repository`, `pull_request`, and `branch_policy
 
 ## Skills
 
-Three skills cover the connector lifecycle for SCM sources, with category specific facts at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
+Four skills cover the connector lifecycle for SCM sources, with category specific facts at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## Connectors in this category
 

@@ -1,6 +1,6 @@
 # Secrets skills
 
-Three skills cover the connector lifecycle for Secrets sources. Each carries a reference specific to Secrets. The procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
+Four skills cover the connector lifecycle for Secrets sources. Each carries a reference specific to Secrets. The procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## analyze-source: Secrets reference
 
@@ -54,6 +54,48 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. CLI-
 - **Detector class severity overrides.** The `src/connectors/{source}/severity.yml` lookup may downgrade specific detector classes (low entropy patterns, deprecated detectors) below the default `high`. Document the policy in the Quirks fact.
 
 *Rendered from `.claude/skills/analyze-source/references/secrets.md`. Source of truth lives in the skill file.*
+
+## provision-source: Secrets reference
+
+Facts the provision-source skill needs to emit the source-side runtime for a secret detection source. Secrets connectors follow a **CLI-artefact** pattern (canonical follower: TruffleHog). The scanner itself runs on CI/CD runners (or on the operator's existing host scan infrastructure) and emits `--json` line-delimited output; CI uploads those artefacts to a cloud bucket (S3 / ADLS / GCS) **provisioned by the operator in advance**.
+
+### Runtime shape
+
+`runtime_provisioner: terraform-uc-volume`. Provider stack: `databricks/databricks` only. The runtime creates a single resource — a **Unity Catalog Volume** of type `EXTERNAL` at `<catalog>.bronze_{source}.artefacts`, mapped at `var.{source}_artifact_volume_path` — so autoloader-style ingestion can read the JSON into `bronze_{source}.findings`. There is no IAM, no Kubernetes, no compute; the cloud bucket is operator-provisioned out of band.
+
+This is the documented pattern for CLI artefacts (`CLAUDE.md` §"Ingestion tooling preference order"). Scanners with no live API to call use a drop-of-artefacts-backed-by-a-Volume as the native fit.
+
+### `operational.yml.source_runtime` fields
+
+Required: `runtime_provisioner` (always `terraform-uc-volume` for secrets), `catalog_var_name`, `bronze_schema_name` (default `bronze_{source}`), `volume_name` (default `artefacts`), `volume_path_var_name` (default `{source}_artifact_volume_path`), `volume_secret_scope_var_name`, `volume_secret_key_var_name`. Optional with category defaults: `volume_type` (`EXTERNAL`), `bucket_provider_examples` (`["S3", "ADLS", "GCS"]`), `volume_secret_scope_default` (`mvp-connectors`), `volume_secret_key_default` (`{source}_aws_credentials`), `secret_blob_format` (`JSON {access_key_id, secret_access_key}`), `sample_artefact_path` (`runtime/files/sample.json`), `terraform_required_version` (`>= 1.7`).
+
+### Variables exposed
+
+Required: `catalog`, `{source}_artifact_volume_path`. Optional with defaults: `{source}_artifact_volume_secret_scope` (`mvp-connectors`), `{source}_artifact_volume_secret_key` (`{source}_aws_credentials`).
+
+### Outputs
+
+`bronze_schema_full_name` (= `<catalog>.bronze_{source}`), `volume_path` (filesystem-style `/Volumes/<catalog>/bronze_{source}/artefacts`), `volume_full_name` (three-level UC name `<catalog>.bronze_{source}.artefacts`).
+
+### Operator-authored sidecar
+
+One `runtime/files/*` reference: `runtime/files/sample.json` — a sanitised representative record showing the JSON shape the scanner emits (one line per finding). The README references it for downstream contract documentation. The `Raw` field of secret findings is intentionally redacted in the sample; the redaction rule is enforced at Bronze→Silver in the pipeline so the literal value never enters the connector's pipeline. Operator-authored — the skill emits the README reference but never the file body.
+
+### `runtime/install.sh` shape
+
+`terraform init` + `terraform apply -auto-approve` wrapper, with TF_VAR exports for `CATALOG` and `{SOURCE_UPPER}_ARTIFACT_VOLUME_PATH`. Optional overrides: `{SOURCE_UPPER}_ARTIFACT_VOLUME_SECRET_SCOPE` and `{SOURCE_UPPER}_ARTIFACT_VOLUME_SECRET_KEY`.
+
+Prerequisites: the cloud bucket exists and is reachable by the Databricks workspace; the `bronze_{source}` schema exists (declared by the bundle's `resources/schemas.yml`); reader credentials with `s3:GetObject` (or equivalent) on the artefact bucket are loaded into the Databricks secret scope (`bash scripts/load-secrets.sh`); the Databricks CLI is authenticated.
+
+### Page §Source provisioning section template
+
+Inserted after `## User inputs` and before `## Secrets`. Section heading: `## Optional source runtime`. Body explains that the module creates a **Unity Catalog `EXTERNAL` Volume** mapped to the cloud bucket where CI/CD runners drop `{source} --json` artefacts, with the explicit caveat that the cloud bucket is **operator-provisioned in advance** (the runtime does not create cloud buckets). Documents the apply command (one-liner against `catalog=appsec_dev` and the `volume_path` var), the optional secret-scope/key overrides, and the CI-side wiring example (S3 `aws s3 cp`). Cross-links to `runtime/files/sample.json` for the artefact format reference.
+
+### Teardown caveat
+
+`terraform destroy` removes the UC Volume only. The underlying cloud bucket and any artefacts already uploaded to it are **not** managed by this module. Delete them out of band if no longer needed.
+
+*Rendered from `.claude/skills/provision-source/references/secrets.md`. Source of truth lives in the skill file.*
 
 ## generate-connector: Secrets reference
 
@@ -132,6 +174,22 @@ Standard order: Lakeflow Connect, then Databricks SDK, then dlt.
 - **No status transitions.** `REQ-TRF-STS` is N/A. Do not generate status transition code or status lookup references. The Silver `status` field is left null (or set to `open` on first emit). Encode the constant in `mapping.yml`, NOT a lookup.
 - **CI/CD step dominance.** Secret detection is almost exclusively CI/CD step in practice. The HWM structure in `config.yml` is the commit SHA. Periodic global host side scans (GitHub Secret Scanning) use scan start timestamp. Both structures coexist on the four tuple dedup key.
 - **Detector class severity overrides.** The optional `src/connectors/{source}/severity.yml` deployment override may downgrade specific detector classes (low entropy patterns, deprecated detectors) below the default `high`. The override path is opt-in. The default code path uses the literal in `mapping.yml`.
+
+### Databricks-side production-shape
+
+In addition to the eight-file core, generate-connector emits the **Databricks-side production-shape** for secrets connectors. The skill reads `operational.yml.databricks_runtime` to interpolate the templates.
+
+The secrets `databricks_runtime` schema (reverse-engineered from the TruffleHog follower) covers fifteen fields: `secret_scope`, `bronze_schema`, `bronze_tables`, `envelope_table` (default `findings` — secrets envelope IS the bronze table; `CREATE TABLE`, not a `VIEW` overlay), `cron_schedule` (default `0 0 * * * ?` — hourly), `uc_catalog_var`, `job_name` (kebab-case), `default_target`, `default_catalog`, `secret_env_vars` (e.g. `TRUFFLEHOG_ARTIFACT_BUCKET → trufflehog_artifact_bucket`, plus a CONDITIONAL `(AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY → trufflehog_aws_credentials)` JSON-encoded blob), `optional_aws_credentials_secret` (`true` for TruffleHog — the CLI-artefact path supports BOTH S3 with credentials and UC Volume without credentials, and `load-secrets.sh` emits a conditional block driven by this flag), `tool_source_label`, `entry_wrappers` (`false` — Auto Loader on the artefact path runs in-notebook), `cli_artefact_prefixes` (default `[trufflehog/]`), `bronze_volume` (optional — TruffleHog uses a bucket-secret pointer instead of a declarative UC Volume).
+
+What the production-shape adds on top of the eight-file core:
+
+- **`scripts/load-secrets.sh`** — populates the secret scope from `databricks_runtime.secret_env_vars`. Emits a conditional block driven by `optional_aws_credentials_secret`: when both `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are exported (S3 path), it writes a JSON blob `{"access_key_id":"...","secret_access_key":"..."}` to `{source}_aws_credentials`; on UC Volume mode (no AWS creds) it skips that step and emits a clarifying message.
+- **`scripts/install.sh`** — minimal three-step shape (load-secrets → `databricks bundle run {job_name}` → echo verify). Pre-conditions documented in the header: Phase 1 platform bootstrap complete, at least one SCM connector run so `silver.repositories` is populated, the artefact-location env var exported, and at least one scanner artefact dropped at the configured location.
+- **Top-level `install.sh`** — orchestrator chaining `runtime/install.sh` → `scripts/load-secrets.sh` → `databricks bundle deploy`. Secrets source-side runtime is typically `hashicorp/aws` (S3 bucket / UC Volume) plus, for some scanners, `hashicorp/kubernetes` (CronJob).
+- **`sql/<envelope>.sql`** — REQUIRED. **`CREATE TABLE`** shape: the bronze table itself. Auto Loader reads line-delimited JSON files from the UC Volume (`<catalog>.bronze_{source}.artefacts`) and lands them here with columns `raw_payload`, `artefact_path`, `ingested_at`, `run_id`. The secrets transform projects this table into `silver.findings`, dropping the `Raw` / `RawV2` fields per the redaction rule.
+- **No `*_entry.py` wrappers** — `entry_wrappers=false`. The CLI-artefact path uses Auto Loader on the artefact prefix; ingest runs in-notebook from `ingest.py` directly.
+- **`resources/` extras** — alongside `resources/{source}-job.yml`, secrets emits `resources/schemas.yml` (bronze only). `resources/connection.yml` is N/A (no API auth). `resources/pipeline.yml` is N/A (notebook job, not Lakeflow Connect). `resources/volumes.yml` is **optional** — emit when `bronze_volume` is set; TruffleHog currently does not emit one (uses a bucket-secret pointer), but peer CLI-artefact connectors (Semgrep) do.
+- **Connector page §4–§7 templates** — §Secrets (table mapping `secret_key` ↔ `env_var` plus the conditional `{source}_aws_credentials` row when `optional_aws_credentials_secret=true`), §Run the job (operator drops `--json` artefacts under the configured prefixes, then triggers the bundle run), §Verify (Bronze count plus `tool_source` AND `category='secrets'` filtered Silver count), and §Troubleshooting (no-artefacts-at-prefix, AWS-credential-loading split between S3 and UC Volume modes, raw-field-leak failure mode for the redaction rule).
 
 *Rendered from `.claude/skills/generate-connector/references/secrets.md`. Source of truth lives in the skill file.*
 

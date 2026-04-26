@@ -1,6 +1,6 @@
 # SCM skills
 
-Three skills cover the connector lifecycle for SCM sources. Each carries an SCM specific reference. The procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
+Four skills cover the connector lifecycle for SCM sources. Each carries an SCM specific reference. The procedural body of each skill is at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## analyze-source: SCM reference
 
@@ -58,6 +58,50 @@ Standard preference order applies: Lakeflow Connect, then Databricks SDK, then d
 - **Platform native finding structures.** Dependabot is package level (SCA structure). Code scanning is code level (SAST structure). Secret scanning is code level secrets structure. The Reference section names the structures in the Quirks fact.
 
 *Rendered from `.claude/skills/analyze-source/references/scm.md`. Source of truth lives in the skill file.*
+
+## provision-source: SCM reference
+
+Facts the provision-source skill needs to emit the source-side runtime for an SCM source. SCM splits into two sub-shapes that drive the auto-deriver: presence of `aws_*` + `eks_cluster_name` variables selects full-provisioning; presence of only `catalog` + `{source}_token_secret_*` variables selects references-only.
+
+### Sub-shape A: references-only (GitLab pattern)
+
+`runtime_provisioner: terraform-references-only`. Provider stack: `databricks/databricks` only. The SCM tenant + target group/org are user-provisioned out of band (gitlab.com SaaS or self-hosted). The runtime contains no `resource` blocks — `main.tf` is a comment-only file documenting why the runtime is structurally empty. It pins providers, declares the user inputs (`catalog`, `{source}_host` defaulting to `gitlab.com`, `{source}_group_id` / `{source}_org`, token-secret pointers), and exports the Bronze schema name and tenant host as outputs for downstream bundle resolution.
+
+This is the default shape for SCM connectors that follow the "the operator already has a tenant" pattern.
+
+### Sub-shape B: full-provisioning (GitHub pattern)
+
+`runtime_provisioner: terraform-aws-github`. Provider stack: `aws` + `integrations/github` + `kubernetes` + `tls`. Heavyweight runtime used when the runtime owns the cross-scanner end-to-end demo wiring. Resources created:
+
+- `aws_ecr_repository.juiceshop` — ECR for Juice Shop image pushes from CI.
+- `aws_iam_openid_connect_provider.github` + `aws_iam_role.github_actions` + `aws_iam_role_policy.github_actions` — GitHub-Actions OIDC trust + IAM role for ECR push + EKS describe + (conditional) S3 artifact PUT.
+- `aws_eks_access_entry.github_actions` + `aws_eks_access_policy_association.github_actions` — cluster-admin via EKS access entries.
+- `kubernetes_namespace.juiceshop` + `kubernetes_service.juiceshop` (`type = LoadBalancer`) — Juice Shop namespace and stable LB hostname (the Deployment itself is applied by GH Actions; the runtime only reserves the LB hostname).
+- `data.github_repository.{benchmark_java,benchmark_python,juice_shop}` — referenced fork repos (not created).
+- `github_repository_file.juice_shop_overlays` — overlays from `${path.module}/files/juice-shop/*` written into the Juice Shop fork.
+- `github_actions_variable.juiceshop_vars` (conditional per-key) + `github_actions_secret.juiceshop_sonar_token` (conditional) — cross-scanner CI variables.
+
+Outputs: `seed_repo_full_names`, `sast_repo_full_names`, `juice_shop_repo_full_name`, `ecr_registry_uri`, `github_actions_role_arn`, `github_actions_role_name`, `juiceshop_namespace`, `juiceshop_ingress_host`.
+
+Operator-authored sidecars (the skill emits `file(...)` references but never the bodies):
+
+- `runtime/files/juice-shop/.sonarcloud.properties` — SonarCloud project bind.
+- `runtime/files/juice-shop/deploy/juiceshop.yaml` — Kubernetes Deployment manifest applied by the CI workflow (via `kubectl apply`).
+- `runtime/files/juice-shop/README.md`, `runtime/files/benchmark-java/README.md`, `runtime/files/benchmark-python/README.md` — operator notes for the target forks.
+
+### `runtime/install.sh` shape
+
+References-only: `terraform init` + `terraform apply -auto-approve` wrapping TF_VAR exports for `CATALOG` and `{SOURCE_UPPER}_GROUP_ID`, with optional `{SOURCE_UPPER}_HOST`.
+
+Full-provisioning: enforces `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `EKS_CLUSTER_NAME`, `GITHUB_ORG`, `GITHUB_PAT`. Optional cross-scanner CI inputs (left empty when not running end-to-end demo): `SONARQUBE_URL`, `SONARQUBE_PROJECT_TOKEN`, `ZAP_URL`, `ARTIFACT_BUCKET`.
+
+### Page §Source provisioning section template
+
+For references-only: a paragraph explaining the module is structural-parity only — it does not provision a tenant, group, projects, or seed data (the SCM Terraform provider supports group and project creation, but the MVP runtime intentionally stops short of that to avoid leaking demo data into the operator's account). Apply only if you want the structural-parity outputs registered in your Terraform state.
+
+For full-provisioning: a paragraph documenting the end-to-end-demo wiring (ECR for Juice Shop image pushes, IAM role with GitHub-Actions OIDC trust, EKS namespace + LoadBalancer Service as the ZAP target, overlay files written into the Juice Shop fork, and Actions variables/secrets in the fork repo). Operators with their own SCM tenant + CI wiring skip this entirely.
+
+*Rendered from `.claude/skills/provision-source/references/scm.md`. Source of truth lives in the skill file.*
 
 ## generate-connector: SCM reference
 
@@ -137,6 +181,22 @@ Justify the chosen tool with a one line comment at the top of `ingest.py`.
 - **Cursor vs keyset pagination.** GraphQL APIs typically use cursor pagination. REST APIs may use keyset. Encode the pagination strategy per endpoint in `config.yml`. `src/platform/` exposes both helpers.
 - **Webhook replay.** When webhook delivery is the chosen incremental hook, `config.yml` MUST also encode a fallback polling window (typically 24h) so missed deliveries are recovered on the next scheduled run.
 - **Finding structure branch.** `transform.py` MUST handle each structure (code scanning, secret scanning, Dependabot) with the matching dedup key tuple. Mis-branching corrupts `dedup_links`.
+
+### Databricks-side production-shape
+
+In addition to the eight-file core, generate-connector emits the **Databricks-side production-shape** for SCM connectors. The skill reads `operational.yml.databricks_runtime` to interpolate the templates.
+
+The SCM `databricks_runtime` schema (reverse-engineered from the GitLab follower and cross-checked against the GitHub original) covers thirteen fields: `secret_scope`, `bronze_schema`, `silver_schema` (optional — emitted only when the SCM source carries a per-source silver namespace; GitHub does, GitLab does not), `bronze_tables`, `cron_schedule` (default `0 */15 * * * ?` — every 15 min for GitLab; `0 0 */3 * * ?` — every 3 hours for GitHub), `uc_catalog_var`, `job_name` (kebab-case), `default_target`, `default_catalog`, `secret_env_vars` (e.g. `(GITLAB_BASE_URL → gitlab_base_url, GITLAB_TOKEN → gitlab_token)`; for GitHub `(GITHUB_PAT → github_token, GITHUB_ORG → github_org)`), `extra_install_env_vars` (e.g. `GITLAB_GROUP_ID` as a job-parameter), `tool_source_label`, `entry_wrappers` (`true` for SCM — credential fetching from secrets at notebook startup makes wrappers necessary), `webhook_endpoint_url` (optional, when webhook-preferred mode applies).
+
+What the production-shape adds on top of the eight-file core:
+
+- **`scripts/load-secrets.sh`** — populates the secret scope from `databricks_runtime.secret_env_vars`. Iterates over the env-var/secret-key pairs and runs `databricks secrets put-secret` per pair.
+- **`scripts/install.sh`** — three-step end-to-end installer (load-secrets → `databricks bundle run {job_name}` → verify). Verify counts rows in each `bronze_tables` entry plus `silver.repositories WHERE source = '{tool_source_label}'` and `silver.findings WHERE tool_source = '{tool_source_label}'`. Required env vars include the secret env vars plus any `extra_install_env_vars` (e.g. `GITLAB_GROUP_ID`).
+- **Top-level `install.sh`** — orchestrator chaining `runtime/install.sh` → `scripts/load-secrets.sh` → `databricks bundle deploy`.
+- **`*_entry.py` notebook wrappers** — `entry_wrappers=true` for SCM. Generate-connector emits `ingest_entry.py` and `transform_entry.py` (widgets + `dbutils.secrets` fetch + delegation to `src.connectors.{source}.{ingest,transform}`). The `resources/job.yml` `notebook_path` points at `../ingest_entry.py` and `../transform_entry.py`.
+- **`sql/<envelope>.sql`** — N/A by default; SCM bronze tables come from the dlt path or Lakeflow Connect, depending on tool choice.
+- **`resources/` extras** — alongside `resources/{source}-job.yml`, SCM emits `resources/schemas.yml` (bronze always; silver only when the source declares a `silver_schema`). `resources/connection.yml` and `resources/pipeline.yml` are N/A — SCM authenticates via PAT through `dbutils.secrets`, not a UC connection. `resources/volumes.yml` is N/A — SCM is server-API-driven, no artefact bucket.
+- **Connector page §4–§7 templates** — §Secrets (table mapping `secret_key` ↔ `env_var` plus the `extra_install_env_vars` block for non-secret job parameters like group IDs), §Run the job (notebook job named `{job_name}` with two tasks — `ingest` REST/dlt → Bronze and `transform` Bronze → silver.{repositories,findings}), §Verify (Bronze counts plus `tool_source` and `source` filtered Silver counts on `silver.repositories` AND `silver.findings`), and §Troubleshooting (token expiry / scope rotation, 0-rows-after-success with the group-ID verification, missing entry wrappers leading to widget-not-found errors).
 
 *Rendered from `.claude/skills/generate-connector/references/scm.md`. Source of truth lives in the skill file.*
 

@@ -22,7 +22,7 @@ Secret connectors populate the Silver `finding` table with secrets dedup key `(r
 
 ## Skills
 
-Three skills cover the connector lifecycle for Secrets sources, with facts for the category at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
+Four skills cover the connector lifecycle for Secrets sources, with facts for the category at [Skills](skills.md). The procedural body of each skill is documented at [Connector skills](../../platform/reference/connector-skills.md).
 
 ## Connectors in this category
 
