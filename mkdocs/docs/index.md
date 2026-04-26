@@ -59,9 +59,6 @@ flowchart LR
     SS["silver.suppression_rules"]
   end
 
-  LINKER{{"app-repo linker
-(name match)"}}
-
   subgraph Gold["Gold (analytics)"]
     GOLAP["OLAP — 5 Delta tables refreshed daily
 app_risk_posture · mttr · coverage ·
@@ -101,9 +98,8 @@ dedup_overlap · cwe_owasp_heatmap"]
   BZAP --> SF
   BWAF --> SW
 
-  SR --> LINKER
-  SA --> LINKER
-  LINKER --> SAR
+  SR --> SAR
+  SA --> SAR
 
   SR --> SF
   SAR --> SF
