@@ -154,6 +154,7 @@ Use this row shape verbatim, replacing the bracketed placeholders:
 
 - `{category}` — the AppSec category input (`cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, or `waf`).
 - `{sha256_of_page}` — output of `sha256sum mkdocs/docs/connectors/{category}/{slug}.md` (the full hex digest pins this generation to the page revision read at step 3).
+- `{value}` — the resolved `databricks_runtime.ingestion_path` (`lakeflow_connect`, `sdk_dlt`, or `artifact_path`).
 - `{source}` — the source name input.
 - `{YYYY-MM-DD}` — the run date in ISO format.
 - `{git_short_sha}` — output of `git rev-parse --short HEAD` on the skill's repo.
