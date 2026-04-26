@@ -8,6 +8,7 @@ REQ bindings:
   dropped silently (no row written, INFO log + counter); valid neighbour
   rows pass through.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -19,7 +20,6 @@ from src.platform.app_repo_link import (
     extract_code,
     link_by_name_pylist,
 )
-
 
 # ----- regex / extract_code -----------------------------------------------
 
@@ -75,9 +75,9 @@ def test_link_by_name_pylist_emits_one_row_per_match() -> None:
         {"application_id": "sysid-b", "app_code": "67890"},
     ]
     repos = [
-        {"repository_id": "acme/svc-12345",         "full_name": "acme/svc-12345"},
-        {"repository_id": "acme/12345-other",       "full_name": "acme/12345-other"},
-        {"repository_id": "acme/svc-67890-deploy",  "full_name": "acme/svc-67890-deploy"},
+        {"repository_id": "acme/svc-12345", "full_name": "acme/svc-12345"},
+        {"repository_id": "acme/12345-other", "full_name": "acme/12345-other"},
+        {"repository_id": "acme/svc-67890-deploy", "full_name": "acme/svc-67890-deploy"},
     ]
     run_ts = datetime(2026, 4, 26, 12, 0, tzinfo=UTC)
     rows = link_by_name_pylist(apps, repos, run_ts=run_ts)
@@ -102,8 +102,7 @@ def test_link_by_name_pylist_first_match_wins() -> None:
         {"application_id": "sysid-b", "app_code": "67890"},
     ]
     repos = [
-        {"repository_id": "acme/12345-thing-67890",
-         "full_name":     "acme/12345-thing-67890"},
+        {"repository_id": "acme/12345-thing-67890", "full_name": "acme/12345-thing-67890"},
     ]
     rows = link_by_name_pylist(apps, repos, run_ts=datetime(2026, 4, 26, tzinfo=UTC))
     assert len(rows) == 1
@@ -119,8 +118,8 @@ def test_link_by_name_pylist_drops_unmatched_extracted_code() -> None:
         {"application_id": "sysid-a", "app_code": "12345"},
     ]
     repos = [
-        {"repository_id": "acme/svc-12345",  "full_name": "acme/svc-12345"},
-        {"repository_id": "acme/svc-99999",  "full_name": "acme/svc-99999"},
+        {"repository_id": "acme/svc-12345", "full_name": "acme/svc-12345"},
+        {"repository_id": "acme/svc-99999", "full_name": "acme/svc-99999"},
     ]
     rows = link_by_name_pylist(apps, repos, run_ts=datetime(2026, 4, 26, tzinfo=UTC))
     assert len(rows) == 1
