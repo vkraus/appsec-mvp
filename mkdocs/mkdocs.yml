@@ -96,6 +96,7 @@ nav:
       - Bundle deploy: platform/bundle-deploy.md
       - Secrets bootstrap: platform/secrets-bootstrap.md
       - Platform bootstrap job: platform/platform-bootstrap-job.md
+      - App-repo linker: platform/app-repo-link.md
       - Reference:
           - Canonical mapping: platform/reference/canonical-mapping.md
           - REQ catalog: platform/reference/catalog.md
