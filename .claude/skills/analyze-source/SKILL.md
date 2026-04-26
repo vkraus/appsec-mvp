@@ -64,7 +64,7 @@ When the source name matches a row above AND the category is in scope, set `inge
 
    When the chosen value is `lakeflow_connect`, append one sentence to the Reference section's API surface fact: "Lakeflow Connect supports {source} as a managed connector via {api_surface} (per the analyze-source LFC managed-source catalogue, refreshed {date}); this connector chooses the `lakeflow_connect` ingestion path."
 10. Assemble the six-section Markdown page and emit to the output path.
-11. Stub the Implementation log section with the row for this skill (date, inputs, outputs, skill repo ref via `git rev-parse --short HEAD`); leave rows for `generate-connector` and `validate-implementation` marked `(pending)`.
+11. Stub the Implementation log section with the row for this skill (date, inputs, outputs, skill repo ref via `git rev-parse --short HEAD`); leave rows for `provision-source`, `generate-connector`, and `validate-implementation` marked `(pending)`.
 
 The seven API facts captured under Reference are:
 
