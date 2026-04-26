@@ -2,10 +2,47 @@ resources:
   jobs:
     analytics:
       name: analytics
+      # Daily 05:00 UTC — after overnight ingest but before the EU business day.
+      schedule:
+        quartz_cron_expression: "0 0 5 * * ?"
+        timezone_id: "UTC"
+        pause_status: "UNPAUSED"
       tasks:
-        - task_key: gold_findings_summary
+        - task_key: gold_app_risk_posture_daily
           notebook_task:
-            notebook_path: ../sql/gold_findings_summary_placeholder.sql
+            notebook_path: ../notebooks/gold/app_risk_posture_daily.py
+            base_parameters:
+              target_catalog: ${var.catalog}
+          job_cluster_key: shared
+        - task_key: gold_mttr_by_source_severity_weekly
+          notebook_task:
+            notebook_path: ../notebooks/gold/mttr_by_source_severity_weekly.py
+            base_parameters:
+              target_catalog: ${var.catalog}
+          job_cluster_key: shared
+        - task_key: gold_coverage_matrix
+          notebook_task:
+            notebook_path: ../notebooks/gold/coverage_matrix.py
+            base_parameters:
+              target_catalog: ${var.catalog}
+          job_cluster_key: shared
+        - task_key: gold_dedup_link_overlap
+          notebook_task:
+            notebook_path: ../notebooks/gold/dedup_link_overlap.py
+            base_parameters:
+              target_catalog: ${var.catalog}
+          job_cluster_key: shared
+        - task_key: gold_cwe_owasp_heatmap
+          notebook_task:
+            notebook_path: ../notebooks/gold/cwe_owasp_heatmap.py
+            base_parameters:
+              target_catalog: ${var.catalog}
+          job_cluster_key: shared
+        - task_key: gold_app_repo_findings_open
+          notebook_task:
+            notebook_path: ../notebooks/gold/app_repo_findings_open.py
+            base_parameters:
+              target_catalog: ${var.catalog}
           job_cluster_key: shared
       job_clusters:
         - job_cluster_key: shared
@@ -13,5 +50,3 @@ resources:
             spark_version: "14.3.x-scala2.12"
             node_type_id: Standard_DS3_v2
             num_workers: 1
-      # No schedule — operator runs on-demand once analytics implementation lands:
-      #   databricks bundle run analytics
