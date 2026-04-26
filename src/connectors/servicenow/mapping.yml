@@ -32,6 +32,7 @@ applications:
     operational_status:    operational_status    # entity lifecycle attribute (NOT finding status)
     owned_by:              owned_by              # opaque sys_id; resolved at Silver join
     used_by:               used_by               # opaque sys_id; resolved at Silver join
+    app_code:              u_app_id              # 5-digit business app code; ^\d{5}$ -> app_code, else NULL
     valid_from:            sys_created_on        # instance-local -> UTC at transform
     updated_at:            sys_updated_on        # HWM column; instance-local -> UTC
 
