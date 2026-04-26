@@ -2,7 +2,7 @@
 
 > **Ingestion path:** WAF sources resolve to `sdk` (AWS WAF→boto3 per the analyze-source Maintained Python SDK catalogue) for the SDK-based sampled-request mode, or `artifact_path` for the canonical autoloader-from-S3 / Firehose log-stream pattern. The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches.
 
-Facts the generate-connector skill needs to emit a WAF connector module. WAF sources emit append-only edge-event records — event-shaped, not finding-shaped.
+Facts the generate-connector skill needs to emit a WAF connector module. WAF sources project edge-event records into finding-shape rows on `silver.findings` per the trufflehog convention — severity is derived from `action`, status is the literal `open`, and `finding_id` is a deterministic SHA-256 hash so re-deliveries collapse at MERGE.
 
 ## Contents
 - Applicable REQ-IDs
@@ -20,14 +20,14 @@ From `mkdocs/docs/platform/reference/catalog.md`. Bind one test function per REQ
 
 - Bind: `REQ-ING-AUTH`, `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-SEV`, `REQ-TRF-TS`, `REQ-DQ`.
 - `REQ-ING-PAG` and `REQ-ING-RL` apply only when the connector consumes a paginated SDK surface (e.g. `GetSampledRequests`); for log-stream consumption (the preferred mode), they are N/A.
-- Do NOT bind `REQ-TRF-STS` — WAF events are append-only block / allow / count records with no lifecycle state.
-- `REQ-DEDUP` applies in degraded form — the dedup is event-stream replay-window deduplication, not cross-tool finding overlap. Bind a single test asserting the replay-window behaviour.
+- `REQ-TRF-STS` applies in degraded form — bind a test asserting that `status_canonical` is the literal `open` (per the trufflehog convention) and never transitions, since WAF events have no native lifecycle.
+- `REQ-DEDUP` stays N/A — WAF events do not share dedup tuples with SAST/SCA/secrets/DAST findings, so the connector emits no `dedup_links` rows. Replay deduplication is achieved via the deterministic `finding_id` hash plus the Bronze→Silver MERGE; bind a single test asserting that re-delivered events collapse onto the same `finding_id`.
 
 ## Default severity
 
-`medium`. Severity is **derived**, not source-supplied — there is no `severity` field on a WAF event. The canonical severity is computed from `action` (block / allow / count / challenge / captcha) plus rule-group category.
+`medium`. Severity is **derived**, not source-supplied — there is no `severity` field on a WAF event. The canonical severity is computed from the `action` field (block / allow / count / challenge / captcha) via an action-keyed lookup.
 
-The `config/severity/{source}.yml` lookup is therefore action-keyed, not severity-keyed. Generate the lookup with action-to-severity mappings covering every documented action value (e.g. `block: high`, `count: low`, `allow: low`, `challenge: medium`). The `mapping.yml` severity field references the lookup with `action` as the source path:
+The `config/severity/{source}.yml` lookup is therefore action-keyed, not severity-keyed. Generate the lookup with action-to-severity mappings covering every documented action value (e.g. `block: high`, `count: medium`, `allow: low`, `challenge: medium`, `captcha: medium`). The `mapping.yml` severity field references the lookup with `action` as the source path:
 
 ```yaml
 severity:
@@ -44,25 +44,32 @@ Timestamp-based HWM over the log stream. Encode in `config.yml`:
 - The connector records the last event-time ingested per WebACL or rule group and advances forward on each run.
 - For AWS deployments: autoloader-style ingestion from a Firehose-to-S3 prefix or CloudWatch Logs export.
 - For on-prem appliances: the same pattern over the forwarded syslog bucket.
-- Sampled SDK calls (`GetSampledRequests`) are a **fallback only**. Prefer log-stream consumption — samples lose fidelity under high-volume rules. Where the fallback is used, preserve the statistical sampling weight (`Weight` field) into Bronze for downstream extrapolation.
+- Sampled SDK calls (`GetSampledRequests`) are a **fallback only**. Prefer log-stream consumption — samples lose fidelity under high-volume rules. Where the fallback is used, preserve the statistical sampling weight (`Weight` field) into Bronze for downstream extrapolation (not onto `silver.findings`).
 
 ## Deduplication key
 
-Per canonical mapping: not currently specified for WAF — append-only event log; cross-tool overlap not yet defined. The `mkdocs/docs/platform/reference/canonical-mapping.md` does not list a dedup-key tuple for WAF in the current MVP scope.
+Per canonical mapping: `REQ-DEDUP` is N/A for WAF — WAF events do not share dedup tuples with SAST/SCA/secrets/DAST findings, so the canonical `dedup_links` table does not get WAF rows. Cite `mkdocs/docs/platform/reference/canonical-mapping.md` in a transform-level comment to document the absence.
 
-For replay-window deduplication (within-source, recovering from re-delivered events), the WAF capability surface uses `(timestamp, rule_id, source_ip, request_id)` per the `analyze-source` WAF reference. Encode this tuple in `transform.py` for replay deduplication only:
+Replay deduplication (within-source, recovering from re-delivered events) is achieved by the deterministic `finding_id`: a SHA-256 hash of `(webacl_arn, request_id, timestamp_ms)` projected onto each row. Re-delivered events produce the same `finding_id` and collapse at the Bronze→Silver MERGE:
 
 ```python
-replay_dedup_key = (row["timestamp"], row["rule_id"], row["source_ip"], row["request_id"])
+import hashlib
+
+def derive_finding_id(webacl_arn: str, request_id: str, timestamp_ms: int) -> str:
+    """Deterministic SHA-256 finding_id; re-delivered WAF events collapse at MERGE."""
+    payload = f"{webacl_arn}|{request_id}|{timestamp_ms}".encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
 ```
 
-Do NOT emit `dedup_links` rows — the canonical `dedup_links` table targets cross-tool finding overlap, which WAF does not participate in. Cite `mkdocs/docs/platform/reference/canonical-mapping.md` in a transform-level comment to document the absence.
+Do NOT emit `dedup_links` rows — the canonical `dedup_links` table targets cross-tool finding overlap, which WAF does not participate in.
 
 ## Target Silver tables
 
-`silver.waf_events` (plural) per `mkdocs/docs/platform/reference/silver-table-ownership.md` patterns and the WAF capability surface at `mkdocs/docs/connectors/waf/index.md`. The `mapping.yml` block targets `silver.waf_events`, NOT `silver.findings` — this is the headline schema deviation for WAF.
+`silver.findings` — the canonical findings table. WAF follows the trufflehog convention: each WAF event becomes one finding row on `silver.findings`, severity is derived from `action` via the action-keyed lookup, status is the literal `open` (no native lifecycle), and `finding_id` is the deterministic SHA-256 hash described above. The `mapping.yml` block targets `silver.findings` with the canonical envelope columns populated; `cwe_id`, `cve_id`, `repository_id`, `file_path`, and `start_line` are null. The previous schema deviation (a dedicated `silver.waf_events` table) has been collapsed; WAF now matches every other category's `silver.findings` target.
 
-`transform.py` MUST emit a join against `silver.deployments` to resolve the WebACL's associated resource ARN (ALB, CloudFront distribution, API Gateway stage) into `application_id`. The ARN field is encoded in `mapping.yml` and the connector page Resource schema excerpt documents the field name.
+WAF events have no native `repository_id`; the connector emits null `repository_id` on every row. Gold-side aggregations bucket WAF findings under the `__UNMAPPED__` application sentinel until an operator extends `silver.app_repo_mapping` with a `webacl_arn → application_id` mapping (out of scope for the MVP). Do NOT emit a transform-time join against `silver.deployments`; do NOT encode an ARN-to-application resolution in `transform.py`.
+
+WAF-specific telemetry that is NOT carried on `silver.findings` — `source_ip`, `country`, `http_method`, `response_code`, `sampling_weight`, `rule_type`, and the `action` value itself — is intentionally dropped from the canonical record. Operators query upstream WAF logs (S3 / CloudWatch) for that detail; do not project these fields into `silver.findings`.
 
 ## Authentication norms
 
@@ -83,11 +90,13 @@ Standard order: Lakeflow Connect → Databricks SDK → dlt.
 
 ## Quirks
 
-- **Event-shaped, not finding-shaped.** Each record is a single edge observation, not a triaged vulnerability. The Silver target is `silver.waf_events`, NOT `silver.findings`. Emit the matching schema in `mapping.yml`; do not reuse the finding shape.
-- **Severity is derived.** Action plus rule-group category drives canonical severity through the action-keyed lookup. Generate the lookup as action-keyed; do NOT generate a severity-keyed lookup that mirrors a source severity field (there is none).
-- **Sampling weight preserved.** Where the source returns statistical samples, project the `Weight` field into Bronze. Downstream extrapolation depends on it.
-- **Application linkage via ARN.** WebACL ARN → `silver.deployments` join at transform time. Encode the ARN field name in `mapping.yml`; emit the join in `transform.py` (mirrors the DAST `target` join in shape).
-- **Append-only stream.** No status lifecycle; do not project a `status` field; do not generate status-transition code. The `config/status/{source}.yml` lookup MUST exist (per the every-connector-has-both-files contract) and contain `# N/A — WAF events are append-only; no status lifecycle`.
+- **Finding-shape on `silver.findings`.** Each WAF event projects to one finding row on the canonical findings table — same target as SAST/SCA/secrets/DAST. Emit a finding-only block in `mapping.yml`; reuse the canonical envelope columns. The previous `silver.waf_events` schema deviation has been collapsed.
+- **Severity is derived.** The `action` field drives canonical severity through the action-keyed lookup. Generate the lookup as action-keyed; do NOT generate a severity-keyed lookup that mirrors a source severity field (there is none).
+- **Status is the literal `open`.** Per the trufflehog convention, write `open` to `status_canonical`; the field never transitions. The `config/status/{source}.yml` lookup contains a comment to that effect (see below).
+- **Deterministic `finding_id`.** Project a SHA-256 hash of `(webacl_arn, request_id, timestamp_ms)` as the `finding_id`. Re-delivered events collapse at the Bronze→Silver MERGE.
+- **WAF-only telemetry is dropped.** Do NOT project `source_ip`, `country`, `http_method`, `response_code`, `sampling_weight`, `rule_type`, or the `action` value itself onto `silver.findings`. Operators query upstream WAF logs (S3 / CloudWatch) for that telemetry.
+- **Sampling weight preserved in Bronze only.** Where the source returns statistical samples, project the `Weight` field into Bronze (not onto `silver.findings`). Downstream extrapolation depends on it.
+- **Application linkage is deferred.** WAF events have no native `repository_id`; emit `repository_id = null`. Gold-side aggregations bucket WAF findings under the `__UNMAPPED__` application sentinel until an operator extends `silver.app_repo_mapping` with a `webacl_arn → application_id` mapping (out of scope for the MVP). Do NOT emit a `silver.deployments` join in `transform.py`.
 - **Action vocabulary.** Documented actions include `block`, `allow`, `count`, `challenge`, `captcha`. The severity lookup MUST cover every action the source emits — exhaustive over the documented vocabulary.
 - **Log-stream over SDK.** Prefer log-stream consumption. SDK sampled-request mode is fallback-only; document the deviation in a top-of-file comment in `ingest.py` if used.
 
@@ -108,7 +117,7 @@ Reverse-engineered from `src/connectors/aws_waf/...` (live follower).
 | `default_catalog` | string | no | `appsec_dev` | Implicit; verify-step in mkdocs page uses `appsec_dev.bronze_aws_waf.event_envelope`. |
 | `secret_env_vars` | list[{env_var,secret_key}] | yes | (none) | `scripts/load-secrets.sh` put-secret lines. aws_waf: `(WAF_LOG_BUCKET→waf_log_bucket, AWS_WAF_IAM_ROLE_ARN→aws_waf_iam_role_arn)`. |
 | `extra_install_env_vars` | list[string] | yes (typically) | (none) | `scripts/install.sh` extra `: "${VAR:?...}"`. aws_waf adds `(AWS_WAF_ACCOUNT_ID, AWS_WAF_LOG_BUCKET_ARN, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)`. |
-| `tool_source_label` | string | yes | `{source}` | Verify-step assumption — silver.waf_events does not have a `tool_source` discriminator (single-source table currently); kept for symmetry. |
+| `tool_source_label` | string | yes | `{source}` | Discriminates WAF rows from other tools' findings on the canonical `silver.findings` table; the verify-step queries `WHERE tool_source = '{tool_source_label}'`. aws_waf=`aws_waf`. |
 | `entry_wrappers` | bool | yes | `false` | aws_waf `resources/job.yml` `notebook_path: ../ingest.py` (no entry wrappers). |
 | `ingestion_mode` | enum(`log_stream`, `sdk_sampled`) | yes | `log_stream` | `config.yml` `ingestion_mode:`; `resources/job.yml` parameter `ingestion_mode default: "log_stream"`. |
 | `log_stream_prefix` | string | yes (log_stream) | `waf/firehose/` | `config.yml` `log_stream.prefix: waf/firehose/`. |
@@ -117,7 +126,7 @@ Reverse-engineered from `src/connectors/aws_waf/...` (live follower).
 
 17 fields.
 
-**Judgment call:** WAF is event-shaped, not finding-shaped. The verify-step queries `silver.waf_events` (NOT `silver.findings`) — this differs from every other category. `tool_source_label` is retained in the schema for cross-category symmetry, but is unused in the verify-step SQL.
+**Judgment call:** WAF now follows the trufflehog convention — finding-shape rows on `silver.findings` with severity derived from `action`, status set to literal `open`, and a deterministic SHA-256 `finding_id` so re-deliveries collapse at MERGE. The previous schema deviation (a dedicated `silver.waf_events` table) has been collapsed. The verify-step queries `silver.findings` with a `WHERE tool_source = '{tool_source_label}'` filter to discriminate WAF rows from other tools' findings on the canonical table.
 
 ## Databricks-side production-shape
 
@@ -184,7 +193,7 @@ REQUIRED. CREATE TABLE shape (companion to the autoloader-managed bronze table).
 ```sql
 -- Bronze envelope for {{ source }} log records.
 -- Autoloader reads gzipped JSON files from the S3 bucket and lands them
--- here for the WAF transform to project into silver.waf_events.
+-- here for the WAF transform to project into silver.findings.
 
 CREATE TABLE IF NOT EXISTS {{ databricks_runtime.uc_catalog_var }}.{{ databricks_runtime.bronze_schema }}.{{ databricks_runtime.envelope_table }} (
   raw_payload STRING,
@@ -193,7 +202,7 @@ CREATE TABLE IF NOT EXISTS {{ databricks_runtime.uc_catalog_var }}.{{ databricks
   run_id STRING
 )
 USING DELTA
-COMMENT 'Raw {{ source }} log records; transformed into silver.waf_events.';
+COMMENT 'Raw {{ source }} log records; transformed into silver.findings.';
 ```
 
 ### resources/extras (per category)
@@ -267,21 +276,23 @@ bash src/connectors/{{ source }}/scripts/install.sh
 -- Bronze: raw WAF log envelopes landed by the autoloader.
 SELECT count(*) FROM {{ databricks_runtime.default_catalog }}.{{ databricks_runtime.bronze_schema }}.{{ databricks_runtime.envelope_table }};
 
--- Top terminating rules (sanity-check the rule inventory).
+-- Top terminating rules across WAF findings on the canonical findings table.
 SELECT rule_id, count(*)
-  FROM {{ databricks_runtime.default_catalog }}.silver.waf_events
+  FROM {{ databricks_runtime.default_catalog }}.silver.findings
+  WHERE tool_source = '{{ databricks_runtime.tool_source_label }}'
   GROUP BY rule_id
   ORDER BY 2 DESC
   LIMIT 10;
 
 -- Severity distribution for a specific WebACL.
 SELECT severity_canonical, count(*)
-  FROM {{ databricks_runtime.default_catalog }}.silver.waf_events
-  WHERE webacl_arn = '<your-webacl-arn>'
+  FROM {{ databricks_runtime.default_catalog }}.silver.findings
+  WHERE tool_source = '{{ databricks_runtime.tool_source_label }}'
+    AND webacl_arn = '<your-webacl-arn>'
   GROUP BY severity_canonical;
 ```
 
-Expected: bronze count > 0 after the Firehose buffer flushes; silver rows in `silver.waf_events` (NOT `silver.findings`); `severity_canonical` derived from `action`.
+Expected: bronze count > 0 after the Firehose buffer flushes; silver rows on `silver.findings` filtered by `tool_source = '{{ databricks_runtime.tool_source_label }}'`; `severity_canonical` derived from `action`; `status_canonical` is the literal `open` on every row; `repository_id` is null on every row (WAF events have no native repository linkage — Gold-side aggregations bucket them under `__UNMAPPED__`).
 ```
 
 #### §Troubleshooting (page §7)

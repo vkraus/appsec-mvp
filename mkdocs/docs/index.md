@@ -58,7 +58,6 @@ flowchart LR
     SA["silver.applications"]
     SAR["silver.app_repo_mapping"]
     SF["silver.findings"]
-    SW["silver.waf_events"]
     SS["silver.suppression_rules"]
   end
 
@@ -80,7 +79,7 @@ flowchart LR
   BDT --> SF
   BTH --> SF
   BZAP --> SF
-  BWAF --> SW
+  BWAF --> SF
 
   SR --> SAR
   SA --> SAR

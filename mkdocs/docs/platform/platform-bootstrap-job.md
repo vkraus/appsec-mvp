@@ -8,13 +8,12 @@ four-step Phase 1 platform flow**: [Prerequisites](prerequisites.md), then
 The DDL lives at `src/platform/sql/silver_tables.sql`. It defines the
 standard Silver tables every connector reads or writes:
 
-- `silver.findings`: the cross-scanner findings table.
+- `silver.findings`: the cross-scanner findings table — also the target for AWS WAF, which projects each edge event as one finding row (severity derived from action, status literal `open`, deterministic `finding_id`; the previous `silver.waf_events` carve-out has been collapsed).
 - `silver.finding_location`: per-finding code/URL location detail.
 - `silver.hwm`: high water mark state for incremental ingestion.
 - `silver.repositories`: standard repository entity (populated by SCM connectors).
 - `silver.applications`: standard business-application entity, including `app_code` (populated by the CMDB connector).
 - `silver.app_repo_mapping`: mapping from application to repository, keyed `(application_id, repository_id, link_source, linked_at)` (populated by the [app-repo linker](app-repo-link.md) and the deferred CMDB-side paths).
-- `silver.waf_events`: AWS WAF event stream (event-shape, NOT finding-shape).
 - `silver.suppression_rules`: operator-authored finding-suppression entries (analytics-layer concern).
 
 The job is intentionally separate from `databricks bundle deploy` because
@@ -52,7 +51,7 @@ otherwise additive only.
 SHOW TABLES IN appsec_dev.silver;
 ```
 
-Expected rows: `applications`, `app_repo_mapping`, `finding_location`, `findings`, `hwm`, `repositories`, `suppression_rules`, `waf_events`.
+Expected rows: `applications`, `app_repo_mapping`, `finding_location`, `findings`, `hwm`, `repositories`, `suppression_rules`.
 
 ```sql
 -- Every table is empty after bootstrap; connectors and the app-repo linker

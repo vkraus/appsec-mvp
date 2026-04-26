@@ -124,30 +124,11 @@ CREATE TABLE IF NOT EXISTS silver.suppression_rules (
   created_at      TIMESTAMP NOT NULL
 ) USING DELTA;
 
--- WAF event stream — populated by the AWS WAF connector. Event-shape, NOT
--- finding-shape; deliberately separate from `silver.findings` per the WAF
--- category reference (`mkdocs/docs/connectors/waf/`). Schema matches
--- `silver_waf_events` declared inline in `src/connectors/aws_waf/transform.py`.
-CREATE TABLE IF NOT EXISTS silver.waf_events (
-  event_id            STRING NOT NULL,
-  tool_source         STRING NOT NULL,
-  category            STRING NOT NULL,
-  timestamp           TIMESTAMP NOT NULL,
-  webacl_arn          STRING NOT NULL,
-  application_id      STRING,
-  rule_id             STRING,
-  rule_type           STRING,
-  action              STRING NOT NULL,
-  severity_canonical  STRING NOT NULL,
-  status_canonical    STRING,
-  source_ip           STRING,
-  country             STRING,
-  request_uri         STRING,
-  http_method         STRING,
-  response_code       INT,
-  sampling_weight     BIGINT,
-  ingested_at         TIMESTAMP NOT NULL
-) USING DELTA;
+-- (silver.waf_events removed: AWS WAF now publishes finding-shape rows to
+-- silver.findings via src/connectors/aws_waf/transform.py, with WAF-specific
+-- telemetry (source_ip, country, http_method, response_code, sampling_weight)
+-- intentionally dropped. Operators query upstream WAF logs (S3 / CloudWatch)
+-- for that detail. See mkdocs/docs/connectors/waf/aws-waf.md.)
 
 -- Idempotent column adds for environments where the CREATE TABLE blocks
 -- above already ran without these columns (Databricks DBR 12+ supports

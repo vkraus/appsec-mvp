@@ -35,8 +35,8 @@ sdk_fallback:
 
 # Bronze / Silver targets
 bronze_table: ${catalog}.bronze_aws_waf.events
-silver_table: ${catalog}.silver.waf_events
+silver_table: ${catalog}.silver.findings           # canonical (was silver.waf_events; collapsed)
 
 # Declarative lookups
 severity_map: src/connectors/aws_waf/severity.yml   # action-keyed (no source severity field)
-status_map:   src/connectors/aws_waf/status.yml     # N/A placeholder (append-only stream)
+status_map:   src/connectors/aws_waf/status.yml     # literal `open` (no native lifecycle)

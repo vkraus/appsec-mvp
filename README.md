@@ -26,7 +26,7 @@ This repository stores the MVP implementation part of my master's thesis. The co
 
 ## Overview
 
-**What it does.** Pulls findings, asset data, and CMDB records from up to nine AppSec sources into a Databricks lakehouse, normalizes severity, status, and dedup tuples per a published mapping contract, and exposes joinable Silver entities (`silver.findings`, `silver.repositories`, `silver.applications`, `silver.app_repo_mapping`, `silver.suppression_rules`, `silver.waf_events`, `silver.hwm`, `silver.finding_location`) plus per-connector projections (`silver_<source>.*`), five materialized Gold OLAP tables refreshed daily, a Gold view backing two OLTP Online Tables, and a Databricks App that serves a sub-50 ms security-score endpoint over the latter.
+**What it does.** Pulls findings, asset data, and CMDB records from up to nine AppSec sources into a Databricks lakehouse, normalizes severity, status, and dedup tuples per a published mapping contract, and exposes joinable Silver entities (`silver.findings`, `silver.repositories`, `silver.applications`, `silver.app_repo_mapping`, `silver.suppression_rules`, `silver.hwm`, `silver.finding_location`) plus per-connector projections (`silver_<source>.*`), five materialized Gold OLAP tables refreshed daily, a Gold view backing two OLTP Online Tables, and a Databricks App that serves a sub-50 ms security-score endpoint over the latter.
 
 **Why it exists.** Production AppSec stacks are a tangle of point integrations between scanner SaaS, CMDB, ticketing, and analytics. Each one comes with its own auth model, pagination contract, and severity vocabulary. This MVP is a thesis-grade reference for *how to ingest those tools systematically*. It provides a single framework primitive (HTTP client, paginator, HWM state, recommended normalization), a fixed connector contract (`ingest()`, `transform()`, `mapping.yml`, `config.yml`, `severity.yml`, `status.yml`), and a fixed deployment unit (DAB). Adding a tenth source is a fill-in-the-blanks exercise, not an integration project.
 
@@ -78,7 +78,6 @@ flowchart LR
     SA["silver.applications"]
     SAR["silver.app_repo_mapping"]
     SF["silver.findings"]
-    SW["silver.waf_events"]
     SS["silver.suppression_rules"]
   end
 
@@ -100,7 +99,7 @@ flowchart LR
   BDT --> SF
   BTH --> SF
   BZAP --> SF
-  BWAF --> SW
+  BWAF --> SF
 
   SR --> SAR
   SA --> SAR

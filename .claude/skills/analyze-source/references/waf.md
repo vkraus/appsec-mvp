@@ -14,20 +14,20 @@ Facts the analyze-source skill needs to write a complete Reference section for a
 
 ## Applicable REQ-IDs
 
-From `mkdocs/docs/platform/reference/catalog.md`. WAF sources emit edge-event records treated as findings.
+From `mkdocs/docs/platform/reference/catalog.md`. WAF sources emit edge-event records that are projected into finding-shape rows on `silver.findings`.
 
 - Apply: `REQ-ING-AUTH`, `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-SEV`, `REQ-TRF-TS`, `REQ-DQ`.
 - `REQ-ING-PAG` and `REQ-ING-RL` apply only when the connector consumes a paginated SDK surface (for example sampled-request SDK calls); for log-stream consumption (the preferred mode), these are N/A.
-- `REQ-TRF-STS` does not apply — WAF events are append-only block / allow / count records with no lifecycle state.
-- `REQ-DEDUP` applies in degraded form — deduplication is event-stream deduplication (replay-window) rather than cross-tool finding overlap.
+- `REQ-TRF-STS` applies in degraded form — WAF events have no native lifecycle, so the connector emits the literal `open` per the trufflehog convention; `status_canonical` never transitions.
+- `REQ-DEDUP` stays N/A on the catalog matrix — WAF events still don't share dedup tuples with SAST/SCA/secrets/DAST. Replay deduplication is achieved via the deterministic `finding_id` hash plus the Bronze→Silver MERGE; no `dedup_links` rows are emitted.
 
 The AWS WAF traceability row currently shows N/A across the matrix because the source is documented but not built in the MVP. The MVP-built profile would be the set above.
 
 ## Default severity
 
-`medium`. Severity is not a first-class field on a WAF event; the canonical severity is **derived** from the action and rule-group category per a per-source lookup table — analogous to the secrets convention but data-driven from action+rule rather than fixed.
+`medium`. Severity is not a first-class field on a WAF event; the canonical severity is **derived** from the `action` field via an action-keyed lookup table (e.g. `block→high`, `count→medium`, `allow→low`) — analogous to the secrets convention but data-driven from action rather than fixed.
 
-The Reference section's Enumerations fact MUST disclose the derivation rule (action + rule-group category → canonical severity) and list every documented action value.
+The Reference section's Enumerations fact MUST disclose the derivation rule (action → canonical severity) and list every documented action value.
 
 ## Incremental strategy
 
@@ -37,11 +37,17 @@ For AWS deployments the reference pattern is **Firehose to S3** or **CloudWatch 
 
 ## Deduplication key
 
-`(timestamp, rule_id, source_ip, request_id)` per the WAF capability surface, with the Silver event scope `(application_id, rule_id, timestamp)` per `mkdocs/docs/platform/reference/canonical-mapping.md`. Because WAF records are append-only event-shaped data rather than finding-shaped, dedup is replay-window deduplication on the unique tuple, not cross-tool overlap linking.
+`REQ-DEDUP` is N/A on the catalog matrix — WAF events do not share dedup tuples with SAST/SCA/secrets/DAST findings, so no `dedup_links` rows are emitted. Replay deduplication (recovering from re-delivered events) is achieved instead by the deterministic `finding_id` SHA-256 hash of `(webacl_arn, request_id, timestamp_ms)` plus the Bronze→Silver MERGE — re-delivered events collapse onto the same `finding_id` at MERGE time. Cite `mkdocs/docs/platform/reference/canonical-mapping.md` in the Reference section to document the absence of a cross-tool dedup tuple for WAF.
 
 ## Target Silver tables
 
-`silver.waf_events` per the WAF capability surface. Application scoping is derived at transform time from the WebACL's associated resource ARNs (ALB, CloudFront distribution, API Gateway stage) joined against `silver.deployments`. The Reference section MUST disclose this transform-time join.
+`silver.findings` — the canonical findings table, same target as SAST/SCA/secrets/DAST. WAF events are projected into finding-shape rows: each event becomes one finding row with severity derived from action (via the action-keyed lookup), status set to the literal `open` (no native lifecycle), and a deterministic `finding_id` SHA-256 hashed from `(webacl_arn, request_id, timestamp_ms)`.
+
+WAF events have no native `repository_id`, so `repository_id` is null on the emitted rows. Gold-side aggregations bucket WAF findings under the `__UNMAPPED__` application sentinel until an operator extends `silver.app_repo_mapping` with a `webacl_arn → application_id` mapping (out of scope for the MVP).
+
+WAF-specific telemetry that is NOT carried on `silver.findings` — `source_ip`, `country`, `http_method`, `response_code`, `sampling_weight`, `rule_type`, and the `action` value itself — is intentionally dropped from the canonical record. Operators query upstream WAF logs (S3 / CloudWatch) for that telemetry.
+
+The headline schema deviation that previously distinguished WAF from other categories has been collapsed: WAF now matches every other category's `silver.findings` target.
 
 ## Authentication norms
 
@@ -53,11 +59,13 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. For 
 
 ## Quirks
 
-- **Event-shaped, not finding-shaped.** Each record describes a single request observed at the edge, not a triaged vulnerability. The Silver target is `silver.waf_events`, not `silver.findings`. The Reference section's Quirks fact MUST disclose this so generate-connector emits the right schema.
-- **Severity is derived.** Severity comes from action + rule-group category, not from a source field. The lookup table is action-keyed, not severity-keyed.
-- **Sampling weight.** Where the source returns statistical samples (sampled SDK calls), each record carries a sampling weight that MUST be preserved into Bronze for downstream extrapolation.
-- **Application linkage via ARN.** Application scoping uses the WebACL's associated resource ARNs (ALB, CloudFront distribution, API Gateway stage) joined against `silver.deployments` at transform time. The Reference section MUST capture the ARN field name in the Resource schema excerpt.
-- **Append-only stream.** WAF events have no status lifecycle. `REQ-TRF-STS` is N/A. The Silver `status` field is left null.
+- **Finding-shape on `silver.findings`.** WAF now follows the trufflehog convention: each WAF event becomes one finding row on `silver.findings` (the same canonical table SAST/SCA/secrets/DAST target). The previous schema deviation (a dedicated `silver.waf_events` table) has been collapsed.
+- **Severity is derived.** Severity comes from the `action` field via an action-keyed lookup (`block→high`, `count→medium`, `allow→low`, etc.). The lookup is action-keyed, not severity-keyed.
+- **Status is the literal `open`.** WAF events have no native lifecycle; the connector follows the trufflehog convention and writes the literal `open` to `status_canonical`. `status_canonical` never transitions.
+- **Deterministic `finding_id`.** Each row's `finding_id` is a deterministic SHA-256 hash of `(webacl_arn, request_id, timestamp_ms)`. Re-deliveries collapse at MERGE time.
+- **WAF-only telemetry is dropped.** `source_ip`, `country`, `http_method`, `response_code`, `sampling_weight`, `rule_type`, and the `action` value itself are NOT carried on `silver.findings`. Operators query upstream WAF logs (S3 / CloudWatch) for that detail.
+- **Sampling weight.** Where the source returns statistical samples (sampled SDK calls), each record carries a sampling weight that MUST be preserved into Bronze for downstream extrapolation (it is not projected onto `silver.findings`).
+- **Application linkage is deferred.** WAF events have no native `repository_id`; `repository_id` is null on emitted rows. Gold-side aggregations bucket WAF findings under the `__UNMAPPED__` application sentinel until an operator extends `silver.app_repo_mapping` with a `webacl_arn → application_id` mapping (out of scope for the MVP).
 - **Action vocabulary.** Documented actions include `block`, `allow`, `count`, `challenge`, `captcha`. The Reference section MUST list every action the source emits — this drives the severity-derivation lookup.
 - **Log-stream over SDK.** Prefer log-stream consumption over sampled SDK calls; the Reference section's Quirks fact MUST disclose the chosen mode and justify any deviation.
 

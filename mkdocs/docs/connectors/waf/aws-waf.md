@@ -2,20 +2,22 @@
 
 ## What this connector ingests
 
-AWS WAF is the reference runtime-security source, representing the third detection tier (distinct from static and dynamic testing). Each record is an **event record, not a finding record**: a single request observed at the edge with a WAF action attached, not a triaged vulnerability. Records populate `silver.waf_events`, linked to applications through the resource ARN associated with the WebACL (ALB, CloudFront distribution, API Gateway stage) joined against `silver.deployments` at transform time.
+AWS WAF is the reference runtime-security source, representing the third detection tier (distinct from static and dynamic testing). The connector projects each WAF edge event as one finding row on the canonical `silver.findings` table — same target as every other scanner category. Severity is derived from the WAF `action` (block, count, challenge, captcha, allow) via an action-keyed lookup; status is the literal `open` and never transitions (matching the trufflehog convention for sources without a native lifecycle); and `finding_id` is a deterministic SHA-256 hash of `(webacl_arn, request_id, timestamp_ms)` so re-delivered events collapse at the Bronze-to-Silver MERGE.
 
-The WAF reference profile prefers **log-stream consumption** (CloudWatch Logs / Kinesis Data Firehose / S3) over the `GetSampledRequests` action of the WAFv2 SDK, because samples lose fidelity under high-volume rules. The SDK path is documented as a fallback for deployments where full-log delivery is not yet provisioned. In that mode, the per-record `Weight` field MUST be preserved into Bronze for downstream extrapolation.
+The WAF reference profile prefers **log-stream consumption** (CloudWatch Logs / Kinesis Data Firehose / S3) over the `GetSampledRequests` action of the WAFv2 SDK, because samples lose fidelity under high-volume rules. The SDK path is documented as a fallback for deployments where full-log delivery is not yet provisioned. In that mode, the per-record `Weight` field MUST be preserved into Bronze for downstream extrapolation (it is not projected onto `silver.findings`).
+
+WAF telemetry beyond severity, rule_id, and url — `source_ip`, `country`, `http_method`, `response_code`, `sampling_weight`, `rule_type`, and the `action` value itself — is intentionally dropped from the canonical record. Operators query the upstream WAF logs (S3 / CloudWatch) when they need that detail.
 
 **Category:** WAF (runtime, edge event stream) · **Integration pattern:** log-stream autoloader (preferred) / SDK boto3 (fallback)
 
 ## Dependencies
 
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md).
-- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** WAF events resolve to applications through the associated resource ARN, then to repositories via `silver.app_repo_mapping`. The chain requires an SCM connector to populate `silver.repositories` upstream.
+- **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** WAF events have no native `repository_id`; `repository_id` is null on emitted rows. Gold-side aggregations bucket WAF findings under the `__UNMAPPED__` application sentinel until an operator extends `silver.app_repo_mapping` with a `webacl_arn → application_id` mapping (out of scope for the MVP).
 
 ## User inputs
 
-AWS WAF is event-shaped: each Bronze row is an edge log record (a request observed at the WebACL with an action attached), not a triaged finding. The reference profile ingests via S3 autoloader over Firehose-delivered logs, so the runbook below assumes the log-stream path. The SDK fallback is a separate code path documented in Reference; it is not covered in this install runbook.
+AWS WAF projects each Bronze edge log record (one request observed at the WebACL with an action attached) onto one row of the canonical `silver.findings` table. The reference profile ingests via S3 autoloader over Firehose-delivered logs, so the runbook below assumes the log-stream path. The SDK fallback is a separate code path documented in Reference; it is not covered in this install runbook.
 
 | Input | Where to obtain | Used as |
 |---|---|---|
@@ -96,76 +98,91 @@ Behaviour differs by API, and the applicability of `REQ-ING-PAG` / `REQ-ING-RL` 
 
 ### Incremental hook
 
-Timestamp-based high-water mark over the log stream. The connector records the maximum event-time ingested per WebACL (or per rule group, when scoping is finer) and advances the window forward on each run. WAF events are append-only and have no lifecycle state, so there is no `updated_at` field to track and no equivalent for `REQ-TRF-STS`.
+Timestamp-based high-water mark over the log stream. The connector records the maximum event-time ingested per WebACL (or per rule group, when scoping is finer) and advances the window forward on each run. WAF events have no native lifecycle state, so there is no `updated_at` field to track; `silver.findings.status_canonical` is the literal `open` on every row (matching the trufflehog convention) and `REQ-TRF-STS` is N/A in the catalog matrix for the same reason it is N/A on the trufflehog row.
 
 On the **log-stream API**, the autoloader picks up newly arrived files in the Firehose-to-S3 prefix. The high-water mark is the max `timestamp` observed in Bronze and is used for restart-from-checkpoint semantics rather than as a server-side filter. On the **SDK fallback**, the connector parameterises `GetSampledRequests` with a bounded `TimeWindow` (`StartTime`, `EndTime`) and records the last `EndTime` per (WebACL, rule). Successive runs advance the window forward. The AWS-imposed three-hour ceiling on `TimeWindow` is the inner-loop limit.
 
 ### Resource schema excerpt
 
-Two record structures apply, one per API. The connector lands them in distinct Bronze tables and reconciles them onto the same `silver.waf_events` schema at transform time.
+Two record structures apply, one per API. The connector lands them in distinct Bronze tables and reconciles them onto the canonical `silver.findings` schema at transform time.
 
 **WAF log record (log-stream API), consumed fields.**
 
 | Field | Type | Meaning |
 |---|---|---|
-| `timestamp` | number (epoch ms) | Event time at the edge; normalised to UTC datetime in Silver. |
-| `webaclId` | string (ARN) | WebACL ARN; joined against `silver.deployments` via the resource ARN associated with the WebACL to derive `application_id`. |
-| `terminatingRuleId` | string | Identifier of the rule that finalised the action; used as `rule_id` in `silver.waf_events`. |
-| `terminatingRuleType` | string | Rule type (`REGULAR`, `RATE_BASED`, `GROUP`, `MANAGED_RULE_GROUP`); feeds the severity-derivation lookup alongside `action`. |
-| `action` | string | Final action: `ALLOW`, `BLOCK`, `COUNT`, `CAPTCHA`, `CHALLENGE`. |
-| `httpRequest.clientIp` | string | Source IP observed by the WAF; component of the dedup key. |
-| `httpRequest.country` | string | Two-letter country code from geo-IP. |
-| `httpRequest.uri` | string | Request path; participates in the application-linkage join. |
-| `httpRequest.httpMethod` | string | HTTP method. |
-| `httpRequest.requestId` | string | Edge-assigned request identifier; component of the dedup key. |
-| `httpRequest.headers` | list | Header name/value pairs observed on the request. |
-| `ruleGroupList` | list | Rule groups evaluated and the per-group terminating action; used for severity derivation when `terminatingRuleType = GROUP`. |
-| `labels` | list | WAF labels emitted by matching rules; used for downstream classification. |
-| `responseCodeSent` | integer | HTTP status returned to the client (present when the action did not allow upstream). |
+| `timestamp` | number (epoch ms) | Event time at the edge; normalised to UTC datetime as `silver.findings.first_seen_at` and `last_seen_at`. Also a component of the `finding_id` hash. |
+| `webaclId` | string (ARN) | WebACL ARN; component of the `finding_id` hash. WAF events have no native `repository_id`, so `silver.findings.repository_id` is null on every emitted row. |
+| `terminatingRuleId` | string | Identifier of the rule that finalised the action; populates `silver.findings.rule_id_native`. |
+| `terminatingRuleType` | string | Rule type (`REGULAR`, `RATE_BASED`, `GROUP`, `MANAGED_RULE_GROUP`); not projected onto `silver.findings`. |
+| `action` | string | Final action: `ALLOW`, `BLOCK`, `COUNT`, `CAPTCHA`, `CHALLENGE`. Drives `silver.findings.severity_canonical` via the action-keyed lookup at `src/connectors/aws_waf/severity.yml`. The `action` value itself is not projected onto `silver.findings`. |
+| `httpRequest.clientIp` | string | Source IP observed by the WAF; not projected onto `silver.findings`. |
+| `httpRequest.country` | string | Two-letter country code from geo-IP; not projected. |
+| `httpRequest.uri` | string | Request path; populates `silver.findings.url` (the closest finding-shape "location" for an edge event). |
+| `httpRequest.httpMethod` | string | HTTP method; not projected. |
+| `httpRequest.requestId` | string | Edge-assigned request identifier; component of the `finding_id` hash. |
+| `httpRequest.headers` | list | Header name/value pairs observed on the request; not projected. |
+| `ruleGroupList` | list | Rule groups evaluated and the per-group terminating action; not projected. |
+| `labels` | list | WAF labels emitted by matching rules; not projected. |
+| `responseCodeSent` | integer | HTTP status returned to the client; not projected. |
 
 **`SampledHTTPRequest` (SDK fallback), consumed fields.**
 
 | Field | Type | Meaning |
 |---|---|---|
-| `Timestamp` | datetime | Event time; normalised to UTC at the Bronze-to-Silver transform. |
-| `Request.ClientIP` | string | Source IP observed by the WAF; component of the dedup key. |
-| `Request.Country` | string | Two-letter country code from geo-IP. |
-| `Request.URI` | string | Request path. |
-| `Request.Method` | string | HTTP method. |
-| `Request.Headers` | list | Header name/value pairs observed on the request. |
-| `Weight` | integer | Sampling weight; the event represents `Weight` underlying requests. Preserved into Bronze for downstream extrapolation. |
-| `Action` | string | WAF action: `ALLOW`, `BLOCK`, `COUNT`, `CAPTCHA`, `CHALLENGE`. |
-| `RuleNameWithinRuleGroup` | string | Matched rule; used as `rule_id` in `silver.waf_events`. |
-| `ResponseCodeSent` | integer | HTTP status returned to the client. |
-| `Labels` | list | WAF labels emitted by the matching rule. |
-| `OverriddenAction` | string | Action overridden by the surrounding rule group; recorded for audit when present. |
+| `Timestamp` | datetime | Event time; normalised to UTC at the Bronze-to-Silver transform; populates `first_seen_at` / `last_seen_at` and feeds the `finding_id` hash. |
+| `Request.ClientIP` | string | Source IP observed by the WAF; not projected onto `silver.findings`. |
+| `Request.Country` | string | Two-letter country code from geo-IP; not projected. |
+| `Request.URI` | string | Request path; populates `silver.findings.url`. |
+| `Request.Method` | string | HTTP method; not projected. |
+| `Request.Headers` | list | Header name/value pairs observed on the request; not projected. |
+| `Weight` | integer | Sampling weight; the event represents `Weight` underlying requests. Preserved into Bronze for downstream extrapolation; not projected onto `silver.findings`. |
+| `Action` | string | WAF action: `ALLOW`, `BLOCK`, `COUNT`, `CAPTCHA`, `CHALLENGE`. Drives `severity_canonical` via the action-keyed lookup. |
+| `RuleNameWithinRuleGroup` | string | Matched rule; populates `silver.findings.rule_id_native`. |
+| `ResponseCodeSent` | integer | HTTP status returned to the client; not projected. |
+| `Labels` | list | WAF labels emitted by the matching rule; not projected. |
+| `OverriddenAction` | string | Action overridden by the surrounding rule group; not projected. |
 
-The Silver scope key for `silver.waf_events` is `(application_id, rule_id, timestamp)`. The replay-window deduplication tuple is `(timestamp, rule_id, source_ip, request_id)` per the WAF capability scope. Application scoping is derived at transform time from the resource ARN associated with the WebACL (ALB, CloudFront distribution, API Gateway stage) joined against `silver.deployments`.
+**Projection onto `silver.findings`.**
+
+| `silver.findings` column | Source / derivation |
+|---|---|
+| `finding_id` | SHA-256 hash of `(webaclId, httpRequest.requestId, timestamp)` — deterministic, so re-delivered events collapse onto the same row at MERGE. |
+| `tool_source` | Literal `"aws_waf"`. |
+| `category` | Literal `"waf"`. |
+| `severity_canonical` | Derived from `action` via the action-keyed lookup at `src/connectors/aws_waf/severity.yml` (`block→high`, `count→medium`, `challenge→low`, `captcha→low`, `allow→low`). |
+| `status_canonical` | Literal `"open"` (no native lifecycle; matches the trufflehog convention). |
+| `rule_id_native` | `terminatingRuleId` (log record) or `RuleNameWithinRuleGroup` (SDK). |
+| `url` | `httpRequest.uri` (log record) or `Request.URI` (SDK). |
+| `first_seen_at` / `last_seen_at` | `timestamp` (epoch ms → UTC datetime) or `Timestamp` (datetime). |
+| `repository_id` | Null on every row (WAF events have no native repository linkage). |
+| `cwe_id` / `cve_id` / `file_path` / `start_line` | Null. |
+
+WAF telemetry beyond this projection (`source_ip`, `country`, `http_method`, `response_code`, `sampling_weight`, `rule_type`, and the `action` value itself) is intentionally dropped from the canonical record. Operators query the upstream WAF logs (S3 prefix or CloudWatch) directly when they need that detail. The previous schema deviation (a dedicated `silver.waf_events` table with this telemetry attached) has been collapsed; WAF now matches every other category's `silver.findings` target.
 
 ### Enumerations
 
-**Action.** `ALLOW`, `BLOCK`, `COUNT`, `CAPTCHA`, `CHALLENGE`. No severity field. The standard severity is derived: `BLOCK` on a managed-rule match→`high`; `COUNT` on a managed-rule match→`medium`; `CAPTCHA`/`CHALLENGE`→`low`; `ALLOW` is not ingested by default. The derivation table is in `src/connectors/aws_waf/severity.yml`.
+**Action.** `ALLOW`, `BLOCK`, `COUNT`, `CAPTCHA`, `CHALLENGE`. No severity field on the source. Canonical severity is derived from the action via the action-keyed lookup at `src/connectors/aws_waf/severity.yml`:
 
-**Severity is derived, not sourced.** WAF events carry no severity field. The standard severity is computed from `(action, terminatingRuleType / rule-group category)` per a per-source lookup table at `config/severity/aws-waf.yml`. The reference derivation:
+- `BLOCK` → `high`.
+- `COUNT` → `medium`.
+- `CHALLENGE` → `low`.
+- `CAPTCHA` → `low`.
+- `ALLOW` → `low`.
 
-- `BLOCK` on a managed-rule-group match → `high`.
-- `BLOCK` on a custom regular or rate-based rule → `medium`.
-- `COUNT` on a managed-rule-group match → `medium`.
-- `CAPTCHA` / `CHALLENGE` → `low`.
-- `ALLOW` → not ingested by default; if ingested, `low`.
+The lookup MUST cover every documented action; undocumented values fall through to the configured default (`medium`) and trigger a data-quality warning per `REQ-TRF-SEV`. The lookup is action-keyed, not severity-keyed, because there is no source severity to translate.
 
-The lookup MUST cover every documented action; undocumented values fall through to the configured default (`medium`) and trigger a data-quality warning per `REQ-TRF-SEV`. The lookup is action-keyed (with rule-type as a secondary axis), not severity-keyed, because there is no source severity to translate.
-
-**Status.** WAF events are append-only and have no lifecycle. `REQ-TRF-STS` is **N/A** for this source. The Silver `status` column is left null.
+**Status.** WAF events have no native lifecycle. The connector writes the literal `open` to `silver.findings.status_canonical` (matching the trufflehog convention for sources without a native lifecycle); the field never transitions. `REQ-TRF-STS` is marked **N/A** in the catalog matrix for the same reason it is N/A on the trufflehog row: literal-status sources have no transitions to validate.
 
 ### Quirks
 
-- **Event records, not finding records.** Each record describes a single edge observation, not a triaged vulnerability. The Silver target is `silver.waf_events`, **not** `silver.findings`. `generate-connector` MUST emit the matching schema in `mapping.yml`. The finding schema is not reused.
-- **Severity is derived.** Severity comes from `(action, rule-group category / rule type)`, not from a source field. The lookup table at `config/severity/aws-waf.yml` is action-keyed.
-- **Sampling weight (SDK fallback).** When `GetSampledRequests` returns statistical samples, each record carries a `Weight` representing the number of underlying requests it stands in for. `Weight` MUST be preserved into Bronze for downstream extrapolation. Gold-layer aggregations multiply by `Weight` to estimate true volume.
-- **Application linkage via ARN.** Application scoping uses the resource ARN associated with the WebACL (ALB, CloudFront distribution, API Gateway stage), captured as `webaclId` on log records, joined against `silver.deployments` at transform time. Without an active deployment row, events fall through unlinked and land in the data-quality unmatched bucket.
-- **Append-only stream.** WAF events have no status lifecycle. `REQ-TRF-STS` is N/A. The Silver `status` field is left null and the connector emits no status-transition events.
-- **Action vocabulary.** Documented actions are `ALLOW`, `BLOCK`, `COUNT`, `CAPTCHA`, `CHALLENGE`. `OverriddenAction` (SDK) and the `ruleGroupList` per-group action (log records) capture rule-group-level overrides. The reference connector logs but does not re-derive severity from these.
+- **Finding-shape on `silver.findings`.** Each WAF event projects to one row on the canonical `silver.findings` table — same target as SAST, SCA, secret, and DAST connectors. The previous schema deviation (a dedicated `silver.waf_events` table) has been collapsed; the connector reuses the canonical envelope columns, with `cwe_id`/`cve_id`/`repository_id`/`file_path`/`start_line` null.
+- **Severity is derived.** Severity comes from the `action` field, not from a source severity. The lookup table at `src/connectors/aws_waf/severity.yml` is action-keyed.
+- **Status is the literal `open`.** Per the trufflehog convention, `status_canonical = "open"` on every emitted row; the field never transitions. `src/connectors/aws_waf/status.yml` carries the literal as the `default` row.
+- **Deterministic `finding_id`.** `finding_id` is a SHA-256 hash of `(webaclId, httpRequest.requestId, timestamp)`. Re-delivered events from the upstream Firehose / CloudWatch path collapse onto the same row at the Bronze-to-Silver MERGE.
+- **WAF-only telemetry is dropped.** `source_ip`, `country`, `http_method`, `response_code`, `sampling_weight`, `rule_type`, and the `action` value itself are NOT projected onto `silver.findings`. Operators query the upstream WAF logs (S3 prefix or CloudWatch) directly when they need that detail.
+- **Sampling weight (SDK fallback).** When `GetSampledRequests` returns statistical samples, each record carries a `Weight` representing the number of underlying requests it stands in for. `Weight` MUST be preserved into Bronze for downstream extrapolation; it is not projected onto `silver.findings`.
+- **Application linkage is deferred.** WAF events have no native `repository_id`; `silver.findings.repository_id` is null on every emitted row. Gold-side aggregations bucket WAF findings under the `__UNMAPPED__` application sentinel until an operator extends `silver.app_repo_mapping` with a `webacl_arn → application_id` mapping (out of scope for the MVP). The connector does not emit a transform-time join against `silver.deployments`.
+- **Action vocabulary.** Documented actions are `ALLOW`, `BLOCK`, `COUNT`, `CAPTCHA`, `CHALLENGE`. `OverriddenAction` (SDK) and the `ruleGroupList` per-group action (log records) capture rule-group-level overrides; the reference connector logs but does not re-derive severity from these.
 - **Log-stream over SDK.** The reference profile prefers log-stream consumption. The SDK path (`GetSampledRequests`) is permitted only as a fallback when full-log delivery is not yet provisioned. The chosen mode MUST be recorded in `config.yml` for the connector so that REQ-applicability can be evaluated correctly.
 - **CloudFront endpoint constraint (SDK only).** CloudFront-scoped WebACLs require the `us-east-1` regional endpoint regardless of where the Databricks workspace runs. Regional WebACLs use the home region of the resource. The connector enumerates both scopes when iterating over `ListWebACLs`.
 
@@ -195,9 +212,9 @@ bash src/connectors/aws_waf/scripts/install.sh
 
 **Normalization spot check.**
 
-- Raw `action = "BLOCK"` on a managed-rule-group match → silver `severity_canonical = 'high'`.
+- Raw `action = "BLOCK"` → silver `severity_canonical = 'high'`.
 - Raw `action = "COUNT"` → silver `severity_canonical = 'medium'`.
-- Raw `action = "CAPTCHA"` or `"CHALLENGE"` → silver `severity_canonical = 'low'`.
+- Raw `action = "CHALLENGE"` or `"CAPTCHA"` or `"ALLOW"` → silver `severity_canonical = 'low'`.
 
 ## Verify
 
@@ -205,22 +222,23 @@ bash src/connectors/aws_waf/scripts/install.sh
 -- Bronze: raw WAF log envelopes landed by the autoloader.
 SELECT count(*) FROM appsec_dev.bronze_aws_waf.event_envelope;
 
--- Top terminating rules (sanity-check the rule inventory).
-SELECT rule_id, count(*)
-  FROM appsec_dev.silver.waf_events
-  GROUP BY rule_id
+-- Top terminating rules across WAF findings on the canonical findings table.
+SELECT rule_id_native, count(*)
+  FROM appsec_dev.silver.findings
+  WHERE tool_source = 'aws_waf'
+  GROUP BY rule_id_native
   ORDER BY 2 DESC
   LIMIT 10;
 
--- Severity distribution for a specific WebACL — confirms the action-keyed
+-- Severity distribution for WAF findings — confirms the action-keyed
 -- severity lookup is firing correctly.
 SELECT severity_canonical, count(*)
-  FROM appsec_dev.silver.waf_events
-  WHERE webacl_arn = '<your-webacl-arn>'
+  FROM appsec_dev.silver.findings
+  WHERE tool_source = 'aws_waf'
   GROUP BY severity_canonical;
 ```
 
-Expected: bronze count > 0 after the Firehose buffer flushes; events grouped by `rule_id` (the column populated from the WAF log envelope's `terminatingRuleId`); `severity_canonical` derived from `action` (`BLOCK` → `high`, `COUNT` → `medium`, `ALLOW` / `CAPTCHA` / `CHALLENGE` → `low`).
+Expected: bronze count > 0 after the Firehose buffer flushes; silver rows on `silver.findings` filtered by `tool_source = 'aws_waf'`; `rule_id_native` populated from the WAF log envelope's `terminatingRuleId`; `severity_canonical` derived from `action` (`BLOCK` → `high`, `COUNT` → `medium`, `CHALLENGE` / `CAPTCHA` / `ALLOW` → `low`); `status_canonical` is the literal `open` on every row; `repository_id` is null on every row (Gold-side aggregations bucket the rows under the `__UNMAPPED__` application sentinel).
 
 ## Troubleshooting
 
@@ -230,6 +248,7 @@ Expected: bronze count > 0 after the Firehose buffer flushes; events grouped by 
 | `AccessDenied` on S3 read in the job log | The IAM principal behind `AWS_ACCESS_KEY_ID` is missing `s3:GetObject` (or `s3:ListBucket`) on the log bucket. Update the IAM policy, then re-run `bash src/connectors/aws_waf/scripts/load-secrets.sh` and re-deploy the bundle. |
 | All `severity_canonical` values land on `medium` | The action-keyed lookup at `src/connectors/aws_waf/severity.yml` fell through to the default for an unknown `action`. Inspect the actual values landing in bronze: `SELECT DISTINCT raw_payload:action FROM appsec_dev.bronze_aws_waf.event_envelope` and add the missing key to `severity.yml`. |
 | Firehose objects present but no rows in bronze | Autoloader has not picked up the prefix yet. Confirm the connector's `log_stream.prefix` in `src/connectors/aws_waf/config.yml` (default `waf/firehose/`) matches the actual S3 layout, and trigger another run. |
+| Bronze rows present but `silver.findings` shows no `tool_source = 'aws_waf'` rows | The Bronze→Silver transform has not run, or `MERGE` collapsed re-deliveries onto an existing `finding_id`. Check the silver row count first (`SELECT count(*) FROM appsec_dev.silver.findings WHERE tool_source = 'aws_waf'`); the `finding_id` is a deterministic SHA-256 hash of `(webacl_arn, request_id, timestamp_ms)`, so re-deliveries collapse onto the same row by design. |
 
 ## Validation
 
@@ -241,14 +260,14 @@ Expected: bronze count > 0 after the Firehose buffer flushes; events grouped by 
 | `REQ-ING-PAG` | n/a | N/A |
 | `REQ-ING-RL` | n/a | N/A |
 | `REQ-ING-HWM` | `src/connectors/aws_waf/tests/test_ingest.py::test_event_timestamp_hwm_round_trip` | PASS |
-| `REQ-TRF-MAP` | `src/connectors/aws_waf/tests/test_transform.py::test_normalise_event_projects_log_record_onto_silver_shape` | PASS |
+| `REQ-TRF-MAP` | `src/connectors/aws_waf/tests/test_transform.py::test_normalise_event_projects_log_record_onto_silver_findings_shape` | PASS |
 | `REQ-TRF-SEV` | `src/connectors/aws_waf/tests/test_transform.py::test_severity_lookup_covers_every_documented_action_value` | PASS |
 | `REQ-TRF-STS` | n/a | N/A |
 | `REQ-TRF-TS` | `src/connectors/aws_waf/tests/test_transform.py::test_epoch_ms_timestamp_normalises_to_utc_datetime` | PASS |
-| `REQ-DQ` | `src/connectors/aws_waf/tests/test_transform.py::test_unmatched_webacl_leaves_application_id_null` | PASS |
+| `REQ-DQ` | `src/connectors/aws_waf/tests/test_transform.py::test_required_columns_are_non_null_on_every_valid_record` | PASS |
 | `REQ-DEDUP` | n/a | N/A |
 
-Collected 6 requirement-bound applicable REQs via `pytest src/connectors/aws_waf/tests/ -v --tb=short` (2026-04-25, 0.41 s wall-clock); 25 passed, 0 failed, 5 skipped; 6 applicable REQs PASS, 4 marked N/A. N/A rationale: `REQ-ING-PAG` and `REQ-ING-RL`: log-stream mode has no API pagination or rate limit (SDK fallback is single-page `GetSampledRequests` with boto3-native throttling). `REQ-TRF-STS`: WAF events are an append-only edge-event stream with no lifecycle state. `REQ-DEDUP`: no cross-tool overlap in MVP scope, and the within-source replay-window dedup on `(timestamp, rule_id, source_ip, request_id)` is asserted under `REQ-DQ` instead.
+Collected 6 requirement-bound applicable REQs via `pytest src/connectors/aws_waf/tests/ -v --tb=short` (2026-04-25, 0.41 s wall-clock); 25 passed, 0 failed, 5 skipped; 6 applicable REQs PASS, 4 marked N/A. N/A rationale: `REQ-ING-PAG` and `REQ-ING-RL`: log-stream mode has no API pagination or rate limit (SDK fallback is single-page `GetSampledRequests` with boto3-native throttling). `REQ-TRF-STS`: WAF events have no native lifecycle; `silver.findings.status_canonical` is the literal `open` on every row (matching the trufflehog convention) and never transitions, so the catalog matrix marks the requirement N/A as it does for the trufflehog row. `REQ-DEDUP`: WAF rows do not share dedup tuples with SAST/SCA/secrets/DAST findings, so no `dedup_links` rows are emitted; replay deduplication (re-delivered events) is achieved by the deterministic `finding_id` SHA-256 hash collapsing onto the same row at the Bronze→Silver MERGE, asserted under `REQ-DQ` rather than `REQ-DEDUP`.
 
 ### Tests
 

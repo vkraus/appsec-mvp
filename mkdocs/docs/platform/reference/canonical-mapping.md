@@ -19,7 +19,7 @@ Entity tables (applications, repositories, teams, commits, pull requests, pipeli
 
 ## Silver Finding Mapping Requirements
 
-All findings are populated into the single Silver Finding table `silver.findings`, discriminated by a `category` column. The implementation **SHALL** union over the native fields these sources expose according to the tables below. Standard fields marked "N/A" for a given source are stored as `NULL` in records from that source. This is the intended union over sources behavior, and the `mapping.yml` for each source makes each assignment explicit, including the `category` value of the record. The two tables group sources by finding structure. The first covers code level sources (SAST and secrets). The second covers package level and platform integrated sources (SCA, GitHub and GitLab platform native findings).
+All findings are populated into the single Silver Finding table `silver.findings`, discriminated by a `category` column. The implementation **SHALL** union over the native fields these sources expose according to the tables below. Standard fields marked "N/A" for a given source are stored as `NULL` in records from that source. This is the intended union over sources behavior, and the `mapping.yml` for each source makes each assignment explicit, including the `category` value of the record. The three tables group sources by finding structure. The first covers code level sources (SAST and secrets). The second covers package level and platform integrated sources (SCA, GitHub and GitLab platform native findings). The third covers runtime edge-event sources (WAF), which project each event as one finding row.
 
 ### Silver Finding derivation: code level sources (SAST and secrets)
 
@@ -64,6 +64,26 @@ Dependency-Track produces package vulnerability findings. GitHub and GitLab expo
 | `validity_status` | N/A | `validity` (GH Secret Scanning) |
 | `detected_at` | `attribution.attributedOn` | `created_at` |
 | `resolved_at` | (on project audit) | `fixed_at` / `resolved_at` |
+
+### Silver Finding derivation: runtime edge-event sources (WAF)
+
+WAF connectors (AWS WAF) project each edge event as one finding row on `silver.findings`. The per-event projection follows the trufflehog convention for sources without a native lifecycle: severity is **derived** from the action via an action-keyed lookup, status is the literal `open` and never transitions, and `finding_id` is a deterministic SHA-256 hash so re-deliveries collapse at the Bronze-to-Silver MERGE. WAF telemetry beyond the canonical record — `source_ip`, `country`, `http_method`, `response_code`, `sampling_weight`, `rule_type`, and the `action` value itself — is intentionally dropped. Operators query the upstream WAF logs (S3 / CloudWatch) directly when they need that detail.
+
+| Standard field | AWS WAF |
+|---|---|
+| `finding_id` | (derived) SHA-256 of `(webaclId, httpRequest.requestId, timestamp)` |
+| `tool_source` | `"aws_waf"` |
+| `category` | `"waf"` |
+| `severity_canonical` | derived from `action` via `severity.yml` (block→high, count→medium, challenge→low, captcha→low, allow→low) |
+| `status_canonical` | literal `"open"` (no native lifecycle) |
+| `rule_id_native` | `terminatingRuleId` |
+| `url` | `httpRequest.uri` |
+| `repository_id` | N/A (WebACLs are not repo-scoped; Gold-side aggregations bucket WAF rows under the `__UNMAPPED__` application sentinel until an operator extends `silver.app_repo_mapping` with a `webacl_arn → application_id` mapping — out of scope for the MVP) |
+| `cwe_id` / `cve_id` | N/A |
+| `file_path` / `start_line` | N/A |
+| `first_seen_at` / `last_seen_at` | `timestamp` (epoch ms → UTC datetime at transform) |
+
+`REQ-DEDUP` is N/A for WAF: WAF rows do not share dedup tuples with SAST / SCA / secret / DAST findings, so no `dedup_links` rows are emitted. Replay deduplication (recovering from re-delivered events) is achieved by the deterministic `finding_id` collapsing onto the same row at MERGE, not by a `dedup_links` entry.
 
 ## Severity and Status Normalization Requirements
 

@@ -1,11 +1,15 @@
-# N/A — WAF events are append-only; no status lifecycle.
+# AWS WAF status canonical literal.
 #
-# Per references/waf.md, the every-connector-has-both-files contract
-# requires this file to exist even when status normalisation does not
-# apply. REQ-TRF-STS is N/A for the aws_waf source; transform.py leaves
-# the Silver `status_canonical` column null, and no status-transition
-# code is emitted.
+# WAF events have no native lifecycle — each event is a point-in-time
+# observation. The canonical status_canonical is the literal `open`
+# (matching the trufflehog convention; see
+# .claude/skills/generate-connector/references/waf.md).
 #
-# Do not populate with placeholder mappings — doing so would imply a
-# lifecycle that the source does not model.
-{}
+# Transform.py emits status_canonical = STATUS_LITERAL = "open" without
+# consulting this file at runtime, but the lookup is present so:
+#   1. Every connector ships severity.yml + status.yml (the every-connector-
+#      has-both-files contract).
+#   2. The `default` row carries the configurable literal an operator can
+#      override at deploy time without touching transform.py.
+default: open
+open:    open
