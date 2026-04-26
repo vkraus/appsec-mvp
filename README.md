@@ -26,7 +26,7 @@ This repository stores the MVP implementation part of my master's thesis. The co
 
 ## Overview
 
-**What it does.** Pulls findings, asset data, and CMDB records from up to nine AppSec sources into a Databricks lakehouse, normalizes severity, status, and dedup tuples per a published mapping contract, and exposes joinable Silver entities (`silver.findings`, `silver.repositories`, `silver.app_repo`, `silver.hwm`) plus projections for each connector (`silver_<source>.*`).
+**What it does.** Pulls findings, asset data, and CMDB records from up to nine AppSec sources into a Databricks lakehouse, normalizes severity, status, and dedup tuples per a published mapping contract, and exposes joinable Silver entities (`silver.findings`, `silver.repositories`, `silver.applications`, `silver.app_repo_mapping`, `silver.hwm`) plus projections for each connector (`silver_<source>.*`).
 
 **Why it exists.** Production AppSec stacks are a tangle of point integrations between scanner SaaS, CMDB, ticketing, and analytics. Each one comes with its own auth model, pagination contract, and severity vocabulary. This MVP is a thesis-grade reference for *how to ingest those tools systematically*. It provides a single framework primitive (HTTP client, paginator, HWM state, recommended normalization), a fixed connector contract (`ingest()`, `transform()`, `mapping.yml`, `config.yml`, `severity.yml`, `status.yml`), and a fixed deployment unit (DAB). Adding a tenth source is a fill-in-the-blanks exercise, not an integration project.
 
@@ -370,11 +370,11 @@ This README is the entry point for engineers. The deeper material lives in:
 - 9 connectors at varying depths. See [Connector inventory](#connector-inventory).
 - DAB bundle with resources distributed across components
 - Optional Terraform runtimes for several connectors (5 of them)
-- Cross-source silver standard tables (findings, hwm, repositories, app_repo)
+- Cross-source silver standard tables (`findings`, `finding_location`, `hwm`, `repositories`, `applications`, `app_repo_mapping`, `waf_events`, `suppression_rules`)
 - Co-located tests with traceability via `@pytest.mark.requirement`
 
 **Out of scope for the current iteration** (tracked as follow-ups):
-- Connector side population of `silver.repositories` and `silver.app_repo`. DDL exists. The writers from each SCM or CMDB connector to those tables are pending.
+- Connector side population of `silver.repositories` is partial — the GitHub transform writes the canonical narrow shape; the wider target shape (`scm_source` / `org` / `name` / `url` / `archived` / `visibility`) is pending. `silver.app_repo_mapping` is populated by the platform-layer [app-repo linker](mkdocs/docs/platform/app-repo-link.md); the parallel CMDB-side `cmdb_rel_ci` and `u_repository_id` write paths are pending.
 - Full analytics implementation. `src/analytics/` is scaffolding.
 - Some skill generated connectors carry placeholder `ingest_entry.py` and `transform_entry.py` notebook wrappers. Full job orchestration for them is pending.
 - Inherited error handling sharp edges in `src/platform/scripts/bootstrap.sh` (`grep -v ALREADY_EXISTS || true`) and `src/connectors/servicenow/runtime/main.tf` (`local-exec curl` doesn't fail on HTTP 4xx). Flagged for a follow-up hardening task.

@@ -53,6 +53,18 @@ Rows are `REQ-*` IDs. Columns are the nine selected sources spanning static test
 
 Cells marked `N/A` indicate a REQ-ID that does not apply to a source. The category does not exercise the requirement. For example, `REQ-DEDUP` does not apply to the CMDB category, which emits no findings subject to cross tool deduplication. The CLI artifact ingestion path has no API auth, pagination, or rate limit. Cells marked `(pending)` indicate that the connector module is generated but the transform implementation is deferred (Future Work). The bound test asserts against an empty stub. Some greenfield connector tests are skipped pending live API fixture capture. These are bound to their REQ-IDs via `@pytest.mark.requirement` markers but skip-marked with `pending live fixtures (B follow-up)`. The Implementation reports for each source linked from each connector page are the authoritative record of which tests were bound to which REQ-ID.
 
+## Platform-layer requirement bindings
+
+Some `REQ-*` IDs are bound to tests in `src/platform/tests/` rather than to a single connector — they cover cross-source framework primitives that no single connector "owns". These bindings are not represented in the per-source matrix above; they are listed here for completeness.
+
+| Component | REQ | Status | Test file |
+|---|---|---|---|
+| App-repo linker | `REQ-TRF-MAP` | PASS | [`src/platform/tests/test_app_repo_link.py`](https://github.com/vkraus/appsec-mvp/tree/main/src/platform/tests/test_app_repo_link.py) — happy-path join, first-match-wins, Spark wrapper shape |
+| App-repo linker | `REQ-DQ` | PASS | [`src/platform/tests/test_app_repo_link.py`](https://github.com/vkraus/appsec-mvp/tree/main/src/platform/tests/test_app_repo_link.py) — unmatched-code drop, no-code-in-name drop, null-app_code guard, code-collision rows, empty-input safety |
+| Silver schema/DDL contract | (no REQ binding) | PASS | [`src/platform/tests/test_silver_ddl.py`](https://github.com/vkraus/appsec-mvp/tree/main/src/platform/tests/test_silver_ddl.py) — every `silver_*` `StructType` matches its `silver_tables.sql` `CREATE TABLE` block column-for-column |
+
+The linker is a platform-layer transform that joins `silver.applications` and `silver.repositories`; it has no native source of its own and does not exercise the ingestion-side REQ-IDs (`REQ-ING-*`), severity/status normalization (`REQ-TRF-SEV`/`REQ-TRF-STS`), or cross-tool dedup (`REQ-DEDUP`). See [App-repo linker](../app-repo-link.md) for the operator-facing description.
+
 ## How traceability is populated
 
 See [Tests → Traceability](../../analytics/tests.md) for the end to end flow. `validate-implementation` runs [`src/connectors/{source}/tests/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors), collects `@pytest.mark.requirement("REQ-...")` markers and outcomes, and emits both the fix list and the traceability row for this matrix.

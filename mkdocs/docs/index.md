@@ -52,10 +52,14 @@ flowchart LR
 
   subgraph Silver["Silver (standard)"]
     SR["silver.repositories"]
+    SA["silver.applications"]
     SAR["silver.app_repo_mapping"]
     SF["silver.findings"]
     SHW["silver.hwm"]
   end
+
+  LINKER{{"app-repo linker
+(name match)"}}
 
   subgraph Gold["Gold (analytics)"]
     GFD["gold.findings_summary
@@ -74,13 +78,17 @@ flowchart LR
 
   BG --> SR
   BGL --> SR
-  BSN --> SAR
+  BSN --> SA
   BSQ --> SF
   BSG --> SF
   BDT --> SF
   BTH --> SF
   BZAP --> SF
   BWAF --> SF
+
+  SR --> LINKER
+  SA --> LINKER
+  LINKER --> SAR
 
   SR --> SF
   SAR --> SF
