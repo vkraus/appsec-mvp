@@ -6,7 +6,12 @@ The app-repo linker populates [`silver.app_repo_mapping`](reference/catalog.md) 
 
 For every row in `silver.repositories`, the linker:
 
-1. Searches `full_name` for a bounded 5-digit token using regex `(?<![A-Za-z0-9])(\d{5})(?![A-Za-z0-9])`.
+1. Searches `full_name` for a bounded 5-digit token using the regex below (the lookarounds prevent partial matches inside longer alphanumeric runs):
+
+   ```text
+   (?<![A-Za-z0-9])(\d{5})(?![A-Za-z0-9])
+   ```
+
 2. If exactly one or more 5-digit tokens are present, takes the **first** match.
 3. Looks the matched code up in `silver.applications.app_code`.
 4. If a match is found, writes one row to `silver.app_repo_mapping` per matching application:
