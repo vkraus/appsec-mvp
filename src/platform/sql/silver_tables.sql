@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS silver.applications (
 CREATE TABLE IF NOT EXISTS silver.app_repo_mapping (
   application_id  STRING NOT NULL,
   repository_id   STRING NOT NULL,
+  link_source     STRING NOT NULL,
   linked_at       TIMESTAMP NOT NULL
 ) USING DELTA;
 

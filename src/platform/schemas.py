@@ -40,6 +40,7 @@ silver_app_repo_mapping = StructType(
     [
         StructField("application_id", StringType(), nullable=False),
         StructField("repository_id", StringType(), nullable=False),
+        StructField("link_source", StringType(), nullable=False),
         StructField("linked_at", TimestampType(), nullable=False),
     ]
 )
