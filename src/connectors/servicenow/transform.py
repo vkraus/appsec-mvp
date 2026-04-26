@@ -31,6 +31,7 @@ encode the mapping and are exercised by ``tests/test_transform.py``.
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -47,6 +48,12 @@ from pyspark.sql.types import (
 # `sys_updated_on`, `sys_created_on`).
 _SN_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+# Validates the 5-digit business application code carried in the
+# ``u_app_id`` custom column on cmdb_ci_business_app records. The
+# name-based app-repo linker joins on this exact form; non-matching values
+# coerce to None so the join key stays clean.
+_APP_CODE_RE = re.compile(r"^\d{5}$")
+
 
 # Silver-side schema for silver.applications. Mirrors the canonical entity
 # shape; reused from `src.platform.schemas` would couple us to that module
@@ -61,6 +68,7 @@ silver_applications = StructType(
         StructField("operational_status", StringType(), nullable=True),
         StructField("owned_by", StringType(), nullable=True),
         StructField("used_by", StringType(), nullable=True),
+        StructField("app_code", StringType(), nullable=True),
         StructField("valid_from", TimestampType(), nullable=True),
         StructField("updated_at", TimestampType(), nullable=False),
     ]
@@ -109,6 +117,20 @@ def _resolve_timezone(instance_timezone: str | timezone | ZoneInfo) -> timezone 
     return ZoneInfo(instance_timezone)
 
 
+def _normalise_app_code(value: Any) -> str | None:
+    """Coerce ``u_app_id`` to its canonical 5-digit form, else ``None``.
+
+    Per the spec, the linker joins ``silver.repositories.full_name`` to
+    ``silver.applications.app_code`` on raw equality of a 5-digit token.
+    Values that do not match ``^\\d{5}$`` are treated as missing rather
+    than landed on Silver — they would never produce a valid join.
+    """
+    coerced = _coerce_empty(value)
+    if coerced is None or not isinstance(coerced, str):
+        return None
+    return coerced if _APP_CODE_RE.fullmatch(coerced) else None
+
+
 def normalise_servicenow_datetime(
     value: str | None,
     instance_timezone: str | timezone | ZoneInfo,
@@ -154,8 +176,10 @@ def normalise_application(
     """Project one ``cmdb_ci_business_app`` record onto silver.applications.
 
     Empty-string values are coerced to ``None``; instance-local datetimes
-    are converted to UTC. Custom ``u_*`` columns are NOT projected here —
-    they flow through additively at Bronze.
+    are converted to UTC. ``u_app_id`` is the only custom column projected
+    here — the 5-digit business-application code is the join key for the
+    name-based app-repo linker. Other custom ``u_*`` columns flow through
+    additively at Bronze and are NOT projected to Silver.
     """
     return {
         "application_id": _coerce_empty(raw.get("sys_id")),
@@ -165,6 +189,7 @@ def normalise_application(
         "operational_status": _coerce_empty(raw.get("operational_status")),
         "owned_by": _coerce_empty(raw.get("owned_by")),
         "used_by": _coerce_empty(raw.get("used_by")),
+        "app_code": _normalise_app_code(raw.get("u_app_id")),
         "valid_from": normalise_servicenow_datetime(
             raw.get("sys_created_on"),
             instance_timezone,
