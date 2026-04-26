@@ -1,0 +1,25 @@
+resources:
+  jobs:
+    app-repo-link:
+      name: app-repo-link
+      parameters:
+        - name: target_catalog
+          default: "${var.catalog}"
+      # No schedule — operator runs on-demand (or chains downstream of the
+      # ServiceNow and SCM connector jobs). Cadence is faster than CMDB
+      # drift but bounded by the slower of the two upstream jobs; daily is
+      # ample. A schedule can be added when the cmdb_rel_ci signal lands.
+      tasks:
+        - task_key: link
+          notebook_task:
+            notebook_path: ../app_repo_link_entry.py
+          job_cluster_key: shared
+          max_retries: 3
+          min_retry_interval_millis: 2000
+          retry_on_timeout: true
+      job_clusters:
+        - job_cluster_key: shared
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            num_workers: 1
