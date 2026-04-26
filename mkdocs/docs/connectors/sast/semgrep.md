@@ -22,6 +22,26 @@ Bronze schema: `bronze_semgrep`. Cross-source contribution: `silver.findings` wi
 - **Depends on: platform set up (Phase 1 complete).** Catalog, `mvp-connectors` secret scope, and the `silver` schema must exist. See [Setup platform](../../platform/index.md) if Phase 1 is not yet complete.
 - **Depends on: at least one SCM connector installed and run, so that `silver.repositories` is populated.** Semgrep findings are keyed by `(repository_id, file_path, rule_id)` per the [SAST dedup contract](../../platform/reference/canonical-mapping.md#silver-finding-mapping-requirements). The `repository_id` is derived from the artefact's S3 key (which encodes the repository slug) and must resolve to a row in `silver.repositories` for downstream rollups to attribute findings to a repository (and through `silver.app_repo_mapping`, to a business application).
 
+## Optional source runtime
+
+The Terraform module under [`src/connectors/semgrep/runtime/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/semgrep/runtime) provisions a periodic **Semgrep CronJob** on an existing EKS cluster. The CronJob clones a configurable list of git repos, runs `semgrep scan`, and uploads JSON findings to an S3 artifact bucket via IRSA. Users with an existing Semgrep deployment skip this entirely.
+
+Required runtime inputs at a glance: `aws_region`, `aws_access_key_id`, `aws_secret_access_key`, `eks_cluster_name`, `eks_cluster_oidc_provider_arn`, `artifact_bucket`, `github_pat_for_clone`. Optional: `repo_urls` (default `["owasp/juice-shop"]`), `cron_schedule` (default `0 */6 * * *`), `semgrep_image` (default `returntocorp/semgrep:latest`).
+
+The bundled driver script [`runtime/files/semgrep-scan.sh`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/semgrep/runtime/files/semgrep-scan.sh) is operator-authored. Inspect and customise before apply (the default expects `org/repo` slugs and clones via `https://x-access-token:${GH_PAT}@github.com/...`; users with non-GitHub hosts must replace the script).
+
+Apply with:
+
+```bash
+cd src/connectors/semgrep/runtime
+terraform init
+terraform apply -var-file=terraform.tfvars
+```
+
+Or use the bundled [`runtime/install.sh`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/semgrep/runtime/install.sh) wrapper, which reads the required values from environment variables (`AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `EKS_CLUSTER_NAME`, `EKS_CLUSTER_OIDC_PROVIDER_ARN`, `ARTIFACT_BUCKET`, `GITHUB_PAT_FOR_CLONE`, plus optional `REPO_URLS` and `CRON_SCHEDULE`) and runs `terraform init && terraform apply` in idempotent mode.
+
+After apply, verify the CronJob is scheduled with `kubectl -n semgrep get cronjob`. The first scan runs at the next cron tick (default every 6 hours).
+
 ## Reference
 
 ### API surface
@@ -127,17 +147,63 @@ The artefact's S3 key contributes two fields not present in the document body it
 
 **Rule-pack drift.** Rule IDs (`check_id`) change across rule-pack versions. The connector retains the `check_id` verbatim and surfaces version drift downstream — Silver records carry the `check_id` as authored at scan time. Cross-time analytics that need stable rule grouping should join on `cwe_id` plus `vulnerability_class` rather than on `rule_id`.
 
-## Setup
+## Secrets
 
-!!! info "Setup runbook pending"
-    The end-to-end Setup runbook (artefact-bucket secrets, Auto Loader pipeline
-    deployment, EKS `CronJob` and GitHub Actions workflow templates, sample
-    artefact upload, verification queries, troubleshooting) is populated by
-    `generate-connector` after this analysis page lands. Until then, the high-
-    level shape is: load the artefact-bucket name and AWS reader credentials
-    into the `mvp-connectors` secret scope; `databricks bundle deploy` the
-    Semgrep job; drop a sample `--json` or `--sarif` artefact under the
-    appropriate prefix; trigger the job.
+Loaded into the `mvp-connectors` secret scope by `src/connectors/semgrep/scripts/load-secrets.sh`:
+
+| Secret key | Source env var | Purpose |
+|---|---|---|
+| `semgrep_artifact_bucket` | `ARTIFACT_BUCKET` | S3 bucket holding the `--json` / `--sarif` artefacts the Auto Loader pipeline reads. |
+| `semgrep_artifact_prefix` | `SEMGREP_PREFIX` | Top-level key prefix under which the two lanes (`periodic/semgrep/` and `cicd/semgrep/`) live. |
+
+Run from repo root after Phase 1 completes:
+
+```bash
+export ARTIFACT_BUCKET="..."
+export SEMGREP_PREFIX="..."
+bash src/connectors/semgrep/scripts/load-secrets.sh
+# Expected: OK: semgrep secrets loaded into scope mvp-connectors
+```
+
+## Run the job
+
+Before the connector ingests anything, the semgrep runner must drop `--json` or `--sarif` artefacts under the configured prefix(es) (`periodic/semgrep/`, `cicd/semgrep/`). The connector reads them autoloader-style.
+
+Then trigger the Databricks job:
+
+```bash
+databricks bundle run semgrep-connector --target dev
+```
+
+For a one-shot orchestration (load secrets + run + verify counts), use the wrapper:
+
+```bash
+bash src/connectors/semgrep/scripts/install.sh
+```
+
+The job is declared in `src/connectors/semgrep/resources/job.yml` (job key `semgrep-connector`), runs on a 15-minute cron once enabled, and has two tasks: `ingest` (Auto Loader on the UC Volume → Bronze) and `transform` (Bronze → `silver.findings`). Because semgrep is a CLI-artefact source the notebooks point directly at `../ingest.py` / `../transform.py` — no `*_entry.py` widget+secret-fetch wrappers are needed (the artefact prefix is read via the UC Volume `bronze_semgrep.semgrep_artifacts`, declared in `src/connectors/semgrep/resources/volumes.yml`).
+
+## Verify
+
+```sql
+SELECT count(*) FROM appsec_dev.bronze_semgrep.findings;
+
+SELECT severity_canonical, count(*)
+  FROM appsec_dev.silver.findings
+  WHERE tool_source = 'semgrep'
+  GROUP BY severity_canonical;
+```
+
+Expected: bronze rows for each scan; silver rows discriminated by `tool_source`. Severity distribution should follow `src/connectors/semgrep/severity.yml`.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `401 Unauthorized` from the Databricks job | Token expired or wrong permissions. Generate a new token, re-run `bash src/connectors/semgrep/scripts/load-secrets.sh`, re-trigger the job. |
+| 0 rows in `bronze_semgrep.findings` | No artefacts have landed under the configured prefix. Verify with `aws s3 ls s3://$ARTIFACT_BUCKET/$SEMGREP_PREFIX/`. |
+| Validation table shows `REQ-DEDUP` FAIL | Cross-tool dedup against another SAST source depends on overlap. Run multiple SAST connectors against the same repo set first. |
+| Auto Loader not picking up new artefacts | UC Volume `semgrep_artifacts` may not have read access to `s3://${var.artifact_bucket}/semgrep/`. Check the workspace's AWS service credential. |
 
 ## Validation
 
@@ -163,7 +229,7 @@ This connector page is produced by the connector lifecycle skills. The Generatio
 | Stage              | Skill                              | Inputs                                                                              | Outputs                                                                            | Run on     | Skills repo ref                          |
 |--------------------|------------------------------------|-------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|------------|------------------------------------------|
 | Source analysis    | `analyze-source` (sast)            | name=Semgrep; url=https://semgrep.dev/docs/cli-reference (+ SARIF v2.1.0 spec at https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html); category=sast | mkdocs/docs/connectors/sast/semgrep.md §1–§3                                       | 2026-04-25 | 3cd1028 (regenerate-4-originals)         |
-| Module generation | `generate-connector` (sast) | page hash=866cfaf193ed | src/connectors/semgrep/__init__.py, src/connectors/semgrep/config.yml, src/connectors/semgrep/ingest.py, src/connectors/semgrep/transform.py, src/connectors/semgrep/mapping.yml, src/connectors/semgrep/severity.yml, src/connectors/semgrep/status.yml, src/connectors/semgrep/resources/job.yml, src/connectors/semgrep/tests/__init__.py, src/connectors/semgrep/tests/test_ingest.py, src/connectors/semgrep/tests/test_transform.py, src/connectors/semgrep/tests/fixtures/cicd_scan.json, src/connectors/semgrep/tests/fixtures/periodic_scan.sarif, src/connectors/semgrep/tests/fixtures/prefix_routing.json, src/connectors/semgrep/tests/fixtures/mixed_severity.json | 2026-04-25 | 76c543e (regenerate-4-originals) |
+| Module generation | `generate-connector` (sast) | page hash=b5f347fa22d4 | src/connectors/semgrep/__init__.py, src/connectors/semgrep/config.yml, src/connectors/semgrep/ingest.py, src/connectors/semgrep/transform.py, src/connectors/semgrep/mapping.yml, src/connectors/semgrep/severity.yml, src/connectors/semgrep/status.yml, src/connectors/semgrep/resources/job.yml, src/connectors/semgrep/resources/schemas.yml, src/connectors/semgrep/resources/volumes.yml, src/connectors/semgrep/scripts/load-secrets.sh, src/connectors/semgrep/scripts/install.sh, src/connectors/semgrep/install.sh, src/connectors/semgrep/tests/__init__.py, src/connectors/semgrep/tests/test_ingest.py, src/connectors/semgrep/tests/test_transform.py, src/connectors/semgrep/tests/fixtures/cicd_scan.json, src/connectors/semgrep/tests/fixtures/periodic_scan.sarif, src/connectors/semgrep/tests/fixtures/prefix_routing.json, src/connectors/semgrep/tests/fixtures/mixed_severity.json | 2026-04-25 | 05db254 (split-source-and-databricks-skills) |
 | Validation         | `validate-implementation` (sast)   | module path=src/connectors/semgrep/                                                 | mkdocs/docs/connectors/sast/semgrep.md §5                                          | 2026-04-25 | 7fec0ac (regenerate-4-originals)         |
 
 ## References

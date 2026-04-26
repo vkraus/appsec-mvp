@@ -118,12 +118,112 @@ The dedup key per the DAST category reference (`.claude/skills/analyze-source/re
 - **Alert `alert` vs `name` field duplication.** The REST API and JSON-report flavours of the alert object inconsistently populate `alert` vs `name`. The connector reads `name` first, then `alert`, then falls back to `pluginId` for safety.
 - **`cweid` / `wascid` `-1` sentinel.** Both fields use `-1` (as a string) when unmapped. The transform converts `-1` to `NULL` before writing to Silver.
 
+## Optional source runtime
+
+The Terraform module under [`src/connectors/owasp_zap/runtime/`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/owasp_zap/runtime) deploys an **OWASP ZAP daemon container** on an existing EKS cluster, exposed via a LoadBalancer Service on port 8080, with a random 40-character API key stored in a Kubernetes Secret. Users with their own ZAP deployment skip this entirely and feed their existing endpoint directly into the connector secrets.
+
+Required runtime inputs at a glance: `aws_region`, `aws_access_key_id`, `aws_secret_access_key`, `eks_cluster_name`. Optional: `namespace_name` (default `zap`), `zap_image` (default `owasp/zap2docker-stable:2.14.0`), `service_port` (default `8080`).
+
+Apply with:
+
+```bash
+cd src/connectors/owasp_zap/runtime
+terraform init
+terraform apply -var-file=terraform.tfvars
+```
+
+Or use the bundled wrapper:
+
+```bash
+AWS_REGION=us-east-1 \
+AWS_ACCESS_KEY_ID=... \
+AWS_SECRET_ACCESS_KEY=... \
+EKS_CLUSTER_NAME=your-eks-cluster \
+src/connectors/owasp_zap/runtime/install.sh
+```
+
+> **Security note:** the daemon ships with `api.addrs.addr.name=.*` + `api.addrs.addr.regex=true` (all caller IPs whitelisted), and the Service is `type = LoadBalancer` (public). The only access control is the random API key. **Production deployments should front the daemon with a NetworkPolicy, a private LoadBalancer, or a VPN gateway**, and consider tightening `api.addrs.addr.*` to a specific caller IP or range.
+
+On first apply, the `zap_url` output may report `http://pending:8080` while AWS is still provisioning the ELB. Re-run `terraform apply` once the LoadBalancer hostname resolves.
+
+This runtime covers only the **on-demand server (daemon)** path. The hybrid CI/CD-artefact path requires no source-side Terraform — operators wire `zap-baseline.py` (or its siblings) into their CI pipeline and write the JSON reports to the bucket prefix `cicd/zap/<pipeline-run>/...`. See `examples/end-to-end-demo/.github/workflows/scan.yml` for a reference workflow.
+
+See [`runtime/README.md`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors/owasp_zap/runtime) for the full variable list and override flags.
+
 ## 4. Setup
 
-!!! info "Pending implementation details"
-    Setup commands, secret-loader script invocation, bundle deployment, and first-run validation are populated by `generate-connector` in Phase 2. The eventual content covers loading `owasp_zap_url`, `owasp_zap_apikey`, and `owasp_zap_artefact_bucket` into the `mvp-connectors` secret scope; deploying the `owasp-zap-connector` job from `src/connectors/owasp_zap/resources/job.yml` via `databricks bundle deploy --target dev`; and running the connector against the seed deployment inventory.
+OWASP ZAP is a hybrid connector. Setup covers both data paths — the **on-demand server (daemon)** path (which requires API credentials in the `mvp-connectors` secret scope) and the **CI/CD artefact** path (which requires no Databricks-side credentials beyond the workspace's bucket-read IAM). Both are wired by the same connector module and the same `owasp-zap-connector` job; operators can run either or both.
 
-## 5. Validation
+The Bronze schema (`bronze_owasp_zap`) and the artefact UC Volume (`zap_artifacts`, backing `s3://${var.artifact_bucket}/zap/`) are declared in `src/connectors/owasp_zap/resources/schemas.yml` and `src/connectors/owasp_zap/resources/volumes.yml` and provisioned automatically by `databricks bundle deploy --target dev`.
+
+### Secrets
+
+Loaded into the `mvp-connectors` secret scope by `src/connectors/owasp_zap/scripts/load-secrets.sh`:
+
+| Secret key | Source env var | Purpose |
+|---|---|---|
+| `zap_url` | `ZAP_URL` | Base URL of the ZAP daemon REST API (e.g. `http://zap-lb.example.com:8080`). Read by `ingest.py` for the on-demand server path. Provided by `terraform output zap_url` after a `runtime/` apply, or by an existing daemon deployment. |
+| `zap_api_key` | `ZAP_API_KEY` | API key configured on the daemon at startup via `-config api.key=<KEY>`. ZAP rejects every API request without it. The value is passed as the `apikey` query parameter on every REST call; the connector scrubs it from logs. |
+
+Both secrets are required for the **server path** only. The **CI/CD artefact path** consumes JSON reports from `s3://${var.artifact_bucket}/zap/` (mounted as the `zap_artifacts` UC Volume) and uses the workspace's bucket-read IAM — no per-secret credentials.
+
+Run from repo root after Phase 1 platform install completes:
+
+```bash
+export ZAP_URL="..."
+export ZAP_API_KEY="..."
+bash src/connectors/owasp_zap/scripts/load-secrets.sh
+# Expected: OK: owasp_zap secrets loaded into scope mvp-connectors
+```
+
+If you only intend to operate the CI/CD artefact path, the load-secrets script is still safe to run with placeholder values (the daemon path will simply 401 against an unreachable URL and emit zero rows; the artefact path is unaffected).
+
+## 5. Run the job
+
+The owasp_zap ingestion is a notebook job named `owasp-zap-connector` (declared in `src/connectors/owasp_zap/resources/job.yml`) that runs on the configured cron (`0 */15 * * * ?` — every 15 minutes UTC) once enabled. Trigger an on-demand run:
+
+```bash
+databricks bundle run owasp-zap-connector --target dev
+```
+
+For a one-shot orchestration (load secrets + run + verify counts):
+
+```bash
+bash src/connectors/owasp_zap/scripts/install.sh
+```
+
+The job has two tasks: `ingest` and `transform`. The `ingest` task is hybrid:
+
+- **Auto Loader** streams new JSON / SARIF report files appearing under the `cicd/zap/` prefix on the `zap_artifacts` UC Volume into `bronze_owasp_zap.findings` (CI/CD-step path, `hwm_kind: artefact_prefix`).
+- **REST calls** against the daemon at `${ZAP_URL}` orchestrate spider + active scans against targets drawn from `silver.deployments`, poll for completion, and read alerts back via `/JSON/alert/view/alerts/` (server path, `hwm_kind: scan_id`, `scan_orchestration_mode: scan-and-read`).
+
+The `transform` task projects Bronze rows into `silver.findings` discriminated by `tool_source = 'owasp_zap'` and `category = 'dast'`, joining `target` against `silver.deployments` to resolve `application_id`. Unmatched targets are emitted unchanged for inventory-gap analysis.
+
+## 6. Verify
+
+```sql
+-- Bronze: raw alerts landed by the ingest task (both data paths share this table).
+SELECT count(*) FROM appsec_dev.bronze_owasp_zap.findings;
+
+-- Silver findings discriminated by source + DAST category.
+SELECT count(*) FROM appsec_dev.silver.findings
+  WHERE tool_source = 'owasp_zap' AND category = 'dast';
+```
+
+Expected: Bronze rows from whichever path ran (CI/CD artefacts under `cicd/zap/`, daemon scans against `silver.deployments` targets, or both); silver rows discriminated by `tool_source` and `category`. If `silver.deployments` is empty, the daemon path will execute zero scans (it iterates the deployment inventory) and only the CI/CD artefact path will contribute rows.
+
+## 7. Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Daemon path `401 Unauthorized` | `ZAP_API_KEY` does not match the daemon's configured key. Verify with `curl "${ZAP_URL}/JSON/core/view/version/?apikey=${ZAP_API_KEY}"`. If wrong, update both daemon and secret-scope value, re-run `bash src/connectors/owasp_zap/scripts/load-secrets.sh`, and re-trigger the job. |
+| Daemon path connection refused / DNS failure | `ZAP_URL` points at an unreachable host (common right after `terraform apply` while the AWS LoadBalancer is still provisioning — `zap_url` may report `http://pending:8080`). Re-run `terraform apply` in `src/connectors/owasp_zap/runtime/` until the ELB hostname resolves, then re-load the secret. |
+| 0 rows in `bronze_owasp_zap.findings` | **CI/CD-step path:** no JSON / SARIF artefacts have been written under `cicd/zap/` yet — confirm the pipeline is invoking `zap-baseline.py -J` and uploading to the bucket prefix. **Daemon path:** no scans have executed — confirm `silver.deployments` is populated with target URLs and that the daemon is reachable. |
+| Application linkage missing in silver | The transform-time join against `silver.deployments` did not match the `target` URL. The unmatched rows are deliberately emitted as inventory-gap signal — verify the corresponding `silver.deployments` row exists with a host that matches the `target` (scheme + host + port). |
+| `cweid` / `wascid` showing as `-1` in silver | Those are ZAP's "unmapped" sentinel values. The `-1 -> NULL` conversion lives in `transform.py`; if `-1` is still showing, re-deploy the bundle. If it persists after a clean re-deploy, the alert genuinely has no CWE / WASC mapping. |
+| Validation table shows `REQ-DEDUP` FAIL | The dedup tuple `(target, alert_id, uri_path)` requires `uri` splitting to populate `uri_path` correctly — re-check that `transform.py` is not stripping query strings before the split. |
+
+## 8. Validation
 
 | Requirement | Bound test | Outcome |
 |---|---|---|
@@ -140,7 +240,7 @@ The dedup key per the DAST category reference (`.claude/skills/analyze-source/re
 
 Validation summary: 19 requirement-bound tests collected across the seven applicable REQ-IDs (additional tests bind multiply to `REQ-ING-HWM`, `REQ-TRF-MAP`, `REQ-TRF-SEV`, `REQ-TRF-STS`, `REQ-TRF-TS`, `REQ-DQ`, and `REQ-DEDUP`); 7 PASS, 0 FAIL, 3 N/A. Wall-clock duration: 49.92 s (37 tests collected in the full suite, 33 passed, 4 skipped — 3 of which carry `REQ-ING-AUTH`, `REQ-ING-PAG`, and `REQ-ING-RL` markers and contribute the N/A rows; the fourth is a live-only ZAP-daemon connectivity test, not requirement-bound). N/A rationale per `references/dast.md`: the CLI-artefact ingestion path used by OWASP ZAP has no API auth, pagination, or rate limit — `REQ-ING-AUTH`, `REQ-ING-PAG`, and `REQ-ING-RL` are recorded N/A on the matrix row even though the daemon path can exercise them, because the matrix outcome reflects the documented CI/CD-artefact path.
 
-## 6. Generation log
+## 9. Generation log
 
 | Stage | Skill | Inputs | Outputs | Run on | Skills repo ref |
 |---|---|---|---|---|---|

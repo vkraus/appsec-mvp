@@ -1,0 +1,10 @@
+resources:
+  connections:
+    servicenow:
+      name: servicenow
+      connection_type: SERVICENOW
+      comment: "Servicenow CMDB — Lakeflow Connect"
+      options:
+        host: ${var.servicenow_host}
+        username: ${var.servicenow_username}
+        password: ${var.servicenow_password}
