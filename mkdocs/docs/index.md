@@ -22,6 +22,8 @@ hide:
 
 The platform ingests from AppSec sources via a connector for each source, normalizes findings to recommended schemas, and exposes analytics over them. The reference implementation runs on Databricks and is packaged as an Asset Bundle.
 
+**Ingest:** every AppSec source has a per-source connector that lands raw data in a Bronze schema and projects normalized findings + entities into a canonical Silver layer.
+
 ```mermaid
 flowchart LR
   subgraph Sources["Sources"]
@@ -51,34 +53,13 @@ flowchart LR
   end
 
   subgraph Silver["Silver (canonical entities)"]
+    direction TB
     SR["silver.repositories"]
     SA["silver.applications"]
     SAR["silver.app_repo_mapping"]
     SF["silver.findings"]
     SW["silver.waf_events"]
     SS["silver.suppression_rules"]
-  end
-
-  subgraph Gold["Gold (analytics — 5 OLAP Delta tables refreshed daily + 1 view)"]
-    direction TB
-    GR1["gold.app_risk_posture_daily"]
-    GR2["gold.mttr_by_source_severity_weekly"]
-    GR3["gold.coverage_matrix"]
-    GR4["gold.dedup_link_overlap"]
-    GR5["gold.cwe_owasp_heatmap"]
-    GVIEW["gold.app_repo_findings_open
-(view)"]
-  end
-
-  subgraph OLTP["OLTP serving (Online Tables, ~5 min lag)"]
-    OAR["gold_online.app_risk_posture"]
-    OARF["silver_online.app_repo_findings"]
-  end
-
-  subgraph Consumers["Consumers"]
-    APP["Databricks App
-(security-score endpoint)"]
-    DASH["Dashboards & SQL"]
   end
 
   GH --> BG
@@ -106,6 +87,43 @@ flowchart LR
 
   SR --> SF
   SAR --> SF
+```
+
+**Analytics & serving:** five Gold tables aggregate Silver into daily snapshots; two Online Tables (~5 min lag) serve those plus an open-findings view to a Databricks App for sub-50 ms point lookups, while all Gold tables also feed dashboards.
+
+```mermaid
+flowchart LR
+  subgraph Silver2["Silver (inputs)"]
+    direction TB
+    SF["silver.findings"]
+    SR["silver.repositories"]
+    SAR["silver.app_repo_mapping"]
+    SS["silver.suppression_rules"]
+  end
+
+  subgraph Gold["Gold (5 OLAP Delta tables refreshed daily + 1 view)"]
+    direction TB
+    GR1["gold.app_risk_posture_daily"]
+    GR2["gold.mttr_by_source_severity_weekly"]
+    GR3["gold.coverage_matrix"]
+    GR4["gold.dedup_link_overlap"]
+    GR5["gold.cwe_owasp_heatmap"]
+    GVIEW["gold.app_repo_findings_open
+(view)"]
+  end
+
+  subgraph OLTP["OLTP serving (Online Tables, ~5 min lag)"]
+    direction TB
+    OAR["gold_online.app_risk_posture"]
+    OARF["silver_online.app_repo_findings"]
+  end
+
+  subgraph Consumers["Consumers"]
+    direction TB
+    APP["Databricks App
+(security-score endpoint)"]
+    DASH["Dashboards & SQL"]
+  end
 
   SF --> GR1
   SF --> GR2
