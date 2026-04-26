@@ -60,3 +60,7 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. For 
 - **Append-only stream.** WAF events have no status lifecycle. `REQ-TRF-STS` is N/A. The Silver `status` field is left null.
 - **Action vocabulary.** Documented actions include `block`, `allow`, `count`, `challenge`, `captcha`. The Reference section MUST list every action the source emits — this drives the severity-derivation lookup.
 - **Log-stream over SDK.** Prefer log-stream consumption over sampled SDK calls; the Reference section's Quirks fact MUST disclose the chosen mode and justify any deviation.
+
+## Lakeflow Connect availability
+
+No source in the waf category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk_dlt` for REST/SDK sources (the standard ingestion-tooling preference for this category).

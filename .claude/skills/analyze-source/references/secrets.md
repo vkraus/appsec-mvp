@@ -58,3 +58,7 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. CLI-
 - **CI/CD-step dominance.** Secret detection is almost exclusively CI/CD-step in practice; every commit is a potential leak. The Reference section's Incremental hook fact records the commit SHA as the operative HWM.
 - **Periodic-global host-side scans.** Some platforms (GitHub Secret Scanning) also run periodic-global scans across repository history to catch historical leaks. Both outputs are labelled with `(repository_id, commit_sha)` so dedup unifies them.
 - **Detector-class severity overrides.** The `config/severity/{source}.yml` lookup may downgrade specific detector classes (low-entropy patterns, deprecated detectors) below the default `high`. Document the policy in the Quirks fact.
+
+## Lakeflow Connect availability
+
+No source in the secrets category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk_dlt` for REST/SDK sources; `artifact_path` for CLI-tool / artefact-driven sources (per the documented exception in this file's "## Ingestion-tooling preference" / "## Quirks" sections).

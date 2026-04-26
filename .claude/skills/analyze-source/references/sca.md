@@ -57,3 +57,7 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. Serv
 - **PURL availability.** Where the source emits a Package URL (`purl`), capture it — `package_name`, `package_version`, and `ecosystem` are all derivable from it for Silver normalization.
 - **Operational pattern axis.** Same CI/CD-step vs periodic-global split as SAST. CI/CD-step SCA (Dependabot alerts on PRs, Semgrep Supply Chain in pipelines) scopes findings to the scanned commit; periodic-global SCA (Dependency-Track scanning enrolled SBOMs on a schedule) scopes findings to the full SBOM inventory at scan time. Reconcile duplicates via the SCA dedup key.
 - **Severity scale variation.** Some tools emit numeric CVSS scores instead of (or alongside) named labels. The Reference section MUST disclose whether the connector consumes the named label, the numeric score, or derives one from the other.
+
+## Lakeflow Connect availability
+
+No source in the sca category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk_dlt` for REST/SDK sources (the standard ingestion-tooling preference for this category).

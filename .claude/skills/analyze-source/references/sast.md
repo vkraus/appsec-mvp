@@ -57,3 +57,7 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. Serv
 - **Severity vocabulary breadth.** Some tools use BLOCKER … INFO; others use CRITICAL … LOW or numeric scales. The Reference section MUST list every documented source severity value to support REQ-TRF-SEV coverage.
 - **CLI-artefact path.** Where a SAST tool runs as a CI/CD CLI (Semgrep Docker, container-hosted CLIs), document the artefact location (pipeline artifact, mounted volume, object-storage prefix), the SARIF / JSON format flavour, and any container-runtime quirks.
 - **Rule-pack drift.** Rule IDs change across rule-pack versions; the Reference section's Quirks fact should note whether the source provides rule-stability guarantees.
+
+## Lakeflow Connect availability
+
+No source in the sast category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk_dlt` for REST/SDK sources; `artifact_path` for CLI-tool / artefact-driven sources (per the documented exception in this file's "## Ingestion-tooling preference" / "## Quirks" sections).

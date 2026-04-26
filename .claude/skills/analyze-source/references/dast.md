@@ -67,3 +67,7 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. DAST
 - **Scan-scoped findings.** Each scan re-emits the full finding set within its scope; the connector MUST treat scans as the unit of incremental work, not individual findings. Mid-scan record updates are not exposed.
 - **No record-level `updated_at`.** This is the key DAST quirk versus SAST / SCA. The Reference section's Incremental hook fact records this absence and the scan-ID / artefact-file HWM in its place.
 - **Scan orchestration vs report collection.** Server-based DAST connectors may need to drive scans (start, poll, read) rather than purely consume them; the Reference section MUST disclose which mode the connector operates in.
+
+## Lakeflow Connect availability
+
+No source in the dast category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk_dlt` for REST/SDK sources; `artifact_path` for CLI-tool / artefact-driven sources (per the documented exception in this file's "## Ingestion-tooling preference" / "## Quirks" sections).

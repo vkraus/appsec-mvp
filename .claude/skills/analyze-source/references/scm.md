@@ -62,3 +62,7 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. GitH
 - **GraphQL availability.** Where a GraphQL surface is available it usually offers tighter field selection and incremental hooks; prefer it over REST for entity-heavy reads when the SDK supports it.
 - **Webhook delivery.** Webhook-driven HWM is the preferred mode; the Reference section MUST document the event types subscribed and the replay strategy if the webhook delivery is missed.
 - **Platform-native finding shapes.** Dependabot is package-level (SCA shape); code scanning is code-level (SAST shape); secret scanning is code-level secrets shape. The Reference section names the shapes in the Quirks fact.
+
+## Lakeflow Connect availability
+
+No source in the scm category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk_dlt` for REST/SDK sources (the standard ingestion-tooling preference for this category).
