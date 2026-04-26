@@ -57,4 +57,8 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. CMDB
 
 ServiceNow appears in the analyze-source LFC managed-source catalogue (Table API v2) and the cmdb category is in scope. Resolution: `databricks_runtime.ingestion_path = lakeflow_connect`. The Reference section gains the catalogue-citation sentence per SKILL.md procedure step 9 (the resolution step).
 
-Future CMDB sources outside the catalogue fall through to the category-canonical default (`sdk_dlt`) — REST + offset pagination + `updated_at`-style HWM column.
+Future CMDB sources outside the catalogue fall through to the category-canonical default (`dlt`) — REST + offset pagination + `updated_at`-style HWM column.
+
+## Maintained Python SDK availability
+
+No source in the cmdb category resolves to `sdk` today; ServiceNow is on `lakeflow_connect`. Future CMDB sources without an entry in the analyze-source Maintained Python SDK catalogue fall through to the category-canonical default (`dlt`).

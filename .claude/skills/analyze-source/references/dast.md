@@ -70,4 +70,8 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. DAST
 
 ## Lakeflow Connect availability
 
-No source in the dast category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk_dlt` for REST/SDK sources; `artifact_path` for CLI-tool / artefact-driven sources (per the documented exception in this file's "## Ingestion-tooling preference" / "## Quirks" sections).
+No source in the dast category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `dlt` for REST sources; `artifact_path` for CLI-tool / artefact-driven sources (per the documented exception in this file's "## Ingestion-tooling preference" / "## Quirks" sections).
+
+## Maintained Python SDK availability
+
+No source in the dast category resolves to `sdk` today. OWASP ZAP has a `zaproxy` Python client but the framework's primary DAST pattern is CI/CD step + JSON-report consumption (`artifact_path`), so ZAP resolves to `artifact_path` rather than `sdk`. Future DAST sources without an entry in the analyze-source Maintained Python SDK catalogue fall through to `dlt` (server-based) or `artifact_path` (CLI-based) per the category-canonical default.

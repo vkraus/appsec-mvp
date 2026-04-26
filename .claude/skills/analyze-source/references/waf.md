@@ -63,4 +63,10 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. For 
 
 ## Lakeflow Connect availability
 
-No source in the waf category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `artifact_path` for the canonical autoloader-from-S3 / Firehose log-stream pattern documented under "## Ingestion-tooling preference" above; `sdk_dlt` for the SDK-based sampled-request fallback when full-log ingestion is not yet provisioned.
+No source in the waf category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `artifact_path` for the canonical autoloader-from-S3 / Firehose log-stream pattern documented under "## Ingestion-tooling preference" above; otherwise the Maintained Python SDK catalogue applies (see below).
+
+## Maintained Python SDK availability
+
+**AWS WAF** → `ingestion_path: sdk` with `python_sdk_module: boto3` per the analyze-source Maintained Python SDK catalogue. boto3 is the first-party AWS SDK (`boto3.client('wafv2')` covers the WAF endpoints — `GetSampledRequests`, `ListWebACLs`, `GetLoggingConfiguration` — and handles auth, paging, and retry via the library's standard mechanisms).
+
+The `sdk` branch applies to the SDK-based sampled-request mode and any boto3-driven WAF read path. The `artifact_path` branch remains the canonical mode for autoloader-from-S3 / Firehose log-stream consumption (per "## Ingestion-tooling preference" above).

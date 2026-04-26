@@ -65,4 +65,13 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. GitH
 
 ## Lakeflow Connect availability
 
-No source in the scm category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk_dlt` for REST/SDK sources (the standard ingestion-tooling preference for this category).
+No source in the scm category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk` (with `python_sdk_module` from the Maintained Python SDK catalogue) for the two known SCM platforms; `dlt` for REST sources without a maintained Python SDK.
+
+## Maintained Python SDK availability
+
+Both MVP-tracked SCM sources resolve to `ingestion_path: sdk` per the analyze-source Maintained Python SDK catalogue:
+
+- **GitHub** → `python_sdk_module: PyGitHub`. Provides `Auth`, `Github`, `PaginatedList`, `GithubRetry`, and per-resource accessor classes covering every framework-consumed endpoint.
+- **GitLab** → `python_sdk_module: python-gitlab`. The de facto community SDK; GitLab links to it from its own DevSecOps blog.
+
+Future SCM sources without an entry in the Maintained Python SDK catalogue fall through to `ingestion_path: dlt`.

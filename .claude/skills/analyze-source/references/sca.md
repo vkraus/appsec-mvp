@@ -60,4 +60,8 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. Serv
 
 ## Lakeflow Connect availability
 
-No source in the sca category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk_dlt` for server-based REST/SDK sources; `artifact_path` for CLI-based SCA (package-manager audits invoked in CI/CD), per the artefact-collection pattern noted under "## Ingestion-tooling preference" above (mirrors the SAST CLI exception).
+No source in the sca category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `dlt` for server-based REST sources; `artifact_path` for CLI-based SCA (package-manager audits invoked in CI/CD), per the artefact-collection pattern noted under "## Ingestion-tooling preference" above (mirrors the SAST CLI exception).
+
+## Maintained Python SDK availability
+
+No source in the sca category resolves to `sdk` today. Dependency-Track has an "Inofficial" client (`owasp-dependency-track-client`) that does not meet the maintained-SDK bar in the analyze-source Maintained Python SDK catalogue, so the framework prefers a thin dlt rest-source. Future SCA sources without an entry in the catalogue fall through to `dlt` (server-based) or `artifact_path` (CLI-based) per the category-canonical default.
