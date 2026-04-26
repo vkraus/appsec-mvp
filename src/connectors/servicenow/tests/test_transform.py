@@ -232,6 +232,38 @@ def test_application_natural_key_is_non_null_on_every_record() -> None:
         assert row["application_id"], f"sys_id is null on record: {raw!r}"
 
 
+# ----- REQ-TRF-MAP / app_code projection ----------------------------------
+
+
+@pytest.mark.requirement("REQ-TRF-MAP")
+def test_normalise_application_projects_well_formed_app_code() -> None:
+    """REQ-TRF-MAP: a well-formed 5-digit ``u_app_id`` projects onto
+    ``silver.applications.app_code`` verbatim. The 5-digit form is the
+    contract for the name-based app-repo linker (see app_repo_link.py)."""
+    raw = _load_fixture("cmdb_ci_business_app.json")["result"][0]
+    row = normalise_application(raw, "UTC")
+    assert row["app_code"] == "12345"
+
+
+@pytest.mark.requirement("REQ-DQ")
+def test_normalise_application_rejects_malformed_app_code_to_none() -> None:
+    """REQ-DQ: a non-5-digit ``u_app_id`` (e.g. ``"ABC12"``) coerces to
+    ``None`` so downstream readers do not see invalid join keys. The
+    contract is regex ``^\\d{5}$`` exactly — anything else is None."""
+    raw = _load_fixture("cmdb_ci_business_app.json")["result"][1]
+    row = normalise_application(raw, "UTC")
+    assert row["app_code"] is None
+
+
+@pytest.mark.requirement("REQ-DQ")
+def test_normalise_application_empty_app_code_coerces_to_none() -> None:
+    """REQ-DQ: empty-string ``u_app_id`` coerces to ``None`` along with
+    the other empty-string sentinel paths on the application projection."""
+    raw = _load_fixture("cmdb_ci_business_app.json")["result"][2]
+    row = normalise_application(raw, "UTC")
+    assert row["app_code"] is None
+
+
 # ----- N/A REQs are NOT bound here — confirmed by absence ------------------
 #
 # Per references/cmdb.md and the catalog.md ServiceNow column:
