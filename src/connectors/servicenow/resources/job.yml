@@ -11,22 +11,17 @@ resources:
           default: "false"
       schedule:
         # Daily cadence: ServiceNow CMDB drift is slow (applications and
-        # team ownership change on the order of days, not minutes). A
-        # daily pull keeps Bronze fresh while staying well under any
-        # rate-limit policy on shared production instances.
+        # team ownership change on the order of days, not minutes). The
+        # daily transform run lifts freshly-ingested Lakeflow Connect bronze
+        # rows into the canonical Silver entity tables.
+        #
+        # Live ingestion is owned by the Lakeflow Connect pipeline declared
+        # in ../resources/pipeline.yml — this job runs the downstream
+        # Bronze→Silver transform only.
         quartz_cron_expression: "0 0 6 * * ?"
         timezone_id: "UTC"
       tasks:
-        - task_key: ingest
-          notebook_task:
-            notebook_path: ../ingest.py
-          job_cluster_key: shared
-          max_retries: 3
-          min_retry_interval_millis: 2000
-          retry_on_timeout: true
         - task_key: transform
-          depends_on:
-            - task_key: ingest
           notebook_task:
             notebook_path: ../transform.py
           job_cluster_key: shared
