@@ -45,6 +45,10 @@ source_runtime:
     - jq
 
 databricks_runtime:
+  # Drives generate-connector emit branch. Resolved by analyze-source from the
+  # LFC managed-source catalogue (ServiceNow → Table API v2 managed connector).
+  # See .claude/skills/analyze-source/SKILL.md "## Lakeflow Connect managed-source catalogue".
+  ingestion_path: lakeflow_connect
   secret_scope: mvp-connectors  # scripts/load-secrets.sh `SCOPE="mvp-connectors"`
   bronze_schema: bronze_servicenow  # resources/schemas.yml + resources/pipeline.yml `target: bronze_servicenow`
   silver_schema: silver_servicenow  # resources/schemas.yml second entry

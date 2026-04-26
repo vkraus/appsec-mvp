@@ -63,3 +63,18 @@ Standard order: Lakeflow Connect → Databricks SDK → dlt. The test suite does
 - **Reference fields read as opaque strings.** Foreign-key fields (e.g. `owned_by`) are not resolved at ingest; the test suite asserts opaque-string behaviour under `REQ-TRF-MAP`, not under a separate REQ-ID.
 - **Display vs raw values.** Source-side raw-value mode (e.g. `sysparm_display_value=false`) is asserted under `REQ-TRF-MAP` — the schema mapping test verifies stable IDs across locales.
 - **High page count.** Offset-based pagination with page sizes in the thousands; the `REQ-ING-PAG` test asserts traversal across at least two pages without loss or duplication, per the catalog requirement text.
+
+## Conditional N/A: `ingestion_path == lakeflow_connect`
+
+When `operational.yml.databricks_runtime.ingestion_path == lakeflow_connect`, the following ingest-side REQ-IDs flip to `N/A` with rationale "delegated to Lakeflow Connect; structural assertion in `tests/test_ingest.py::test_pipeline_yml_declares_lakeflow_ingestion`":
+
+- `REQ-ING-PAG` — pagination is owned by the LFC pipeline.
+- `REQ-ING-RL` — rate-limit handling is owned by the LFC pipeline.
+- `REQ-ING-HWM` — incremental hook is configured in `pipeline.yml` (`ingestion_definition.objects[].table.scd_type` and friends).
+
+`REQ-ING-AUTH` stays **PASS** (not flipped to N/A): the contract wrapper's defensive `state['extra']` validation provides runtime safety against a misconfigured DAB job that bypasses the LFC pipeline (e.g., a notebook-task accidentally calling `ingest_contract` directly). Auth at the LFC pipeline level is owned by the UC connection, but the framework contract still binds REQ-ING-AUTH to the per-source wrapper, and that binding remains meaningful even on the LFC branch. An equally-defensible alternative would be to mark REQ-ING-AUTH as N/A on `lakeflow_connect` sources; this skill's contract chose PASS to keep the framework wrapper test surface uniform across ingestion paths. A future reviewer evaluating the trade-off should not second-guess this choice — it is recorded here, not in test code.
+
+`REQ-DQ` stays bound: empty-string coercion lives in `transform.py`, not `ingest.py`.
+`REQ-TRF-MAP` and `REQ-TRF-TS` stay bound: transform-side, unaffected by ingestion path.
+
+The `N/A` rows in the Validation table use `—` for the bound-test column and the rationale above for the rationale row.

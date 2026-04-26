@@ -30,7 +30,7 @@ No file outside the connector page is modified by this skill.
 
 ## Procedure
 
-1. **Read `references/<category>.md` to get the category's applicable REQ-ID set and N/A reasons.** This is the load-bearing per-category artefact for this skill — it lists which REQ-IDs bind to tests for connectors in this category, in catalog order, with explicit N/A reasons quoted from `mkdocs/docs/platform/reference/catalog.md` and `mkdocs/docs/connectors/<category>/index.md`.
+1. **Read `references/<category>.md` to get the category's applicable REQ-ID set and N/A reasons.** This is the load-bearing per-category artefact for this skill — it lists which REQ-IDs bind to tests for connectors in this category, in catalog order, with explicit N/A reasons quoted from `mkdocs/docs/platform/reference/catalog.md` and `mkdocs/docs/connectors/<category>/index.md`. Also read `operational.yml.databricks_runtime.ingestion_path`. Apply any per-`ingestion_path` N/A overrides documented in the category reference (e.g., `lakeflow_connect` sources flip `REQ-ING-PAG`, `REQ-ING-RL`, `REQ-ING-HWM` to `N/A` on the cmdb branch with rationale "delegated to Lakeflow Connect").
 2. Run `pytest tests/connectors/{source}/ -v --tb=short`. Treat timeouts as failures (not skips). Capture stdout/stderr; preserve the wall-clock duration for the run summary.
 3. Collect every test function carrying a `@pytest.mark.requirement("REQ-...")` marker and its outcome (`passed` / `failed` / `skipped` / `timed-out`).
 4. For each REQ-ID in the category's applicable set (from step 1, in the order they appear in `mkdocs/docs/platform/reference/catalog.md`), record: is there a bound test? did it pass? what is the test path? For REQ-IDs marked N/A by the category reference, record `N/A` with no bound test path.
