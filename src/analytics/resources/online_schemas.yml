@@ -1,0 +1,10 @@
+resources:
+  schemas:
+    gold_online:
+      catalog_name: ${var.catalog}
+      name: gold_online
+      comment: "Row-store replicas of selected gold tables, served via Online Tables (analytics-owned)"
+    silver_online:
+      catalog_name: ${var.catalog}
+      name: silver_online
+      comment: "Row-store replicas of selected gold views over silver, served via Online Tables (analytics-owned)"

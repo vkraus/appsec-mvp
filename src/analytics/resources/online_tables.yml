@@ -1,0 +1,14 @@
+resources:
+  online_tables:
+    app_risk_posture:
+      name: ${var.catalog}.gold_online.app_risk_posture
+      spec:
+        source_table_full_name: ${var.catalog}.gold.app_risk_posture_daily
+        primary_key_columns: [application_id, severity_canonical, snapshot_date]
+        run_continuously: {}
+    app_repo_findings:
+      name: ${var.catalog}.silver_online.app_repo_findings
+      spec:
+        source_table_full_name: ${var.catalog}.gold.app_repo_findings_open
+        primary_key_columns: [finding_id]
+        run_continuously: {}

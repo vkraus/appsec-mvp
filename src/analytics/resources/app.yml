@@ -1,0 +1,6 @@
+resources:
+  apps:
+    appsec_analytics_app:
+      name: appsec-analytics-app
+      description: "OLTP serving for AppSec analytics — security score lookup + CI/CD pre-merge gate"
+      source_code_path: ../app
