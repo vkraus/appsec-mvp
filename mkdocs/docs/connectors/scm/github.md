@@ -186,7 +186,7 @@ Only fields the connector reads are listed. Complete schemas are at the cited Gi
 
 *Repository visibility.* `visibility` takes `public`, `private`, `internal`. Stored verbatim as a domain column on `silver.repositories`; no canonical normalization is required.
 
-*Code scanning alert severity (canonical mapping).* GitHub returns two severity fields on a code scanning alert. The framework treats `rule.security_severity_level` (`critical`, `high`, `medium`, `low`) as authoritative per the canonical mapping; the rule-level `severity` (`error`, `warning`, `note`) is kept as a domain column. The mapping is identity into the standard four-level model:
+*Code scanning alert severity (canonical mapping).* GitHub returns two severity fields on a code scanning alert. The framework treats `rule.security_severity_level` (`critical`, `high`, `medium`, `low`) as authoritative per the canonical mapping; the rule-level `severity` (`error`, `warning`, `note`) is kept as a domain column. The mapping is identity into the standardized four-level model:
 
 | GitHub `rule.security_severity_level` | Canonical `severity` |
 |---|---|
@@ -196,15 +196,15 @@ Only fields the connector reads are listed. Complete schemas are at the cited Gi
 | `low` | `low` |
 | (null or absent) | configured default (`medium`), with a `REQ-DQ` data-quality warning |
 
-*Code scanning alert status.* `state` takes `open`, `closed`, `dismissed`, `fixed`. Mapped to the standard five-state model: `open → open`; `dismissed → false_positive` when `dismissed_reason in ("false positive",)`, otherwise `wontfix`; `closed → resolved`; `fixed → resolved`.
+*Code scanning alert status.* `state` takes `open`, `closed`, `dismissed`, `fixed`. Mapped to the standardized five-state model: `open → open`; `dismissed → false_positive` when `dismissed_reason in ("false positive",)`, otherwise `wontfix`; `closed → resolved`; `fixed → resolved`.
 
 *Secret scanning alert severity.* Secret scanning has no native severity field. Per the canonical mapping convention used for TruffleHog (`high` for unverified secrets escalating implicitly to `critical` for verified), the connector emits `severity = high` when `validity = active` and `severity = high` for `inactive`/`unknown`; operators may override the policy in `src/connectors/github/severity.yml`.
 
 *Secret scanning alert status.* `state` takes `open`, `resolved`. `resolution` discriminates the resolved cases: `false_positive → false_positive`, `wont_fix → wontfix`, `revoked → resolved`, `used_in_tests → false_positive`.
 
-*Dependabot alert severity.* `security_vulnerability.severity` returns `low`, `medium`, `high`, `critical`. Identity mapping into the standard four-level model.
+*Dependabot alert severity.* `security_vulnerability.severity` returns `low`, `medium`, `high`, `critical`. Identity mapping into the standardized four-level model.
 
-*Dependabot alert status.* `state` takes `open`, `dismissed`, `auto_dismissed`, `fixed`. Mapped to the standard five-state model: `open → open`; `dismissed`/`auto_dismissed → wontfix` (or `false_positive` when `dismissed_reason = "no_bandwidth"` etc., per `src/connectors/github/status.yml`); `fixed → resolved`.
+*Dependabot alert status.* `state` takes `open`, `dismissed`, `auto_dismissed`, `fixed`. Mapped to the standardized five-state model: `open → open`; `dismissed`/`auto_dismissed → wontfix` (or `false_positive` when `dismissed_reason = "no_bandwidth"` etc., per `src/connectors/github/status.yml`); `fixed → resolved`.
 
 ### 6. Quirks
 

@@ -89,7 +89,7 @@ the workspace contains:
 | Resource | Type | Purpose |
 |---|---|---|
 | `appsec` | catalog | Unity Catalog (`appsec_dev`, `appsec_staging`, or `appsec_prod`) for Bronze, Silver, and Gold. |
-| `silver` | schema | Cross-source standard Silver: `findings`, `hwm`, `repositories`, `app_repo`. |
+| `silver` | schema | Cross-source standardized Silver: `findings`, `hwm`, `repositories`, `app_repo`. |
 | `platform-bootstrap` | job | One-task SQL job that runs `src/platform/sql/silver_tables.sql` against the SQL warehouse. User runs it once after secrets are loaded. See [Platform bootstrap job](platform-bootstrap-job.md). |
 
 ### Connector layers (`src/connectors/<source>/resources/`)

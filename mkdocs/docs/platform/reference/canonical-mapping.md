@@ -1,10 +1,10 @@
-# Standard Mapping Requirements
+# Standardized Mapping Requirements
 
-The standard Silver layer schemas commit the framework to a single vendor agnostic entity and finding model. This page states, per schema, the requirement the implementation **SHALL** satisfy when mapping a source record into Silver.
+The standardized Silver layer schemas commit the framework to a single vendor agnostic entity and finding model. This page states, per schema, the requirement the implementation **SHALL** satisfy when mapping a source record into Silver.
 
 ## Silver Entity Mapping Requirements
 
-Entity tables (applications, repositories, teams, commits, pull requests, pipeline runs, dependencies, branch policies) are populated from the entity emitting sources in the selection. The implementation **SHALL** union over the native fields these sources expose according to the table below. Every standard field maps to the source field shown in the corresponding column, with the derivation on the right. Fields marked as framework generated are assigned by the connector or transformation layer, not read from the source.
+Entity tables (applications, repositories, teams, commits, pull requests, pipeline runs, dependencies, branch policies) are populated from the entity emitting sources in the selection. The implementation **SHALL** union over the native fields these sources expose according to the table below. Every standardized field maps to the source field shown in the corresponding column, with the derivation on the right. Fields marked as framework generated are assigned by the connector or transformation layer, not read from the source.
 
 ### Silver Entity Pattern field derivation across entity emitting sources
 
@@ -87,9 +87,9 @@ WAF connectors (AWS WAF) project each edge event as one finding row on `silver.f
 
 ## Severity and Status Normalization Requirements
 
-The implementation **SHALL** harmonize the native severity scale of each source to the standard four level model (`critical`, `high`, `medium`, `low`) through a lookup table for each source. The table is co-located with the connector at [`src/connectors/{source}/severity.yml`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors). Each lookup **SHALL** cover every documented source value. Undocumented source values fall through to a configurable default (`medium` unless the `config.yml` for the connector overrides it) and **SHALL** trigger a data quality warning. A null or missing source severity is mapped to `medium` and similarly flagged.
+The implementation **SHALL** harmonize the native severity scale of each source to the standardized four level model (`critical`, `high`, `medium`, `low`) through a lookup table for each source. The table is co-located with the connector at [`src/connectors/{source}/severity.yml`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors). Each lookup **SHALL** cover every documented source value. Undocumented source values fall through to a configurable default (`medium` unless the `config.yml` for the connector overrides it) and **SHALL** trigger a data quality warning. A null or missing source severity is mapped to `medium` and similarly flagged.
 
-The implementation **SHALL** translate the native lifecycle state of each source to the standard five state model (`open`, `confirmed`, `resolved`, `false_positive`, `wontfix`) through an analogous lookup at [`src/connectors/{source}/status.yml`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors).
+The implementation **SHALL** translate the native lifecycle state of each source to the standardized five state model (`open`, `confirmed`, `resolved`, `false_positive`, `wontfix`) through an analogous lookup at [`src/connectors/{source}/status.yml`](https://github.com/vkraus/appsec-mvp/tree/main/src/connectors).
 
 Both severity and status lookup tables **SHALL** be maintained as configuration files rather than code so that vocabulary updates do not require a pipeline redeploy.
 

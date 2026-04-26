@@ -25,11 +25,11 @@ Native high water mark column (`updated_at` style; `sys_updated_on` in ServiceNo
 
 ### Deduplication key
 
-Not applicable. CMDB ingests entities (applications, teams, ownership), not findings. The standard dedup pattern targets `silver.findings` and is not exercised by entity ingestion.
+Not applicable. CMDB ingests entities (applications, teams, ownership), not findings. The standardized dedup pattern targets `silver.findings` and is not exercised by entity ingestion.
 
 ### Target Silver tables
 
-`silver.applications`, `silver.teams`, `silver.app_repo_mapping` per the Silver Entity Mapping requirements at `mkdocs/docs/platform/reference/canonical-mapping.md#silver-entity-mapping-requirements`. The Resource schema excerpt in the Reference section should map source fields to these standard entity columns.
+`silver.applications`, `silver.teams`, `silver.app_repo_mapping` per the Silver Entity Mapping requirements at `mkdocs/docs/platform/reference/canonical-mapping.md#silver-entity-mapping-requirements`. The Resource schema excerpt in the Reference section should map source fields to these standardized entity columns.
 
 ### Authentication norms
 
@@ -124,7 +124,7 @@ Plural names, authoritative per `mkdocs/docs/platform/reference/silver-table-own
 
 Emit one Bronze to Silver mapping block per target table in `mapping.yml` (one block can produce multiple Silver rows via projection for each source; or split by source endpoint). Do NOT invent table names. `silver.ownership` is not a thing. Ownership lands in `silver.app_repo_mapping`.
 
-The `mapping.yml` structure is entity only (no `category` discriminator, no severity / status lookup references). Field expressions follow the standard entity model at `mkdocs/docs/platform/reference/canonical-mapping.md#silver-entity-mapping-requirements`.
+The `mapping.yml` structure is entity only (no `category` discriminator, no severity / status lookup references). Field expressions follow the standardized entity model at `mkdocs/docs/platform/reference/canonical-mapping.md#silver-entity-mapping-requirements`.
 
 ### Authentication norms
 
@@ -136,7 +136,7 @@ Standard order: Lakeflow Connect, then Databricks SDK, then dlt. CMDB sources ar
 
 ### Quirks
 
-- **Schema on read at Bronze.** Custom attributes (e.g. `u_*` columns in ServiceNow) flow through additively without connector changes. Do NOT hard code a closed schema in `mapping.yml`. The standard fields project explicitly. Everything else falls through to Bronze for downstream use.
+- **Schema on read at Bronze.** Custom attributes (e.g. `u_*` columns in ServiceNow) flow through additively without connector changes. Do NOT hard code a closed schema in `mapping.yml`. The standardized fields project explicitly. Everything else falls through to Bronze for downstream use.
 - **Reference fields.** Foreign key attributes (e.g. `owned_by`) are read as opaque strings. Do NOT resolve via relationship APIs at ingestion. Resolution lands at transform via Bronze to Silver join against `silver.teams`.
 - **Display vs raw values.** Configure the source request to return raw values (e.g. `sysparm_display_value=false` for ServiceNow) so IDs stay stable across locale and admin renames.
 - **Plural Silver names.** The transform writes to `silver.applications` / `silver.teams` / `silver.app_repo_mapping`. The plurals are authoritative. Singular forms are wrong.

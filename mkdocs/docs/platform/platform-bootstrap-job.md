@@ -1,18 +1,18 @@
 # Platform bootstrap job
 
-Apply the cross-source standard silver table DDL. This is **step 4 of the
+Apply the cross-source standardized silver table DDL. This is **step 4 of the
 four-step Phase 1 platform flow**: [Prerequisites](prerequisites.md), then
 [Bundle deploy](bundle-deploy.md), then
 [Secrets bootstrap](secrets-bootstrap.md), then **Platform bootstrap job**.
 
 The DDL lives at `src/platform/sql/silver_tables.sql`. It defines the
-standard Silver tables every connector reads or writes:
+standardized Silver tables every connector reads or writes:
 
 - `silver.findings`: the cross-scanner findings table — also the target for AWS WAF, which projects each edge event as one finding row (severity derived from action, status literal `open`, deterministic `finding_id`; the previous `silver.waf_events` carve-out has been collapsed).
 - `silver.finding_location`: per-finding code/URL location detail.
 - `silver.hwm`: high water mark state for incremental ingestion.
-- `silver.repositories`: standard repository entity (populated by SCM connectors).
-- `silver.applications`: standard business-application entity, including `app_code` (populated by the CMDB connector).
+- `silver.repositories`: standardized repository entity (populated by SCM connectors).
+- `silver.applications`: standardized business-application entity, including `app_code` (populated by the CMDB connector).
 - `silver.app_repo_mapping`: mapping from application to repository, keyed `(application_id, repository_id, link_source, linked_at)` (populated by the [app-repo linker](app-repo-link.md) and the deferred CMDB-side paths).
 - `silver.suppression_rules`: operator-authored finding-suppression entries (analytics-layer concern).
 

@@ -51,10 +51,10 @@ A single Markdown page emitted at `mkdocs/docs/connectors/<category>/<source-slu
 1. Read `references/<category>.md` for category specific facts that influence the seven API facts in the Reference section. These include applicable REQ-IDs, default severity, HWM preference, dedup key structure, target Silver tables, auth norms, ingestion tooling preference, quirks.
 2. Fetch the API documentation for the source via WebFetch from the input URL. Cache the fetched content for citations.
 3. Identify the authentication mechanism the source supports. Cross-check against the auth norm for the category in `references/<category>.md`. If the source supports multiple auth modes, select the one matching the category convention.
-4. Enumerate the endpoints required to populate the Silver tables assigned to the category of the source. Cross-reference the Silver Table Ownership table at `mkdocs/docs/platform/reference/catalog.md` and the standard schemas at `mkdocs/docs/platform/reference/canonical-mapping.md`.
+4. Enumerate the endpoints required to populate the Silver tables assigned to the category of the source. Cross-reference the Silver Table Ownership table at `mkdocs/docs/platform/reference/catalog.md` and the standardized schemas at `mkdocs/docs/platform/reference/canonical-mapping.md`.
 5. Select the incremental strategy per the preference order in `references/<category>.md` (typical order: webhook > native HWM column > full reload; some categories override).
-6. Extract a consumed field schema excerpt (only fields the connector actually reads) matching the standard Silver fields from `mkdocs/docs/platform/reference/canonical-mapping.md` (entities or findings schema, whichever applies to the category).
-7. Produce severity and status lookup proposals per the standard enumeration models at `mkdocs/docs/platform/reference/canonical-mapping.md`. For categories where severity or status do not apply (CMDB, secrets-status), record the N/A explicitly.
+6. Extract a consumed field schema excerpt (only fields the connector actually reads) matching the standardized Silver fields from `mkdocs/docs/platform/reference/canonical-mapping.md` (entities or findings schema, whichever applies to the category).
+7. Produce severity and status lookup proposals per the standardized enumeration models at `mkdocs/docs/platform/reference/canonical-mapping.md`. For categories where severity or status do not apply (CMDB, secrets-status), record the N/A explicitly.
 8. Document quirks: deviations from category norms, format surprises, handling policies for each source. Cross-check `references/<category>.md` for category quirks the source may inherit.
 9. Assemble the six section Markdown page and emit to the output path.
 10. Stub the Implementation log section with the row for this skill (date, inputs, outputs, skill repo ref via `git rev-parse --short HEAD`). Leave rows for `generate-connector` and `validate-implementation` marked `(pending)`.
@@ -65,7 +65,7 @@ The seven API facts captured under Reference are:
 - **Pagination and rate limits**: strategy and quotas.
 - **Incremental hook**: webhook, native HWM column, scan-id, or full reload (per `references/<category>.md`).
 - **Resource schema excerpt**: Markdown table with columns Field / Type / Meaning, scoped to fields the connector reads.
-- **Enumerations**: severity and status mappings against the standard models.
+- **Enumerations**: severity and status mappings against the standardized models.
 - **Quirks**: deviations from category norms; format surprises.
 
 Authentication is folded into the API fact. That is six visible facts but the framework documentation calls it seven. Preserve the seven fact wording when writing Reference, matching the existing baselines.

@@ -87,9 +87,9 @@ The mandatory artifacts:
   references severity and status lookups.
 - **`config.yml`**: base URL, endpoints, pagination strategy, HWM column,
   target Bronze table.
-- **`severity.yml`**: native severity to standard severity lookup, tunable
+- **`severity.yml`**: native severity to standardized severity lookup, tunable
   without touching pipeline code.
-- **`status.yml`**: native status to standard status lookup.
+- **`status.yml`**: native status to standardized status lookup.
 - **`resources/`**: DAB fragments registered automatically via the include
   glob. Schemas plus a job for batch style connectors. Schemas plus volumes for
   artifact path scanners. Schemas plus connection plus pipeline for Lakeflow

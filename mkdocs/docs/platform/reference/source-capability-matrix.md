@@ -25,4 +25,4 @@ The **operational pattern** column distinguishes:
 
 ## Patterns
 
-This matrix drives the standard Silver Entity and Silver Finding patterns, which must accommodate sources varying across every column. It also drives the connector framework defaults that apply uniformly across ingestion strategies.
+This matrix drives the standardized Silver Entity and Silver Finding patterns, which must accommodate sources varying across every column. It also drives the connector framework defaults that apply uniformly across ingestion strategies.

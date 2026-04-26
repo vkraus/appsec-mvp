@@ -14,9 +14,9 @@ Every SCM connector **SHALL** select its incremental strategy from a three optio
 
 The decision for each source is recorded in the connector pages. `config.yml` declares which mode applies.
 
-## Standard mapping contribution
+## Standardized mapping contribution
 
-SCM sources populate the Silver `repository`, `pull_request`, and `branch_policy` tables. See [Standard mapping](../../platform/reference/canonical-mapping.md).
+SCM sources populate the Silver `repository`, `pull_request`, and `branch_policy` tables. See [Standardized mapping](../../platform/reference/canonical-mapping.md).
 
 ## Skills
 

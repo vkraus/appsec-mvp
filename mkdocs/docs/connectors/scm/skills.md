@@ -17,7 +17,7 @@ The GitHub column of the traceability matrix shows the full set as `PASS` becaus
 
 ### Default severity
 
-N/A for the entity role. For the finding role, severity comes from the native field of the platform (`rule.security_severity_level` on GitHub code scanning, `severity` on GitLab) and is normalized to the standard four level model (`critical`, `high`, `medium`, `low`) via lookup for each source. The configurable default for unmatched values is `medium` per the standard mapping.
+N/A for the entity role. For the finding role, severity comes from the native field of the platform (`rule.security_severity_level` on GitHub code scanning, `severity` on GitLab) and is normalized to the standardized four level model (`critical`, `high`, `medium`, `low`) via lookup for each source. The configurable default for unmatched values is `medium` per the standardized mapping.
 
 ### Incremental strategy
 
@@ -119,7 +119,7 @@ From `mkdocs/docs/platform/reference/catalog.md`. Bind one test function per REQ
 
 For the entity role: N/A. Entity rows have no `severity` column.
 
-For the finding role: derived from the native field of the platform (`rule.security_severity_level` for GitHub code scanning, `severity` for GitLab) and normalized via `src/connectors/{source}/severity.yml` to the standard four level model (`critical`, `high`, `medium`, `low`). Configurable default for unmatched values is `medium`. The lookup file MUST cover every source value documented in the connector page.
+For the finding role: derived from the native field of the platform (`rule.security_severity_level` for GitHub code scanning, `severity` for GitLab) and normalized via `src/connectors/{source}/severity.yml` to the standardized four level model (`critical`, `high`, `medium`, `low`). Configurable default for unmatched values is `medium`. The lookup file MUST cover every source value documented in the connector page.
 
 ### Incremental strategy
 

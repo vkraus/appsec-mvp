@@ -4,7 +4,7 @@ The physical Silver schema stores all finding categories (SAST, SCA, secret, DAS
 
 ## Cross category analytics
 
-The standard Silver Finding mapping is already a union over sources. Every standard field has a single definition, and each source populates the subset of fields its category produces. A physical split would instantiate that union as N separate tables with identical base columns and different columns for each category. Cross category queries such as "all open findings on a repository" or "top five risky applications by finding volume across all categories" would then require `UNION ALL` across N tables, and every new category would add another operand.
+The standardized Silver Finding mapping is already a union over sources. Every standardized field has a single definition, and each source populates the subset of fields its category produces. A physical split would instantiate that union as N separate tables with identical base columns and different columns for each category. Cross category queries such as "all open findings on a repository" or "top five risky applications by finding volume across all categories" would then require `UNION ALL` across N tables, and every new category would add another operand.
 
 ## Dedup routing
 

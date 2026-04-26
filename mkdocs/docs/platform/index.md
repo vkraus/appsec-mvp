@@ -67,7 +67,7 @@ The platform implements a medallion layout across three layers:
 
 - **Bronze**: raw landed data, one schema per source (`bronze_<source>`),
   schema on read.
-- **Silver**: standard entity and finding tables, severity and status
+- **Silver**: standardized entity and finding tables, severity and status
   normalized. Cross-source tables live in the `silver` schema. Projections
   for each source live in `silver_<source>` schemas.
 - **Gold**: aggregations, evidence views, and dashboards consumed by

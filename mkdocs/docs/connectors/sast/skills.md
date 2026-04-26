@@ -16,7 +16,7 @@ From `mkdocs/docs/platform/reference/catalog.md`. SAST sources emit findings.
 
 ### Default severity
 
-`medium`. Source severity vocabularies have three to five levels with overlapping but non-identical names. Per-source lookup tables at `src/connectors/{source}/severity.yml` map each value to the standard four-level model (`critical`, `high`, `medium`, `low`). Undocumented values fall through to `medium` and trigger a data-quality warning.
+`medium`. Source severity vocabularies have three to five levels with overlapping but non-identical names. Per-source lookup tables at `src/connectors/{source}/severity.yml` map each value to the standardized four-level model (`critical`, `high`, `medium`, `low`). Undocumented values fall through to `medium` and trigger a data-quality warning.
 
 ### Incremental strategy
 
@@ -108,7 +108,7 @@ From `mkdocs/docs/platform/reference/catalog.md`. Bind one test function per REQ
 
 ### Default severity
 
-`medium`. Generate `src/connectors/{source}/severity.yml` covering every documented source value (e.g. `BLOCKER`, `CRITICAL`, `MAJOR`, `MINOR`, `INFO` for SonarQube; `ERROR`, `WARNING`, `INFO` for Semgrep) mapped to the standard four-level model (`critical`, `high`, `medium`, `low`). Undocumented values fall through to `medium` with a data-quality warning per the helper in `src/platform/`.
+`medium`. Generate `src/connectors/{source}/severity.yml` covering every documented source value (e.g. `BLOCKER`, `CRITICAL`, `MAJOR`, `MINOR`, `INFO` for SonarQube; `ERROR`, `WARNING`, `INFO` for Semgrep) mapped to the standardized four-level model (`critical`, `high`, `medium`, `low`). Undocumented values fall through to `medium` with a data-quality warning per the helper in `src/platform/`.
 
 The `mapping.yml` `severity` field references the lookup file by path, NOT a hard-coded value:
 

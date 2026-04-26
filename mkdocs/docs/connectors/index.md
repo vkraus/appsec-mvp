@@ -1,7 +1,7 @@
 # Install connectors
 
 Connectors ingest from AppSec source systems into the Bronze layer of the platform,
-then transform into the standard Silver entities and findings.
+then transform into the standardized Silver entities and findings.
 This is **Phase 2 of the install flow**. It follows
 [Setup platform](../platform/index.md) (catalog, schemas, jobs, secret
 scope) and feeds [Build analytics](../analytics/index.md) (gold
@@ -10,7 +10,7 @@ aggregations, dashboards).
 ## Adoption order
 
 **SCM connectors must be installed first.** They are the source of truth
-for `silver.repositories`, the cross source standard repository entity.
+for `silver.repositories`, the cross source standardized repository entity.
 The findings from every non-SCM connector carry a `repository_id` that must
 resolve to a row populated by an SCM connector. Without that data, the
 cross source rollups in [Evidence scenarios](../analytics/evidence.md)

@@ -16,9 +16,9 @@ Deployments routinely add custom attributes specific to the organization (for ex
 
 Authentication is typically basic auth with a service account or OAuth 2.0 client credentials. Pagination is offset based with page sizes in the thousands. Every record exposes an update timestamp column, which the connector **SHALL** use as the high water mark for incremental ingestion. CMDB data has no severity dimension.
 
-## Standard mapping contribution
+## Standardized mapping contribution
 
-CMDB sources populate the Silver `application`, `team`, and `ownership` tables. See [Standard mapping](../../platform/reference/canonical-mapping.md) for the full schema.
+CMDB sources populate the Silver `application`, `team`, and `ownership` tables. See [Standardized mapping](../../platform/reference/canonical-mapping.md) for the full schema.
 
 ## Skills
 

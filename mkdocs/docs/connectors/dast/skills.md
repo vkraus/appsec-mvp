@@ -16,7 +16,7 @@ From `mkdocs/docs/platform/reference/catalog.md`. DAST sources emit findings aga
 
 ### Default severity
 
-`medium`. DAST severity vocabularies are shorter than SAST (typically four levels, for example `Informational`, `Low`, `Medium`, `High`). Per-source lookup tables at `src/connectors/{source}/severity.yml` map each value to the standard four-level model. Undocumented values fall through to `medium` and trigger a data-quality warning.
+`medium`. DAST severity vocabularies are shorter than SAST (typically four levels, for example `Informational`, `Low`, `Medium`, `High`). Per-source lookup tables at `src/connectors/{source}/severity.yml` map each value to the standardized four-level model. Undocumented values fall through to `medium` and trigger a data-quality warning.
 
 ### Incremental strategy
 
@@ -116,7 +116,7 @@ From `mkdocs/docs/platform/reference/catalog.md`. Bind one test function per REQ
 
 ### Default severity
 
-`medium`. Generate `src/connectors/{source}/severity.yml` covering the documented vocabulary (typically four levels: `Informational`, `Low`, `Medium`, `High`) mapped to the standard four-level model (`critical`, `high`, `medium`, `low`). Configurable default for unmatched values is `medium` with a data-quality warning.
+`medium`. Generate `src/connectors/{source}/severity.yml` covering the documented vocabulary (typically four levels: `Informational`, `Low`, `Medium`, `High`) mapped to the standardized four-level model (`critical`, `high`, `medium`, `low`). Configurable default for unmatched values is `medium` with a data-quality warning.
 
 The `mapping.yml` `severity` field references the lookup file by path:
 

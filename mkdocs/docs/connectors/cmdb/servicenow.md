@@ -2,7 +2,7 @@
 
 ## Overview
 
-ServiceNow is the reference implementation for the CMDB category. The connector treats a ServiceNow instance as the authoritative business-application inventory and team-ownership graph. It reads from the ServiceNow Table API over the `cmdb_ci_business_app` Configuration Item table (and related CI tables when an instance models ownership separately) to populate the standard Silver entity tables `silver.applications`, `silver.teams`, and `silver.app_repo_mapping`. The downstream effect is that `silver.findings` rows produced by every other connector resolve to a real business application through the `repository_id` to `silver.repositories` to `silver.app_repo_mapping` chain.
+ServiceNow is the reference implementation for the CMDB category. The connector treats a ServiceNow instance as the authoritative business-application inventory and team-ownership graph. It reads from the ServiceNow Table API over the `cmdb_ci_business_app` Configuration Item table (and related CI tables when an instance models ownership separately) to populate the standardized Silver entity tables `silver.applications`, `silver.teams`, and `silver.app_repo_mapping`. The downstream effect is that `silver.findings` rows produced by every other connector resolve to a real business application through the `repository_id` to `silver.repositories` to `silver.app_repo_mapping` chain.
 
 **Category:** CMDB (entity-only; no findings emitted) - **Integration pattern:** REST + Databricks SDK, offset-based pagination over `/api/now/table/{tableName}`.
 
@@ -67,7 +67,7 @@ Full-reload mode is reserved for the first run (when the HWM is unset) and for e
 
 ### Resource schema excerpt
 
-The fields below are the subset the connector reads from `cmdb_ci_business_app`. ServiceNow's actual schema for the table is much wider (hundreds of platform-system columns plus organisation-specific `u_*` extensions); the connector projects only the fields that participate in the standard mapping. Schema-on-read at Bronze captures every other column additively without connector changes per the CMDB category quirks.
+The fields below are the subset the connector reads from `cmdb_ci_business_app`. ServiceNow's actual schema for the table is much wider (hundreds of platform-system columns plus organisation-specific `u_*` extensions); the connector projects only the fields that participate in the standardized mapping. Schema-on-read at Bronze captures every other column additively without connector changes per the CMDB category quirks.
 
 **`cmdb_ci_business_app` consumed fields**
 
@@ -94,9 +94,9 @@ If a deployment does not use 5-digit application codes, leave `u_app_id` unpopul
 
 ### Enumerations
 
-**Severity.** N/A. CMDB sources emit no findings, so the standard four-level severity model (`critical`, `high`, `medium`, `low`) is not exercised. The lookup file `src/connectors/servicenow/severity.yml` contains only the comment `# N/A: CMDB sources emit no findings`. No mapping rows. The `mapping.yml` does not reference this lookup.
+**Severity.** N/A. CMDB sources emit no findings, so the standardized four-level severity model (`critical`, `high`, `medium`, `low`) is not exercised. The lookup file `src/connectors/servicenow/severity.yml` contains only the comment `# N/A: CMDB sources emit no findings`. No mapping rows. The `mapping.yml` does not reference this lookup.
 
-**Status.** N/A. CMDB entities have no finding lifecycle. The standard five-state status model (`open`, `confirmed`, `resolved`, `false_positive`, `wontfix`) does not apply. The lookup file `src/connectors/servicenow/status.yml` contains the same comment. `operational_status` on `cmdb_ci_business_app` is an entity lifecycle attribute, not a finding status, and lands as a domain column on `silver.applications` without normalisation against the finding-status canonical model.
+**Status.** N/A. CMDB entities have no finding lifecycle. The standardized five-state status model (`open`, `confirmed`, `resolved`, `false_positive`, `wontfix`) does not apply. The lookup file `src/connectors/servicenow/status.yml` contains the same comment. `operational_status` on `cmdb_ci_business_app` is an entity lifecycle attribute, not a finding status, and lands as a domain column on `silver.applications` without normalisation against the finding-status canonical model.
 
 **Dedup.** N/A. Entity dedup is handled by the natural key (`sys_id`) at Bronze-to-Silver upsert time. The connector does not emit `dedup_links` rows; cross-tool finding deduplication does not apply to CMDB.
 
@@ -106,7 +106,7 @@ If a deployment does not use 5-digit application codes, leave `u_app_id` unpopul
 - **Empty fields render as empty strings.** ServiceNow renders missing or null field values as the empty string `""` rather than JSON `null`. The Bronze-to-Silver transform coerces empty strings to `NULL` for all nullable columns to keep the Silver schema honest. This applies to optional columns like `short_description` and to reference columns when the relationship is unset.
 - **Display vs raw values.** By default the Table API returns *display values* for reference fields (e.g. `owned_by` resolves to the human-readable group name) and for choice fields (e.g. `business_criticality` resolves to the localised label). Display values are unstable: they change with locale and admin renames, breaking joins. The connector requests **raw values** by setting `sysparm_display_value=false` on every Table API call so foreign keys come back as `sys_id` strings and choice fields come back as their canonical underlying values. Resolution against `silver.teams` happens via Bronze-to-Silver join at the transform layer.
 - **Reference link expansion.** The Table API's default response inlines a `link` URL alongside every reference field's value (`{"value": "<sys_id>", "link": "<api-url>"}`). The connector sets `sysparm_exclude_reference_link=true` to flatten reference fields to bare `sys_id` strings, simplifying the Bronze schema and reducing payload size on full-reload bootstraps.
-- **Custom attributes (`u_*` columns).** Organisations routinely extend `cmdb_ci_business_app` with custom columns prefixed `u_` (e.g. `u_compliance_scope`, `u_data_classification`). The connector's `mapping.yml` projects only the standard fields the AppSec model consumes; everything else falls through to Bronze additively under schema-on-read. `generate-connector` MUST NOT hard-code a closed schema.
+- **Custom attributes (`u_*` columns).** Organisations routinely extend `cmdb_ci_business_app` with custom columns prefixed `u_` (e.g. `u_compliance_scope`, `u_data_classification`). The connector's `mapping.yml` projects only the standardized fields the AppSec model consumes; everything else falls through to Bronze additively under schema-on-read. `generate-connector` MUST NOT hard-code a closed schema.
 - **Relational data model, joined in Silver.** Applications, teams, and ownership are separate CI tables. The connector reads each as its own Bronze table; the join into `silver.applications` / `silver.teams` / `silver.app_repo_mapping` happens at the Silver transform layer, never at ingestion via the ServiceNow relationship API. This keeps the ingestion path stateless and the relationship logic testable without API mocks.
 - **High page count on bootstrap.** Offset-based pagination at `sysparm_limit=1000` over a large CMDB (tens of thousands of CIs) produces dozens of pages on the first run. The rate-limit and backoff policy in `ingest.py` is sized for this; subsequent incremental runs typically retrieve a single page.
 - **Personal Developer Instance hibernation.** PDIs hibernate after a few days of inactivity. The Table API returns `HTTP 200` with an HTML wake-up page rather than JSON when the instance is asleep. The connector treats a non-JSON `Content-Type` on a Table API response as a hard error with a clear remediation message ("wake the instance at developer.servicenow.com") rather than landing the HTML payload in Bronze.
@@ -231,5 +231,5 @@ This connector page is produced by the connector-lifecycle skills. Each row is f
 - ServiceNow Table API reference (latest, redirects to release-pinned page; release at run time: Yokohama): [https://developer.servicenow.com/dev.do#!/reference/api/latest/rest/c_TableAPI](https://developer.servicenow.com/dev.do#!/reference/api/latest/rest/c_TableAPI)
 - ServiceNow Table API reference (Yokohama, version-pinned URL): [https://www.servicenow.com/docs/r/yokohama/api-reference/rest-apis/c_TableAPI.html](https://www.servicenow.com/docs/r/yokohama/api-reference/rest-apis/c_TableAPI.html)
 - CMDB category capability contract: [Connectors > CMDB](index.md)
-- Standard mapping (Silver Entity Mapping Requirements): [Standard mapping](../../platform/reference/canonical-mapping.md#silver-entity-mapping-requirements)
+- Standardized mapping (Silver Entity Mapping Requirements): [Standardized mapping](../../platform/reference/canonical-mapping.md#silver-entity-mapping-requirements)
 - analyze-source CMDB skill reference: [CMDB skills](skills.md#analyze-source-cmdb-reference)

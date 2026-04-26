@@ -325,8 +325,8 @@ src/connectors/<source>/
 ├── transform.py                  transform(bronze_df) -> silver_df
 ├── mapping.yml                   bronze to silver column expressions
 ├── config.yml                    base URL, pagination, HWM column, secret refs
-├── severity.yml                  native severity to standard severity lookup
-├── status.yml                    native status to standard status lookup
+├── severity.yml                  native severity to standardized severity lookup
+├── status.yml                    native status to standardized status lookup
 ├── ingest_entry.py               (optional) Databricks notebook entry for the ingest task
 ├── transform_entry.py            (optional) Databricks notebook entry for the transform task
 │
@@ -446,7 +446,7 @@ This README is the entry point for engineers. The deeper material lives in:
 - 9 connectors at varying depths. See [Connector inventory](#connector-inventory).
 - DAB bundle with resources distributed across components
 - Optional Terraform runtimes for several connectors (5 of them)
-- Cross-source silver standard tables (`findings`, `finding_location`, `hwm`, `repositories`, `applications`, `app_repo_mapping`, `waf_events`, `suppression_rules`)
+- Cross-source standardized Silver tables (`findings`, `finding_location`, `hwm`, `repositories`, `applications`, `app_repo_mapping`, `waf_events`, `suppression_rules`)
 - Platform-layer [app-repo linker](mkdocs/docs/platform/app-repo-link.md) joining `silver.repositories` to `silver.applications` via embedded 5-digit app codes
 - Gold OLAP analytics: 5 daily-refreshed Delta tables (`app_risk_posture_daily`, `mttr_by_source_severity_weekly`, `coverage_matrix`, `dedup_link_overlap`, `cwe_owasp_heatmap`) plus a Gold view (`app_repo_findings_open`)
 - OLTP serving: 2 Databricks Online Tables (`gold_online.app_risk_posture`, `silver_online.app_repo_findings`) syncing continuously from Gold with ~5-min lag
@@ -471,7 +471,7 @@ If you're a thesis reviewer or external reader, the right starting points are:
 
 1. **<https://vkraus.github.io/appsec-mvp/>**, the user narrative.
 2. **`mkdocs/docs/platform/reference/catalog.md`**, the REQ catalog and traceability matrix (anchored by `@pytest.mark.requirement` markers).
-3. **One connector end-to-end**: pick `src/connectors/servicenow/` (Lakeflow Connect path) or `src/connectors/github/` (notebook job plus SCM standard entity) and read the implementation alongside the corresponding `mkdocs/docs/connectors/<category>/<source>.md` runbook.
+3. **One connector end-to-end**: pick `src/connectors/servicenow/` (Lakeflow Connect path) or `src/connectors/github/` (notebook job plus SCM standardized entity) and read the implementation alongside the corresponding `mkdocs/docs/connectors/<category>/<source>.md` runbook.
 
 ---
 

@@ -1,6 +1,6 @@
 # N/A — CMDB sources emit no findings.
 #
-# CMDB entities have no finding lifecycle. The standard five-state status
+# CMDB entities have no finding lifecycle. The standardized five-state status
 # model (`open`, `confirmed`, `resolved`, `false_positive`, `wontfix`)
 # does not apply. REQ-TRF-STS is N/A on the ServiceNow row of the
 # traceability matrix.

@@ -10,7 +10,7 @@ SAST connectors ingest static analysis findings keyed by repository, file, and r
 
 ## Capability contract
 
-SAST sources emit findings keyed by repository, file path, line number, rule identifier, and optional CWE category. Severity scales range from three to five levels, with overlapping but non-identical vocabularies. The specification requires lookup tables for each tool mapping each source value to the standard four level severity.
+SAST sources emit findings keyed by repository, file path, line number, rule identifier, and optional CWE category. Severity scales range from three to five levels, with overlapping but non-identical vocabularies. The specification requires lookup tables for each tool mapping each source value to the standardized four level severity.
 
 Three deployment styles recur:
 
@@ -27,9 +27,9 @@ SAST tools also split on an orthogonal axis (the **operational pattern**) that t
 
 Most SAST tools operate in one mode (Semgrep Docker hosted: CI/CD step; SonarQube server: periodic global), though some deployments run the same tool in both.
 
-## Standard mapping contribution
+## Standardized mapping contribution
 
-SAST sources populate the Silver `finding` table scoped by `(repository_id, file_path, rule_id)`. See [Standard mapping](../../platform/reference/canonical-mapping.md).
+SAST sources populate the Silver `finding` table scoped by `(repository_id, file_path, rule_id)`. See [Standardized mapping](../../platform/reference/canonical-mapping.md).
 
 ## Skills
 

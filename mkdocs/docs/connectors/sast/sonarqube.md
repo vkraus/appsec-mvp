@@ -138,7 +138,7 @@ Hotspots model a different concept from issues: a hotspot flags a security-sensi
 
 ## Mapping example
 
-This section shows how native SonarQube issue fields map to the standard
+This section shows how native SonarQube issue fields map to the standardized
 Silver Finding schema. The structure matches the `mapping.yml` convention used
 by `src/connectors/<source>/mapping.yml` throughout the reference
 implementation. Field names correspond to the
@@ -173,7 +173,7 @@ fields:
 
 ### Notes on non-obvious mappings
 
-- **Severity translation.** SonarQube uses a five-level scale (BLOCKER, CRITICAL, MAJOR, MINOR, INFO) while the standard model has four levels. The lookup in `src/connectors/sonarqube/severity.yml` collapses both MINOR and INFO to `low`. INFO maps directly rather than falling through to the default, because it is a defined value. Direct mapping avoids data-quality warnings on high-volume informational findings.
+- **Severity translation.** SonarQube uses a five-level scale (BLOCKER, CRITICAL, MAJOR, MINOR, INFO) while the standardized model has four levels. The lookup in `src/connectors/sonarqube/severity.yml` collapses both MINOR and INFO to `low`. INFO maps directly rather than falling through to the default, because it is a defined value. Direct mapping avoids data-quality warnings on high-volume informational findings.
 - **Status composition.** SonarQube splits lifecycle state across two fields: `status` (OPEN, CONFIRMED, REOPENED, RESOLVED, CLOSED) and `resolution` (FALSE-POSITIVE, WONTFIX, FIXED, REMOVED), where `resolution` is only present when `status` is RESOLVED or CLOSED. The lookup in `src/connectors/sonarqube/status.yml` treats the pair as a composite key. For example, RESOLVED+FALSE-POSITIVE maps to `false_positive` and CLOSED+REMOVED maps to `resolved`.
 - **File path extraction.** The `component` field encodes both the project key and the relative file path as `project-key:relative/path`. The Silver transform splits on the first colon to obtain `file_path`. Project keys cannot contain colons, so the split is unambiguous.
 - **CWE derivation.** The issues endpoint does not return CWE identifiers directly. `src/platform/cwe.py` derives CWE from the rule identifier using a pre-loaded rule-metadata table (populated from `/api/rules/search`). The `mapping.yml` records `cwe_id: null` to indicate the field is not read directly from the source record; the transform layer enriches it from the side table.

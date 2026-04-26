@@ -114,7 +114,7 @@ The fields below are the subset consumed by the connector. Complete schemas are 
 | `id` | string | Full SHA-1 commit hash. Primary key in `silver.commits`. |
 | `short_id` | string | Abbreviated SHA (8 characters). Stored for display purposes in reporting outputs. |
 | `title` | string | First line of the commit message. Used as the commit summary in gold layer views. |
-| `authored_date` | datetime (UTC) | Authoring timestamp. Used as the standard commit timestamp in `silver.commits`. |
+| `authored_date` | datetime (UTC) | Authoring timestamp. Used as the standardized commit timestamp in `silver.commits`. |
 | `committer_date` | datetime (UTC) | Committer timestamp. May differ from `authored_date` for rebased or amended commits. |
 | `author_name` | string | Committer display name as recorded in the `git` commit object. |
 | `author_email` | string | Committer email address. Used to resolve `author_name` to a GitLab user identity where possible. |
@@ -152,21 +152,21 @@ The fields below are the subset consumed by the connector. Complete schemas are 
 
 ### Enumerations
 
-**Vulnerability severity.** `severity` uses six values: `info`, `unknown`, `low`, `medium`, `high`, `critical`. `info` and `unknown` do not map to the four level standard scale of the framework. Both resolve to the connector configured default severity. `src/connectors/gitlab/severity.yml` documents this mapping and must be reviewed per deployment.
+**Vulnerability severity.** `severity` uses six values: `info`, `unknown`, `low`, `medium`, `high`, `critical`. `info` and `unknown` do not map to the four level standardized scale of the framework. Both resolve to the connector configured default severity. `src/connectors/gitlab/severity.yml` documents this mapping and must be reviewed per deployment.
 
 **Vulnerability state.** `state` takes `detected` (identified, unreviewed), `confirmed` (true positive), `dismissed` (suppressed without remediation), and `resolved` (remediated). The connector maps these via `src/connectors/gitlab/status.yml`.
 
-**Report type.** `report_type` identifies the scanner category: `sast`, `dependency_scanning`, `container_scanning`, `dast`, `secret_detection`, `coverage_fuzzing`, `api_fuzzing`, `cluster_image_scanning`. The connector maps `report_type` to the standard `category` column in `silver.findings`: `sast` to `sast`, `secret_detection` to `secret`, `dependency_scanning` to `sca`, `dast` to `dast`, `container_scanning` to `container`. Other report types land with `report_type` preserved as a domain column and the nearest standard `category`.
+**Report type.** `report_type` identifies the scanner category: `sast`, `dependency_scanning`, `container_scanning`, `dast`, `secret_detection`, `coverage_fuzzing`, `api_fuzzing`, `cluster_image_scanning`. The connector maps `report_type` to the standardized `category` column in `silver.findings`: `sast` to `sast`, `secret_detection` to `secret`, `dependency_scanning` to `sca`, `dast` to `dast`, `container_scanning` to `container`. Other report types land with `report_type` preserved as a domain column and the nearest standardized `category`.
 
 **Confidence.** `confidence` encodes the accuracy assessment from the scanner: `ignore`, `unknown`, `experimental`, `low`, `medium`, `high`, `confirmed`. The connector preserves it verbatim as a domain column. Gold layer risk scoring may use it as a weighting factor.
 
-**Protected branch access levels.** `protected_branches` returns `allowed_to_push` and `allowed_to_merge` arrays with `access_level` integers: 0 (No access), 30 (Developer), 40 (Maintainer), 60 (Admin). These are translated to the standard policy vocabulary in the Bronze to Silver transform.
+**Protected branch access levels.** `protected_branches` returns `allowed_to_push` and `allowed_to_merge` arrays with `access_level` integers: 0 (No access), 30 (Developer), 40 (Maintainer), 60 (Admin). These are translated to the standardized policy vocabulary in the Bronze to Silver transform.
 
 ### Quirks
 
 **Ultimate tier requirement for the Vulnerabilities API.** `/projects/{id}/vulnerabilities` and the Security Dashboard require GitLab Ultimate. On lower tiers, findings must be retrieved from CI pipeline artifacts (SARIF or GitLab JSON) via `/projects/{id}/jobs/{job_id}/artifacts`, requiring the connector to enumerate pipeline runs, identify jobs that produce security data, and fetch and parse each artifact. This pipeline level path is documented in the `README` for the connector and is selected via the `gitlab_finding_path` Terraform variable.
 
-**Severity fallback for `info` and `unknown`.** `info` (informational, no exploitability) and `unknown` (undetermined) have no four level standard equivalent. Both resolve to the connector configured default. Operators should set this to `low` in `src/connectors/gitlab/severity.yml` unless policy dictates otherwise.
+**Severity fallback for `info` and `unknown`.** `info` (informational, no exploitability) and `unknown` (undetermined) have no four level standardized equivalent. Both resolve to the connector configured default. Operators should set this to `low` in `src/connectors/gitlab/severity.yml` unless policy dictates otherwise.
 
 **Merge request versus pull request terminology.** A *merge request* in GitLab is a *pull request* in GitHub. The silver schema uses `pull_requests` uniformly. The connector maps `iid` to `pull_request.number` and records `gitlab` in `source` for platform filtering.
 
