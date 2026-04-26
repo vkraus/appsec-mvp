@@ -142,8 +142,11 @@ nav:
   - Build analytics:
       - analytics/index.md
       - Gold datasets: analytics/gold-datasets.md
-      - Evidence scenarios: analytics/evidence.md
+      - Online tables: analytics/online-tables.md
+      - Databricks app: analytics/databricks-app.md
+      - Suppression rules: analytics/suppression-rules.md
       - Dashboards: analytics/dashboards.md
+      - Evidence scenarios: analytics/evidence.md
       - Tests & traceability: analytics/tests.md
 
 extra:

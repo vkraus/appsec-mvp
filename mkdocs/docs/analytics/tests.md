@@ -71,3 +71,101 @@ Test fixtures follow the convention `{endpoint}_{scenario}.json` and live under 
 - Rate limit response (HTTP 429 with `Retry-After` header to exercise `REQ-ING-RL`).
 - Error response (HTTP 4xx or 5xx to exercise auth error paths and retry exhaustion).
 - Edge values for severity and status columns (every documented source value plus one undocumented value to exercise `REQ-TRF-SEV` and `REQ-TRF-STS` fallthrough).
+
+## Analytics-layer test patterns
+
+The analytics tests under `src/analytics/tests/` and
+`src/analytics/app/tests/` are not connector-style integration tests —
+they exercise pure-Python aggregation helpers and route handlers. Three
+patterns recur:
+
+### Synthetic DataFrame fixtures (lists of dicts)
+
+Each Gold notebook factors its aggregation logic into a pure-Python
+`compute_*_rows(...)` helper that takes lists of dicts and returns a
+list of dicts. The pytest under `src/analytics/tests/gold/` builds those
+inputs inline (no fixtures on disk, no JSON files) and asserts on the
+returned dicts. There is no Spark in the test path.
+
+```python
+def test_compute_posture_rows_typical_case():
+    findings = [
+        {"repository_id": "r1", "severity_canonical": "critical",
+         "status_canonical": "open"},
+        {"repository_id": "r1", "severity_canonical": "critical",
+         "status_canonical": "resolved"},
+    ]
+    app_repo = [{"repository_id": "r1", "application_id": "APP-001"}]
+    rules = []
+
+    rows = compute_posture_rows(findings, app_repo, rules,
+                                snapshot_date=date(2026, 4, 25))
+
+    assert rows == [{
+        "snapshot_date": date(2026, 4, 25),
+        "application_id": "APP-001",
+        "severity_canonical": "critical",
+        "open_count": 1,
+        "closed_count": 1,
+    }]
+```
+
+Three cases per Gold notebook: typical case, empty input, and one
+edge case specific to the metric (suppression match, ISO-week
+boundary, unmapped repository, etc.).
+
+### Spark-applied path is skip-marked
+
+Per CLAUDE.md, the project does not run a local `SparkSession`. The
+Spark wrapper functions in each Gold notebook (`_run_notebook`,
+`_spark_main`, the apply_suppression_rules Column expression) are
+exercised only on the Databricks job cluster. Tests that would need a
+local Spark are absent — the pure-Python path is the contract under
+test, and the Spark wrapper is a thin Column-based applicator over the
+same logic.
+
+### Mocked SQL + FastAPI TestClient for the App
+
+The App's tests under `src/analytics/app/tests/` use
+`unittest.mock.patch` against `databricks.sql.connect` (or against the
+two query helpers in `queries.py`) to return canned rows, and
+`fastapi.testclient.TestClient` to exercise the route handlers
+end-to-end without a live workspace.
+
+```python
+from unittest.mock import patch
+from fastapi.testclient import TestClient
+from src.analytics.app.main import app
+
+def test_get_score_returns_breakdown():
+    canned = {"application_id": "APP-001", "score": 23,
+              "severity_breakdown": {"critical": 2, "high": 1,
+                                     "medium": 0, "low": 0},
+              "snapshot_date": "2026-04-25"}
+    with patch("src.analytics.app.queries.fetch_score", return_value=canned), \
+         patch("src.analytics.app.queries.connect"):
+        client = TestClient(app)
+        resp = client.get("/v1/score?app_id=APP-001")
+    assert resp.status_code == 200
+    assert resp.json()["score"] == 23
+```
+
+### Live tests are skip-marked and excluded from CI
+
+Tests that need a real Databricks workspace (a deployed App, populated
+Online Tables, valid PAT) carry `@pytest.mark.skip` with a reason
+string. They live alongside the unit tests so operators can flip them on
+manually for end-to-end smoke tests, but CI does not execute them.
+
+```python
+import pytest
+
+@pytest.mark.skip(reason="live: requires a deployed App + valid PAT")
+def test_score_endpoint_against_live_workspace():
+    ...
+```
+
+The convention is to gate live tests with `@pytest.mark.skip` rather
+than environment-variable detection, so the skip is unconditional and
+the operator opts in by editing the test source. This avoids
+accidental-cost surprises in CI.

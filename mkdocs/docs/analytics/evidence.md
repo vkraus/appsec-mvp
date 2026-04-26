@@ -2,6 +2,16 @@
 
 Three scenarios that exercise the end-to-end pipeline. Completing all three is your "you're done" signal.
 
+!!! info "Low-latency consumers use the OLTP path"
+    The queries on this page run against Silver directly via a SQL
+    warehouse — the right shape for ad-hoc evidence runs. Real-time
+    consumers (Slack bot, IDE plugin, CI/CD pre-merge gate) should use
+    the [Databricks app](databricks-app.md) instead, which reads the
+    [Online Tables](online-tables.md) replicas at sub-50 ms PK lookup
+    latency and applies the configured pre-merge policy. The OLTP-served
+    metrics are derived from the same Silver record these evidence
+    queries scan, so the numbers reconcile.
+
 ## Evidence 1: Cross-tool deduplication
 
 **Claim:** two independent SAST tools (SonarQube and Semgrep) pointed at the same repository produce overlapping findings that the pipeline deduplicates.
