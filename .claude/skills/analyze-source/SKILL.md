@@ -46,13 +46,13 @@ The table drives `databricks_runtime.ingestion_path` resolution per the procedur
 
 ### Resolution precedence
 
-When the source name matches a row above AND the category is in scope, set `ingestion_path: lakeflow_connect`. Otherwise, defer to the per-category reference's ingestion-tooling preference: SAST CLI / secrets CLI / DAST CLI categories pin `artifact_path`; all others default to `sdk_dlt`. `AskUserQuestion` is reserved for future categories where the choice is genuinely ambiguous; today no category triggers it.
+When the source name matches a row above AND the category is in scope, set `ingestion_path: lakeflow_connect`. Otherwise, defer to the per-category reference's ingestion-tooling preference: when the category reference flags the source's path as CLI-based or artefact-driven (per the SAST/secrets/DAST CLI exception documented in `references/<category>.md`), pin `artifact_path`; otherwise default to `sdk_dlt`. `AskUserQuestion` is reserved for future categories where the choice is genuinely ambiguous; today no category triggers it.
 
 ## Procedure
 
 1. Read `references/<category>.md` for category-specific facts that influence the Reference section's seven API facts — applicable REQ-IDs, default severity, HWM preference, dedup key shape, target Silver tables, auth norms, ingestion-tooling preference, quirks.
 
-   ALSO read the "## Lakeflow Connect managed-source catalogue" subsection above. The catalogue and category reference together drive `ingestion_path` resolution in the new step 9a below.
+   ALSO read the "## Lakeflow Connect managed-source catalogue" subsection above. The catalogue and category reference together drive `ingestion_path` resolution in the new step 9 below.
 2. Fetch the source's API documentation via WebFetch from the input URL. Cache the fetched content for citations.
 3. Identify the authentication mechanism the source supports; cross-check against the category's auth norm in `references/<category>.md`. If the source supports multiple auth modes, select the one matching the category convention.
 4. Enumerate the endpoints required to populate the Silver tables assigned to the source's category. Cross-reference the Silver Table Ownership table at `mkdocs/docs/platform/reference/catalog.md` and the canonical schemas at `mkdocs/docs/platform/reference/canonical-mapping.md`.
@@ -60,11 +60,11 @@ When the source name matches a row above AND the category is in scope, set `inge
 6. Extract a consumed-field schema excerpt — only fields the connector actually reads — matching the canonical Silver fields from `mkdocs/docs/platform/reference/canonical-mapping.md` (entities or findings schema, whichever applies to the category).
 7. Produce severity and status lookup proposals per the canonical enumeration models at `mkdocs/docs/platform/reference/canonical-mapping.md`. For categories where severity or status do not apply (CMDB, secrets-status), record the N/A explicitly.
 8. Document quirks: deviations from category norms, format surprises, per-source handling policies. Cross-check `references/<category>.md` for category quirks the source may inherit.
-9. Assemble the six-section Markdown page and emit to the output path.
-9a. **Resolve `databricks_runtime.ingestion_path` and write it to `operational.yml`.** Apply the resolution precedence in the catalogue subsection: (a) source name + category match → `lakeflow_connect`; (b) category-canonical fallback (`artifact_path` for SAST CLI / secrets / DAST CLI; `sdk_dlt` otherwise); (c) `AskUserQuestion` only when the category reference flags the choice as ambiguous. Write the chosen value to `src/connectors/{source}/operational.yml` under `databricks_runtime.ingestion_path`. If `operational.yml` does not yet exist, stage the value as a Reference-section note for `generate-connector` to consume.
+9. **Resolve `databricks_runtime.ingestion_path` and write it to `operational.yml`.** Apply the resolution precedence in the catalogue subsection: (a) source name + category match → `lakeflow_connect`; (b) category-canonical fallback — defer to the per-category reference's ingestion-tooling preference: when the category reference flags the source's path as CLI-based or artefact-driven (per the SAST/secrets/DAST CLI exception documented in `references/<category>.md`), pin `artifact_path`; otherwise default to `sdk_dlt`; (c) `AskUserQuestion` only when the category reference flags the choice as ambiguous. Write the chosen value to `src/connectors/{source}/operational.yml` under `databricks_runtime.ingestion_path`. If `operational.yml` does not yet exist, stage the value as a Reference-section note for `generate-connector` to consume.
 
    When the chosen value is `lakeflow_connect`, append one sentence to the Reference section's API surface fact: "Lakeflow Connect supports {source} as a managed connector via {api_surface} (per the analyze-source LFC managed-source catalogue, refreshed {date}); this connector chooses the `lakeflow_connect` ingestion path."
-10. Stub the Implementation log section with the row for this skill (date, inputs, outputs, skill repo ref via `git rev-parse --short HEAD`); leave rows for `generate-connector` and `validate-implementation` marked `(pending)`.
+10. Assemble the six-section Markdown page and emit to the output path.
+11. Stub the Implementation log section with the row for this skill (date, inputs, outputs, skill repo ref via `git rev-parse --short HEAD`); leave rows for `generate-connector` and `validate-implementation` marked `(pending)`.
 
 The seven API facts captured under Reference are:
 
@@ -96,6 +96,7 @@ Append exactly one row to the Implementation log table for this skill's invocati
 ```
 
 - `{category}` — the AppSec category input (`cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, or `waf`).
+- `{value}` — the resolved `databricks_runtime.ingestion_path` (`lakeflow_connect`, `sdk_dlt`, or `artifact_path`).
 - `{source}` — the source name input.
 - `{doc_url}` — the official API documentation URL input.
 - `{slug}` — the kebab-case slug used in the output filename.
