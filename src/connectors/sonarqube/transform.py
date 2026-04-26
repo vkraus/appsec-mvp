@@ -48,19 +48,21 @@ _STATUS_PATH = _CONNECTOR_DIR / "status.yml"
 _SILVER_TYPES_FOR_FINDINGS: frozenset[str] = frozenset({"BUG", "VULNERABILITY"})
 
 
-_RAW_ISSUE_SCHEMA = StructType([
-    StructField("key", StringType(), nullable=False),
-    StructField("rule", StringType(), nullable=False),
-    StructField("severity", StringType(), nullable=True),
-    StructField("status", StringType(), nullable=True),
-    StructField("resolution", StringType(), nullable=True),
-    StructField("project", StringType(), nullable=True),
-    StructField("component", StringType(), nullable=True),
-    StructField("line", IntegerType(), nullable=True),
-    StructField("type", StringType(), nullable=True),
-    StructField("creationDate", StringType(), nullable=True),
-    StructField("updateDate", StringType(), nullable=True),
-])
+_RAW_ISSUE_SCHEMA = StructType(
+    [
+        StructField("key", StringType(), nullable=False),
+        StructField("rule", StringType(), nullable=False),
+        StructField("severity", StringType(), nullable=True),
+        StructField("status", StringType(), nullable=True),
+        StructField("resolution", StringType(), nullable=True),
+        StructField("project", StringType(), nullable=True),
+        StructField("component", StringType(), nullable=True),
+        StructField("line", IntegerType(), nullable=True),
+        StructField("type", StringType(), nullable=True),
+        StructField("creationDate", StringType(), nullable=True),
+        StructField("updateDate", StringType(), nullable=True),
+    ]
+)
 
 
 def _parse_sonar_ts(raw: str | None) -> datetime | None:

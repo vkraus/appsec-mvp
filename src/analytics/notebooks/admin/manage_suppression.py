@@ -25,7 +25,7 @@ runtime invokes ``_run_notebook`` only when ``dbutils`` is present.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -55,10 +55,7 @@ def validate_inputs(
     failure so the operator sees a clear error in the notebook output.
     """
     if scope not in CANONICAL_SCOPES:
-        raise ValueError(
-            f"scope {scope!r} is not in the canonical enum "
-            f"{sorted(CANONICAL_SCOPES)}"
-        )
+        raise ValueError(f"scope {scope!r} is not in the canonical enum {sorted(CANONICAL_SCOPES)}")
     if not target_pattern or not target_pattern.strip():
         raise ValueError("target_pattern must be non-empty")
     if not reason or not reason.strip():
@@ -71,9 +68,7 @@ def validate_inputs(
             f"expires_at_days must be a positive integer, got {expires_at_days!r}"
         ) from exc
     if days <= 0:
-        raise ValueError(
-            f"expires_at_days must be a positive integer, got {days}"
-        )
+        raise ValueError(f"expires_at_days must be a positive integer, got {days}")
     return days
 
 
@@ -91,7 +86,7 @@ def build_rule_row(
     ``expires_at`` is ``now + expires_at_days``.
     """
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
     return {
         "rule_id": str(uuid4()),
@@ -154,11 +149,7 @@ def _run_notebook() -> None:
     )
 
     df = spark.createDataFrame([row])
-    (
-        df.write.format("delta")
-        .mode("append")
-        .saveAsTable(f"{catalog}.silver.suppression_rules")
-    )
+    (df.write.format("delta").mode("append").saveAsTable(f"{catalog}.silver.suppression_rules"))
 
     print(
         f"appended suppression rule {row['rule_id']} "

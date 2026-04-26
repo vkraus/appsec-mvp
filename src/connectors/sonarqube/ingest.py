@@ -151,9 +151,7 @@ def advance_hwm(issues: list[dict[str, Any]], prev_hwm: str | None) -> str | Non
     return max_seen
 
 
-def filter_since_hwm(
-    issues: list[dict[str, Any]], prev_hwm: str | None
-) -> list[dict[str, Any]]:
+def filter_since_hwm(issues: list[dict[str, Any]], prev_hwm: str | None) -> list[dict[str, Any]]:
     """Return only issues strictly newer than ``prev_hwm``. ``None``
     (first run) returns everything. String comparison is exact for UTC
     ISO-8601 timestamps with a fixed offset.
@@ -182,8 +180,7 @@ def ingest(run_id: str, state: ConnectorState) -> BatchDescriptor:
     catalog = extra.get("catalog")
     if not token or not base_url or not catalog:
         raise ValueError(
-            "sonarqube.ingest requires state['extra'] with "
-            "'token', 'base_url', and 'catalog'"
+            "sonarqube.ingest requires state['extra'] with 'token', 'base_url', and 'catalog'"
         )
 
     # The record_count is 0 in this contract wrapper because the dlt REST

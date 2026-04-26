@@ -89,9 +89,7 @@ def build_sysparm_query(
     if hwm_value is None:
         return f"ORDERBY{order_by}"
     if not _SN_DATETIME_RE.match(hwm_value):
-        raise ValueError(
-            f"servicenow hwm_value must be 'YYYY-MM-DD HH:MM:SS', got {hwm_value!r}"
-        )
+        raise ValueError(f"servicenow hwm_value must be 'YYYY-MM-DD HH:MM:SS', got {hwm_value!r}")
     return f"sys_updated_on>={hwm_value}^ORDERBY{order_by}"
 
 
@@ -116,10 +114,7 @@ def is_html_hibernation_response(content_type: str | None, body: str | None) -> 
     # Conservative: if the content type is set but is not JSON, treat as
     # hibernation. This matches the page's prescription that any non-JSON
     # response on the Table API is a hard error.
-    return bool(
-        content_type
-        and not content_type.lower().startswith(_JSON_CONTENT_TYPE_PREFIX)
-    )
+    return bool(content_type and not content_type.lower().startswith(_JSON_CONTENT_TYPE_PREFIX))
 
 
 def raise_if_hibernating(content_type: str | None, body: str | None) -> None:
@@ -216,9 +211,7 @@ def ingest_contract(run_id: str, state: ConnectorState) -> BatchDescriptor:
             "base_url, username, password, catalog"
         )
     tables = extra.get("tables") or ("cmdb_ci_business_app",)
-    bronze_table_prefix = (
-        extra.get("bronze_table_prefix") or f"{catalog}.bronze_servicenow"
-    )
+    bronze_table_prefix = extra.get("bronze_table_prefix") or f"{catalog}.bronze_servicenow"
     spark = extra.get("spark")
 
     run_ingest_pipeline(

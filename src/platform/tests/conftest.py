@@ -5,6 +5,7 @@ tests. DataFrame-shaped assertions run against Databricks Connect when the
 environment is configured, otherwise they are skipped. Pure-Python unit
 tests do not use any fixture from this file.
 """
+
 from __future__ import annotations
 
 import os
@@ -21,9 +22,7 @@ def spark():
     repo rule mandates that Spark logic runs on Databricks.
     """
     if not os.environ.get("DATABRICKS_HOST"):
-        pytest.skip(
-            "DATABRICKS_HOST is not set; Spark tests run via Databricks Connect only."
-        )
+        pytest.skip("DATABRICKS_HOST is not set; Spark tests run via Databricks Connect only.")
     try:
         from databricks.connect import DatabricksSession  # type: ignore[import-not-found]
     except ImportError:

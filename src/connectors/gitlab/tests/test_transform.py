@@ -14,6 +14,7 @@ declarative YAML lookups in ``src/connectors/gitlab/severity.yml`` and
 - REQ-DQ       — unmapped severity values fall through to the configured default
 - REQ-DEDUP    — dedup-key tuple matches the finding-shape discriminator
 """
+
 from __future__ import annotations
 
 import json
@@ -233,7 +234,12 @@ def test_dedup_key_branches_on_finding_shape() -> None:
 
     sast = vulnerability_to_finding(200, by_id[5001])
     assert sast["category"] == "sast"
-    assert sast["dedup_key"] == ("200", "src/auth/tokens.py", 42, "Predictable pseudorandom number generator (PRNG)")
+    assert sast["dedup_key"] == (
+        "200",
+        "src/auth/tokens.py",
+        42,
+        "Predictable pseudorandom number generator (PRNG)",
+    )
 
     secret = vulnerability_to_finding(200, by_id[5002])
     assert secret["category"] == "secret"

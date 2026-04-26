@@ -16,7 +16,6 @@ import pytest
 
 from src.analytics.app import queries
 
-
 # --- helpers ---
 
 
@@ -169,9 +168,8 @@ def test_connect_raises_when_env_vars_missing(monkeypatch) -> None:
     ):
         monkeypatch.delenv(var, raising=False)
 
-    with pytest.raises(RuntimeError, match="DATABRICKS_SERVER_HOSTNAME"):
-        with queries.connect():
-            pass  # pragma: no cover
+    with pytest.raises(RuntimeError, match="DATABRICKS_SERVER_HOSTNAME"), queries.connect():
+        pass  # pragma: no cover
 
 
 def test_connect_calls_dbsql_with_env_vars(monkeypatch) -> None:

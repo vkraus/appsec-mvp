@@ -155,7 +155,7 @@ def test_classify_trigger_rejects_ambiguous_inputs() -> None:
 @pytest.mark.requirement("REQ-ING-AUTH")
 @pytest.mark.skip(
     reason="N/A: CI/CD-step artefact path has no native auth on report files; "
-           "access governed by object-storage IAM (per catalog matrix N/A column)"
+    "access governed by object-storage IAM (per catalog matrix N/A column)"
 )
 def test_auth_not_applicable_under_cicd_path() -> None:
     """REQ-ING-AUTH: N/A in the CI/CD-step path — placeholder for the matrix."""
@@ -233,8 +233,8 @@ def test_scrub_apikey_strips_query_parameter_value() -> None:
 @pytest.mark.requirement("REQ-ING-PAG")
 @pytest.mark.skip(
     reason="N/A under CI/CD-step path (one report per pipeline run); "
-           "the daemon-path pagination contract is exercised by "
-           "test_iter_paged_alerts_terminates_on_short_page below"
+    "the daemon-path pagination contract is exercised by "
+    "test_iter_paged_alerts_terminates_on_short_page below"
 )
 def test_pagination_not_applicable_under_cicd_path() -> None:
     """REQ-ING-PAG: N/A under the CI/CD-step path — placeholder for the matrix."""
@@ -251,20 +251,22 @@ def test_iter_paged_alerts_terminates_on_short_page() -> None:
     PASS profile, but the daemon-path iterator MUST be correct on its
     own — exercised here directly.)
     """
-    page1 = _load_fixture("alerts.json")             # 2 items
+    page1 = _load_fixture("alerts.json")  # 2 items
     page_size = 5
     pages = iter([page1, {"alerts": []}])
 
     def fetch(_url):
         return next(pages)
 
-    out = list(iter_paged_alerts(
-        fetch,
-        base_url="http://zap-daemon.internal:8080",
-        baseurl="https://app.test",
-        apikey="abc123",
-        page_size=page_size,
-    ))
+    out = list(
+        iter_paged_alerts(
+            fetch,
+            base_url="http://zap-daemon.internal:8080",
+            baseurl="https://app.test",
+            apikey="abc123",
+            page_size=page_size,
+        )
+    )
     # First page returns 2 < page_size -> loop terminates after page 1.
     assert len(out) == 2
     assert out[0]["pluginId"] == "10038"
@@ -293,8 +295,8 @@ def test_build_alerts_url_uses_offset_limit_pagination() -> None:
 @pytest.mark.requirement("REQ-ING-RL")
 @pytest.mark.skip(
     reason="N/A: ZAP enforces no documented per-client rate limit; "
-           "throughput is daemon-resource bounded. CI/CD-step path has "
-           "no API quota at all (N/A per catalog matrix)."
+    "throughput is daemon-resource bounded. CI/CD-step path has "
+    "no API quota at all (N/A per catalog matrix)."
 )
 def test_rate_limit_not_applicable() -> None:
     """REQ-ING-RL: N/A under both ingestion paths — placeholder for the matrix."""

@@ -20,6 +20,7 @@ REQ-ID coverage:
 No local SparkSession is instantiated; the ``apply_deployments_join``
 Spark-level test is skip-marked (local-Spark is prohibited by CLAUDE.md).
 """
+
 from __future__ import annotations
 
 import json
@@ -63,7 +64,7 @@ def test_normalise_event_projects_log_record_onto_silver_shape() -> None:
     assert row["tool_source"] == "aws_waf"
     assert row["category"] == "waf"
     assert row["webacl_arn"] == raw["webaclId"]
-    assert row["application_id"] is None      # resolved via deployments join, not here
+    assert row["application_id"] is None  # resolved via deployments join, not here
     assert row["rule_id"] == "AWSManagedRulesCommonRuleSet_XSS"
     assert row["rule_type"] == "MANAGED_RULE_GROUP"
     assert row["action"] == "BLOCK"
@@ -153,8 +154,9 @@ def test_epoch_ms_timestamp_normalises_to_utc_datetime() -> None:
     assert isinstance(row["timestamp"], datetime)
     assert row["timestamp"].tzinfo is UTC
     # 1713600000000 ms -> 2024-04-20T07:28:20+00:00 deterministically.
-    assert row["timestamp"] == datetime(2024, 4, 20, 7, 0, tzinfo=UTC) or \
-        row["timestamp"] == datetime.fromtimestamp(1713600000, tz=UTC)
+    assert row["timestamp"] == datetime(2024, 4, 20, 7, 0, tzinfo=UTC) or row[
+        "timestamp"
+    ] == datetime.fromtimestamp(1713600000, tz=UTC)
 
 
 @pytest.mark.requirement("REQ-TRF-TS")
@@ -236,8 +238,11 @@ def test_action_field_is_non_null_on_every_valid_record() -> None:
 # REQ-TRF-STS — N/A for WAF (append-only stream). Skip-marked per matrix.
 # ------------------------------------------------------------------
 
+
 @pytest.mark.requirement("REQ-TRF-STS")
-@pytest.mark.skip(reason="N/A: WAF events are append-only; no status lifecycle. status_canonical is always null.")
+@pytest.mark.skip(
+    reason="N/A: WAF events are append-only; no status lifecycle. status_canonical is always null."
+)
 def test_status_normalisation_not_applicable() -> None:
     """REQ-TRF-STS: N/A per references/waf.md."""
     raise AssertionError("unreachable — test is skip-marked")
@@ -247,8 +252,11 @@ def test_status_normalisation_not_applicable() -> None:
 # Spark-dependent path — skip-marked (CLAUDE.md bans local SparkSession).
 # ------------------------------------------------------------------
 
+
 @pytest.mark.e2e
-@pytest.mark.skip(reason="requires Databricks Connect / remote Spark — no local SparkSession per CLAUDE.md")
+@pytest.mark.skip(
+    reason="requires Databricks Connect / remote Spark — no local SparkSession per CLAUDE.md"
+)
 def test_apply_deployments_join_resolves_application_id_remotely() -> None:
     """Spark-level join against silver.deployments (ARN linkage). Remote-only."""
     raise AssertionError("unreachable — test is skip-marked")

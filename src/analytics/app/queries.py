@@ -12,8 +12,9 @@ Connection params are read from environment variables:
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import Any
 
 # ``databricks.sql`` is imported lazily inside ``connect`` so the module is
 # importable without the connector in environments where only the helpers
@@ -41,9 +42,7 @@ def connect() -> Iterator[Any]:
         if not value
     ]
     if missing:
-        raise RuntimeError(
-            f"Missing required Databricks SQL env vars: {', '.join(missing)}"
-        )
+        raise RuntimeError(f"Missing required Databricks SQL env vars: {', '.join(missing)}")
 
     from databricks import sql as dbsql  # local import — see module docstring
 

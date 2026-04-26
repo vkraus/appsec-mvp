@@ -1,4 +1,5 @@
 """Envelope helper for bronze writes per thesis section 2.2.2."""
+
 from __future__ import annotations
 
 import pytest

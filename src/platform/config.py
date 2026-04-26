@@ -45,7 +45,9 @@ class SeverityMap(RootModel[dict[str, Literal["critical", "high", "medium", "low
     pass
 
 
-class StatusMap(RootModel[dict[str, Literal["open", "confirmed", "resolved", "false_positive", "wontfix"]]]):
+class StatusMap(
+    RootModel[dict[str, Literal["open", "confirmed", "resolved", "false_positive", "wontfix"]]]
+):
     pass
 
 

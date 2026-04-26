@@ -20,8 +20,9 @@ Spark in tests").
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
-from typing import Any, Iterable, Mapping
+from collections.abc import Iterable, Mapping
+from datetime import UTC, date, datetime
+from typing import Any
 
 from pyspark.sql import SparkSession
 
@@ -61,7 +62,7 @@ def compute_posture_rows(
     5. Stamp each output row with ``snapshot_date``.
     """
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
     rules = list(suppression_rules)
 

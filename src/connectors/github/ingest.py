@@ -246,9 +246,7 @@ def filter_since_hwm(
 # --- Webhook signature verification (mode: webhook) -------------------------
 
 
-def verify_webhook_signature(
-    body: bytes, signature_header: str | None, secret: str
-) -> bool:
+def verify_webhook_signature(body: bytes, signature_header: str | None, secret: str) -> bool:
     """Verify GitHub's ``X-Hub-Signature-256`` header against the request
     body.
 
@@ -291,9 +289,7 @@ def ingest(run_id: str, state: ConnectorState) -> BatchDescriptor:
     org = extra.get("org")
     catalog = extra.get("catalog")
     if not token or not org or not catalog:
-        raise ValueError(
-            "github.ingest requires state['extra'] with 'token', 'org', and 'catalog'"
-        )
+        raise ValueError("github.ingest requires state['extra'] with 'token', 'org', and 'catalog'")
 
     # The record_count is 0 in this contract wrapper because the dlt /
     # SDK driver writes directly and does not surface a count in-process;

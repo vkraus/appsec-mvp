@@ -115,9 +115,7 @@ def test_build_table_url_targets_table_api_endpoint() -> None:
     """REQ-ING-PAG scaffolding: the URL builder produces the canonical
     ``/api/now/table/{tableName}`` endpoint shape that pagination iterates
     against."""
-    url = build_table_url(
-        "https://dev123456.service-now.com/", "cmdb_ci_business_app"
-    )
+    url = build_table_url("https://dev123456.service-now.com/", "cmdb_ci_business_app")
     assert url == "https://dev123456.service-now.com/api/now/table/cmdb_ci_business_app"
 
 
@@ -213,7 +211,7 @@ def test_build_sysparm_query_rejects_malformed_hwm_value() -> None:
     clear ``ValueError`` rather than silently producing an invalid query
     that the server would interpret as no filter."""
     with pytest.raises(ValueError, match="YYYY-MM-DD HH:MM:SS"):
-        build_sysparm_query("2026-04-19T18:00:00Z")   # ISO-8601 — wrong format
+        build_sysparm_query("2026-04-19T18:00:00Z")  # ISO-8601 — wrong format
 
 
 @pytest.mark.requirement("REQ-ING-HWM")

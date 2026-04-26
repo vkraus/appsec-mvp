@@ -15,6 +15,7 @@ REQ-ID coverage:
 No local SparkSession is instantiated — pure-Python contracts only per the
 CLAUDE.md architectural rules.
 """
+
 from __future__ import annotations
 
 import json
@@ -107,7 +108,7 @@ def test_event_timestamp_hwm_rejects_naive_datetime(tmp_path) -> None:
     store = HwmStore(tmp_path / "aws_waf_hwm.json")
     hwm = UpdatedAtHwm("aws_waf::webacl::x", store)
     with pytest.raises(ValueError, match="timezone-aware"):
-        hwm.write(datetime(2026, 4, 20, 10, 0, 0))   # naive — rejected
+        hwm.write(datetime(2026, 4, 20, 10, 0, 0))  # naive — rejected
 
 
 def test_classify_ingestion_mode_accepts_documented_modes() -> None:
@@ -117,7 +118,7 @@ def test_classify_ingestion_mode_accepts_documented_modes() -> None:
 
 def test_classify_ingestion_mode_rejects_unknown_mode() -> None:
     with pytest.raises(ValueError):
-        classify_ingestion_mode("http")   # not a documented surface
+        classify_ingestion_mode("http")  # not a documented surface
 
 
 def test_documented_actions_match_reference_vocabulary() -> None:
@@ -140,14 +141,16 @@ def test_iter_sampled_requests_preserves_weight_field() -> None:
         ],
     }
 
-    out = list(iter_sampled_requests(
-        client,
-        web_acl_arn=sample["webaclId"],
-        rule_metric_name="SQLi_BODY",
-        scope="CLOUDFRONT",
-        start_time=datetime(2026, 4, 20, 9, 0, tzinfo=UTC),
-        end_time=datetime(2026, 4, 20, 10, 0, tzinfo=UTC),
-    ))
+    out = list(
+        iter_sampled_requests(
+            client,
+            web_acl_arn=sample["webaclId"],
+            rule_metric_name="SQLi_BODY",
+            scope="CLOUDFRONT",
+            start_time=datetime(2026, 4, 20, 9, 0, tzinfo=UTC),
+            end_time=datetime(2026, 4, 20, 10, 0, tzinfo=UTC),
+        )
+    )
 
     assert len(out) == 1
     assert out[0]["Weight"] == 23
@@ -161,8 +164,11 @@ def test_iter_sampled_requests_preserves_weight_field() -> None:
 # placeholders per the WAF reference profile.
 # ------------------------------------------------------------------
 
+
 @pytest.mark.requirement("REQ-ING-PAG")
-@pytest.mark.skip(reason="N/A: log-stream autoloader has no pagination; SDK-fallback GetSampledRequests is single-page (MaxItems=500 cap)")
+@pytest.mark.skip(
+    reason="N/A: log-stream autoloader has no pagination; SDK-fallback GetSampledRequests is single-page (MaxItems=500 cap)"
+)
 def test_pagination_not_applicable_under_log_stream() -> None:
     """REQ-ING-PAG: N/A in the preferred log-stream mode.
 
@@ -174,7 +180,9 @@ def test_pagination_not_applicable_under_log_stream() -> None:
 
 
 @pytest.mark.requirement("REQ-ING-RL")
-@pytest.mark.skip(reason="N/A: log-stream autoloader has no API quota; SDK-fallback retry is delegated to boto3's native ThrottlingException handling")
+@pytest.mark.skip(
+    reason="N/A: log-stream autoloader has no API quota; SDK-fallback retry is delegated to boto3's native ThrottlingException handling"
+)
 def test_rate_limit_not_applicable_under_log_stream() -> None:
     """REQ-ING-RL: N/A in the preferred log-stream mode."""
     raise AssertionError("unreachable — test is skip-marked")
@@ -183,6 +191,7 @@ def test_rate_limit_not_applicable_under_log_stream() -> None:
 # ------------------------------------------------------------------
 # Live-only paths — skip unless LIVE_AWS_WAF is set.
 # ------------------------------------------------------------------
+
 
 @pytest.mark.integration
 @pytest.mark.skip(reason="live-only: requires AWS creds and a Firehose-to-S3 prefix")

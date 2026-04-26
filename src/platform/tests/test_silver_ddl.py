@@ -75,8 +75,7 @@ def ddl_text() -> str:
 def test_struct_matches_ddl(struct_attr: str, table: str, ddl_text: str) -> None:
     struct = getattr(schemas, struct_attr)
     struct_cols = [
-        (f.name.lower(), f.dataType.typeName().lower(), f.nullable)
-        for f in struct.fields
+        (f.name.lower(), f.dataType.typeName().lower(), f.nullable) for f in struct.fields
     ]
     ddl_cols = _parse_ddl_block(ddl_text, table)
 
@@ -88,8 +87,8 @@ def test_struct_matches_ddl(struct_attr: str, table: str, ddl_text: str) -> None
         f"  DDL:        {ddl_names}"
     )
 
-    for (sname, stype, snullable), (dname, dtype, dnullable) in zip(
-        struct_cols, ddl_cols
+    for (sname, stype, snullable), (_dname, dtype, dnullable) in zip(
+        struct_cols, ddl_cols, strict=False
     ):
         accepted = TYPE_ALIASES.get(stype, {stype})
         assert dtype in accepted, (

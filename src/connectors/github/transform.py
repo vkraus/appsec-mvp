@@ -105,9 +105,7 @@ def repository_to_silver(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def pull_request_to_silver(
-    repository_id: str, raw: dict[str, Any]
-) -> dict[str, Any]:
+def pull_request_to_silver(repository_id: str, raw: dict[str, Any]) -> dict[str, Any]:
     """Project a GitHub pull-request row to a ``silver.pull_requests`` row.
 
     ``source`` is stamped ``github`` so downstream gold-layer views can
@@ -222,7 +220,7 @@ def code_scanning_alert_to_finding(
     """
     rule = raw.get("rule") or {}
     instance = raw.get("most_recent_instance") or {}
-    location = (instance.get("location") or {})
+    location = instance.get("location") or {}
 
     sev_native = rule.get("security_severity_level")
     severity_canonical = (
@@ -268,9 +266,7 @@ def secret_scanning_alert_to_finding(
     """
     state = raw.get("state")
     resolution = raw.get("resolution")
-    status_canonical = normalize_status(
-        _compose_status_key(state, resolution), status_map
-    )
+    status_canonical = normalize_status(_compose_status_key(state, resolution), status_map)
     # Native severity absent for secret scanning per page §; severity
     # lookup applied for forward-compatibility if GitHub later exposes
     # one. Default per page is ``high``.
@@ -322,9 +318,7 @@ def dependabot_alert_to_finding(
     package = dependency.get("package") or {}
 
     sev_native = sec_vuln.get("severity")
-    severity_canonical = (
-        normalize_severity(sev_native, severity_map) if sev_native else "medium"
-    )
+    severity_canonical = normalize_severity(sev_native, severity_map) if sev_native else "medium"
     status_canonical = normalize_status(raw.get("state") or "", status_map)
 
     cve_id = advisory.get("cve_id")

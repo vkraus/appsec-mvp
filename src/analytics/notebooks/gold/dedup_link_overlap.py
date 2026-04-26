@@ -124,9 +124,7 @@ def compute_overlap_rows(
 
     # Step 1: filter by suppression. Done up-front so subsequent grouping
     # can't re-introduce suppressed findings.
-    surviving = [
-        f for f in findings_rows if not is_row_suppressed(f, rules, now=now)
-    ]
+    surviving = [f for f in findings_rows if not is_row_suppressed(f, rules, now=now)]
 
     # Step 2: per category, collapse findings to dedup-tuple-keyed sets
     # of distinct tool_sources. Then enumerate every unordered pair
@@ -176,9 +174,7 @@ def compute_overlap_rows(
                 }
             )
 
-    out.sort(
-        key=lambda r: (r["category"], r["tool_source_a"], r["tool_source_b"])
-    )
+    out.sort(key=lambda r: (r["category"], r["tool_source_a"], r["tool_source_b"]))
     return out
 
 

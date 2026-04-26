@@ -28,7 +28,7 @@ def test_bootstrap_sql_declares_trigger_context_on_findings():
         sql,
         re.DOTALL,
     )
-    assert findings_match is not None, \
-        "silver.findings DDL block missing from silver_tables.sql"
-    assert "trigger_context" in findings_match.group(0), \
+    assert findings_match is not None, "silver.findings DDL block missing from silver_tables.sql"
+    assert "trigger_context" in findings_match.group(0), (
         "Bootstrap DDL for silver.findings must declare the trigger_context column."
+    )

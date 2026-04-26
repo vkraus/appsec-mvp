@@ -19,9 +19,7 @@ def _utc_from_internal(self, ts: int):  # type: ignore[override]
     """Return a UTC-aware datetime instead of a local-naive one."""
     if ts is None:
         return None
-    return _dt.datetime.fromtimestamp(
-        ts // 1000000, tz=_dt.UTC
-    ).replace(microsecond=ts % 1000000)
+    return _dt.datetime.fromtimestamp(ts // 1000000, tz=_dt.UTC).replace(microsecond=ts % 1000000)
 
 
 @pytest.fixture(scope="session", autouse=True)

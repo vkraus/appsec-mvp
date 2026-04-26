@@ -84,19 +84,25 @@ def test_ingest_contract_raises_without_extra_config() -> None:
 # scanners per references/secrets.md § "Applicable REQ-IDs". Record the
 # non-applicability via a skipped test so the traceability matrix shows
 # the deliberate N/A rather than a silent gap.
-@pytest.mark.skip(reason="N/A for CLI-artefact secrets scanners (references/secrets.md § Applicable REQ-IDs)")
+@pytest.mark.skip(
+    reason="N/A for CLI-artefact secrets scanners (references/secrets.md § Applicable REQ-IDs)"
+)
 @pytest.mark.requirement("REQ-ING-AUTH")
 def test_req_ing_auth_na_for_cli_scanner() -> None:  # pragma: no cover - documentation marker
     pass
 
 
-@pytest.mark.skip(reason="N/A for CLI-artefact secrets scanners (references/secrets.md § Applicable REQ-IDs)")
+@pytest.mark.skip(
+    reason="N/A for CLI-artefact secrets scanners (references/secrets.md § Applicable REQ-IDs)"
+)
 @pytest.mark.requirement("REQ-ING-PAG")
 def test_req_ing_pag_na_for_cli_scanner() -> None:  # pragma: no cover - documentation marker
     pass
 
 
-@pytest.mark.skip(reason="N/A for CLI-artefact secrets scanners (references/secrets.md § Applicable REQ-IDs)")
+@pytest.mark.skip(
+    reason="N/A for CLI-artefact secrets scanners (references/secrets.md § Applicable REQ-IDs)"
+)
 @pytest.mark.requirement("REQ-ING-RL")
 def test_req_ing_rl_na_for_cli_scanner() -> None:  # pragma: no cover - documentation marker
     pass

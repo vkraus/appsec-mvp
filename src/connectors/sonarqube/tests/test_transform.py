@@ -76,7 +76,7 @@ def test_issue_mapping(spark: SparkSession) -> None:
     # Envelope columns that carry semantics.
     assert row["trigger_context"] == "periodic"
     assert row["cwe_id"] is None  # enriched via src/platform/cwe.py side table
-    assert row["url"] is None      # no per-finding permalink in the API
+    assert row["url"] is None  # no per-finding permalink in the API
 
 
 @pytest.mark.requirement("REQ-TRF-MAP")
@@ -245,9 +245,9 @@ def test_dedup_links_against_semgrep_overlap() -> None:
     key_c = dedup_key_for(issue_c_different_file)
     key_d = dedup_key_for(issue_d_different_rule)
 
-    assert key_a == key_b                # linked -> same dedup tuple
-    assert key_a != key_c                # distinct file -> distinct tuple
-    assert key_a != key_d                # distinct rule -> distinct tuple
+    assert key_a == key_b  # linked -> same dedup tuple
+    assert key_a != key_c  # distinct file -> distinct tuple
+    assert key_a != key_d  # distinct rule -> distinct tuple
     # The tuple shape itself matches the SAST reference contract.
     assert key_a == (
         "BenchmarkJava",

@@ -20,7 +20,7 @@ Scenarios:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -28,8 +28,7 @@ from src.analytics.notebooks.gold.mttr_by_source_severity_weekly import (
     compute_mttr_rows,
 )
 
-
-NOW = datetime(2026, 4, 26, 12, 0, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 4, 26, 12, 0, 0, tzinfo=UTC)
 FUTURE = NOW + timedelta(days=30)
 
 
@@ -94,8 +93,8 @@ def test_typical_two_weeks_two_severities() -> None:
     """
     # Mid-week timestamps so ISO-week classification is unambiguous.
     # 2026-03-04 (Wed) lies in ISO 2026-W10. 2026-03-11 (Wed) in W11.
-    last_w10 = datetime(2026, 3, 4, 12, 0, tzinfo=timezone.utc)
-    last_w11 = datetime(2026, 3, 11, 12, 0, tzinfo=timezone.utc)
+    last_w10 = datetime(2026, 3, 4, 12, 0, tzinfo=UTC)
+    last_w11 = datetime(2026, 3, 11, 12, 0, tzinfo=UTC)
 
     rows: list[dict] = []
     # W10 high: 1h, 5h, 9h
@@ -141,9 +140,7 @@ def test_typical_two_weeks_two_severities() -> None:
     # Result is sorted by (iso_year, iso_week, tool_source, severity).
     # Order: (2026,10,semgrep,critical), (2026,10,semgrep,high),
     #        (2026,11,semgrep,critical), (2026,11,semgrep,high).
-    by_key = {
-        (r["iso_year"], r["iso_week"], r["severity_canonical"]): r for r in result
-    }
+    by_key = {(r["iso_year"], r["iso_week"], r["severity_canonical"]): r for r in result}
 
     w10_high = by_key[(2026, 10, "high")]
     assert w10_high["mttr_median_hours"] == 5.0
@@ -179,7 +176,7 @@ def test_no_findings_returns_empty() -> None:
 
 
 def test_all_open_returns_empty() -> None:
-    last = datetime(2026, 3, 4, 12, 0, tzinfo=timezone.utc)
+    last = datetime(2026, 3, 4, 12, 0, tzinfo=UTC)
     rows = [
         _finding(
             status="open",
@@ -196,7 +193,7 @@ def test_all_open_returns_empty() -> None:
 
 
 def test_single_resolved_finding_median_equals_p90() -> None:
-    last = datetime(2026, 3, 4, 12, 0, tzinfo=timezone.utc)
+    last = datetime(2026, 3, 4, 12, 0, tzinfo=UTC)
     first = last - timedelta(hours=42)
     rows = [_finding(first_seen_at=first, last_seen_at=last)]
 
@@ -217,7 +214,7 @@ def test_single_resolved_finding_median_equals_p90() -> None:
 
 
 def test_tool_source_suppression_rule_excludes_findings() -> None:
-    last = datetime(2026, 3, 4, 12, 0, tzinfo=timezone.utc)
+    last = datetime(2026, 3, 4, 12, 0, tzinfo=UTC)
     rows = [
         _finding(
             tool_source="semgrep",
@@ -242,7 +239,7 @@ def test_tool_source_suppression_rule_excludes_findings() -> None:
 def test_expired_suppression_rule_does_not_exclude() -> None:
     """An expired rule must NOT filter — the Gold output should include
     the finding it nominally covers."""
-    last = datetime(2026, 3, 4, 12, 0, tzinfo=timezone.utc)
+    last = datetime(2026, 3, 4, 12, 0, tzinfo=UTC)
     rows = [
         _finding(
             tool_source="semgrep",
@@ -273,8 +270,8 @@ def test_iso_week_boundary_2025_2026_split() -> None:
     the ISO-year (which differs from the calendar year for the W01 row
     since 2026-01-01 is in calendar 2026 anyway, but the principle holds).
     """
-    last_w52 = datetime(2025, 12, 25, 12, 0, tzinfo=timezone.utc)  # Thu, ISO 2025-W52
-    last_w01 = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)  # Thu, ISO 2026-W01
+    last_w52 = datetime(2025, 12, 25, 12, 0, tzinfo=UTC)  # Thu, ISO 2025-W52
+    last_w01 = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)  # Thu, ISO 2026-W01
 
     rows = [
         _finding(

@@ -74,34 +74,42 @@ _CWE_PLACEHOLDERS: frozenset[str] = frozenset({"", "0", "-1"})
 # Bronze ``_raw_payload`` shape: the ZAP scan-report JSON envelope. The
 # Spark path uses this schema with ``from_json`` to project the nested
 # alert/instance structure into rows.
-_RAW_INSTANCE_SCHEMA = StructType([
-    StructField("uri", StringType(), nullable=True),
-    StructField("method", StringType(), nullable=True),
-    StructField("evidence", StringType(), nullable=True),
-])
+_RAW_INSTANCE_SCHEMA = StructType(
+    [
+        StructField("uri", StringType(), nullable=True),
+        StructField("method", StringType(), nullable=True),
+        StructField("evidence", StringType(), nullable=True),
+    ]
+)
 
-_RAW_ALERT_SCHEMA = StructType([
-    StructField("pluginid", StringType(), nullable=True),
-    StructField("alert", StringType(), nullable=True),
-    StructField("name", StringType(), nullable=True),
-    StructField("riskdesc", StringType(), nullable=True),
-    StructField("riskcode", StringType(), nullable=True),
-    StructField("confidence", StringType(), nullable=True),
-    StructField("cweid", StringType(), nullable=True),
-    StructField("wascid", StringType(), nullable=True),
-    StructField("instances", ArrayType(_RAW_INSTANCE_SCHEMA), nullable=True),
-])
+_RAW_ALERT_SCHEMA = StructType(
+    [
+        StructField("pluginid", StringType(), nullable=True),
+        StructField("alert", StringType(), nullable=True),
+        StructField("name", StringType(), nullable=True),
+        StructField("riskdesc", StringType(), nullable=True),
+        StructField("riskcode", StringType(), nullable=True),
+        StructField("confidence", StringType(), nullable=True),
+        StructField("cweid", StringType(), nullable=True),
+        StructField("wascid", StringType(), nullable=True),
+        StructField("instances", ArrayType(_RAW_INSTANCE_SCHEMA), nullable=True),
+    ]
+)
 
-_RAW_SITE_SCHEMA = StructType([
-    StructField("@name", StringType(), nullable=True),
-    StructField("@host", StringType(), nullable=True),
-    StructField("alerts", ArrayType(_RAW_ALERT_SCHEMA), nullable=True),
-])
+_RAW_SITE_SCHEMA = StructType(
+    [
+        StructField("@name", StringType(), nullable=True),
+        StructField("@host", StringType(), nullable=True),
+        StructField("alerts", ArrayType(_RAW_ALERT_SCHEMA), nullable=True),
+    ]
+)
 
-_RAW_REPORT_SCHEMA = StructType([
-    StructField("site", ArrayType(_RAW_SITE_SCHEMA), nullable=True),
-    StructField("@generated", StringType(), nullable=True),
-])
+_RAW_REPORT_SCHEMA = StructType(
+    [
+        StructField("site", ArrayType(_RAW_SITE_SCHEMA), nullable=True),
+        StructField("@generated", StringType(), nullable=True),
+    ]
+)
 
 
 def _parse_zap_generated_at(raw: str | None) -> datetime | None:
@@ -266,13 +274,13 @@ def alerts_to_silver(
                             # collapses any input to "open".
                             status_canonical=normalize_status("open", status_map),
                             cwe_id=cwe,
-                            cve_id=None,    # DAST: no CVE axis
+                            cve_id=None,  # DAST: no CVE axis
                             rule_id_native=plugin_id,
                             trigger_context=trigger_context,
                             # application_id is resolved by
                             # apply_deployments_join, not here.
                             repository_id=None,
-                            file_path=None,    # DAST shape: URL-located
+                            file_path=None,  # DAST shape: URL-located
                             start_line=None,
                             url=uri,
                             first_seen_at=report_ts,
@@ -304,13 +312,17 @@ def apply_deployments_join(findings_df: DataFrame, deployments_df: DataFrame) ->
     Silver schema columns; the join helper is composed onto the
     output by the orchestrating notebook.)
     """
-    return findings_df.alias("f").join(
-        deployments_df.alias("d"),
-        F.col("f.target") == F.col("d.target"),
-        how="left",
-    ).select(
-        *[F.col(f"f.{c.name}") for c in findings_df.schema.fields],
-        F.col("d.application_id").alias("application_id"),
+    return (
+        findings_df.alias("f")
+        .join(
+            deployments_df.alias("d"),
+            F.col("f.target") == F.col("d.target"),
+            how="left",
+        )
+        .select(
+            *[F.col(f"f.{c.name}") for c in findings_df.schema.fields],
+            F.col("d.application_id").alias("application_id"),
+        )
     )
 
 
@@ -337,9 +349,7 @@ def transform(bronze_df: DataFrame) -> DataFrame:
 
     # Parse envelope payload into the typed scan-report struct, then
     # explode the nested site/alert/instance hierarchy.
-    parsed = bronze_df.withColumn(
-        "_zap", F.from_json(F.col("_raw_payload"), _RAW_REPORT_SCHEMA)
-    )
+    parsed = bronze_df.withColumn("_zap", F.from_json(F.col("_raw_payload"), _RAW_REPORT_SCHEMA))
     sites = parsed.select(
         F.col("trigger_context").alias("_trigger_context")
         if "trigger_context" in bronze_df.columns
@@ -371,15 +381,12 @@ def transform(bronze_df: DataFrame) -> DataFrame:
 
     # cweid placeholders ("", "0", "-1") collapse to NULL.
     cwe = F.when(
-        F.col("_alert.cweid").isNull()
-        | F.col("_alert.cweid").isin("", "0", "-1"),
+        F.col("_alert.cweid").isNull() | F.col("_alert.cweid").isin("", "0", "-1"),
         F.lit(None).cast(StringType()),
     ).otherwise(F.col("_alert.cweid"))
 
     return instances.select(
-        F.concat_ws("@", F.col("_alert.pluginid"), F.col("_inst.uri")).alias(
-            "finding_id"
-        ),
+        F.concat_ws("@", F.col("_alert.pluginid"), F.col("_inst.uri")).alias("finding_id"),
         F.lit("owasp_zap").alias("tool_source"),
         F.lit("dast").alias("category"),
         sev_expr(risk).alias("severity_canonical"),

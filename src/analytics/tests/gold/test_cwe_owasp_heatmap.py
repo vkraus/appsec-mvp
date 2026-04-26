@@ -17,18 +17,20 @@ This mirrors :mod:`src.analytics.tests.gold.test_coverage_matrix`.
 from __future__ import annotations
 
 import types
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Import the notebook's pure-Python helpers without triggering Spark.
 
 _NOTEBOOK_PATH = (
     Path(__file__).resolve().parents[3]
-    / "analytics" / "notebooks" / "gold" / "cwe_owasp_heatmap.py"
+    / "analytics"
+    / "notebooks"
+    / "gold"
+    / "cwe_owasp_heatmap.py"
 )
 
 
@@ -59,7 +61,7 @@ UNMAPPED_OWASP_CATEGORY = _helpers.UNMAPPED_OWASP_CATEGORY
 # ---------------------------------------------------------------------------
 # Fixtures
 
-NOW = datetime(2026, 4, 26, 12, 0, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 4, 26, 12, 0, 0, tzinfo=UTC)
 FUTURE = NOW + timedelta(days=30)
 
 
@@ -101,9 +103,7 @@ def _rule(scope: str, target: str, expires: datetime = FUTURE, rule_id: str = "r
 
 def _by_key(rows: list[dict]) -> dict[tuple, dict]:
     """Index output rows by their natural key for stable lookup in asserts."""
-    return {
-        (r["application_id"], r["owasp_category"], r["cwe_id"]): r for r in rows
-    }
+    return {(r["application_id"], r["owasp_category"], r["cwe_id"]): r for r in rows}
 
 
 # ---------------------------------------------------------------------------
@@ -113,15 +113,23 @@ def _by_key(rows: list[dict]) -> dict[tuple, dict]:
 def test_owasp_2021_mapping_covers_all_ten_categories() -> None:
     categories_seen = set(OWASP_2021_CWE_TO_CATEGORY.values())
     assert categories_seen == {
-        "A01", "A02", "A03", "A04", "A05",
-        "A06", "A07", "A08", "A09", "A10",
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A06",
+        "A07",
+        "A08",
+        "A09",
+        "A10",
     }
 
 
 def test_a10_ssrf_is_cwe_918_only() -> None:
     # OWASP 2021 A10 Server-Side Request Forgery has exactly one mapped
     # CWE per the Foundation's primary mapping.
-    assert OWASP_2021_A10_SERVER_SIDE_REQUEST_FORGERY == frozenset({"CWE-918"})
+    assert frozenset({"CWE-918"}) == OWASP_2021_A10_SERVER_SIDE_REQUEST_FORGERY
     assert OWASP_2021_CWE_TO_CATEGORY["CWE-918"] == "A10"
 
 
@@ -163,9 +171,7 @@ def test_no_cwe_double_assigned() -> None:
     ]
     for cat, s in sets:
         for cwe in s:
-            assert cwe not in seen, (
-                f"{cwe} double-assigned to {seen[cwe]} and {cat}"
-            )
+            assert cwe not in seen, f"{cwe} double-assigned to {seen[cwe]} and {cat}"
             seen[cwe] = cat
 
 
@@ -302,9 +308,7 @@ def test_unmapped_repository_routes_to_unmapped_application() -> None:
     rows = compute_heatmap_rows(findings, app_repo)
     indexed = _by_key(rows)
 
-    assert (
-        indexed[(UNMAPPED_APPLICATION_ID, "A03", "CWE-89")]["finding_count"] == 2
-    )
+    assert indexed[(UNMAPPED_APPLICATION_ID, "A03", "CWE-89")]["finding_count"] == 2
 
 
 def test_repository_mapped_to_multiple_apps_duplicates_count() -> None:

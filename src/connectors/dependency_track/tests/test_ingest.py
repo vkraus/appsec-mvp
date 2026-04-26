@@ -85,10 +85,7 @@ def test_build_api_url_substitutes_path_params() -> None:
         "/api/v1/finding/project/{uuid}",
         uuid="11111111-1111-1111-1111-111111111111",
     )
-    assert url == (
-        "https://dt.example/api/v1/finding/project/"
-        "11111111-1111-1111-1111-111111111111"
-    )
+    assert url == ("https://dt.example/api/v1/finding/project/11111111-1111-1111-1111-111111111111")
 
 
 @pytest.mark.requirement("REQ-ING-PAG")
@@ -152,9 +149,7 @@ def test_select_finding_hwm_picks_maximum_attributed_on() -> None:
     # and verify we only retain strictly-newer records.
     first_run_hwm = "2026-04-19T09:10:11Z"
     second_run = [
-        f
-        for f in findings
-        if (f.get("attribution") or {}).get("attributedOn", "") > first_run_hwm
+        f for f in findings if (f.get("attribution") or {}).get("attributedOn", "") > first_run_hwm
     ]
     assert [f["vulnerability"]["vulnId"] for f in second_run] == [
         "OSV-2021-0001",

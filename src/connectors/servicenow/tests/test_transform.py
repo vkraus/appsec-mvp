@@ -151,9 +151,7 @@ def test_servicenow_datetime_converts_europe_berlin_to_utc() -> None:
 def test_servicenow_datetime_accepts_zoneinfo_instance() -> None:
     """REQ-TRF-TS: callers may pass a pre-instantiated ``ZoneInfo`` rather
     than the IANA name string; both resolve to the same conversion."""
-    out = normalise_servicenow_datetime(
-        "2026-04-20 12:00:00", ZoneInfo("Europe/Berlin")
-    )
+    out = normalise_servicenow_datetime("2026-04-20 12:00:00", ZoneInfo("Europe/Berlin"))
     assert out == datetime(2026, 4, 20, 10, 0, 0, tzinfo=UTC)
 
 
@@ -170,7 +168,7 @@ def test_servicenow_datetime_rejects_unrecognised_format() -> None:
     """REQ-TRF-TS defensive: a non-native format is rejected loudly so the
     UTC-skew bug class cannot be reintroduced via shape changes upstream."""
     with pytest.raises(ValueError):
-        normalise_servicenow_datetime("2026-04-20T14:22:11Z", "UTC")   # ISO-8601
+        normalise_servicenow_datetime("2026-04-20T14:22:11Z", "UTC")  # ISO-8601
 
 
 # ----- REQ-DQ --------------------------------------------------------------

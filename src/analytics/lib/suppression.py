@@ -27,8 +27,9 @@ The Spark application is a thin Column-based wrapper.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Mapping
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 
 
 def is_rule_active(rule: Mapping[str, Any], now: datetime) -> bool:
@@ -50,9 +51,7 @@ def rule_matches_value(rule: Mapping[str, Any], value: Any) -> bool:
     pattern = rule["target_pattern"]
     if pattern.endswith("/*"):
         prefix = pattern[: -len("/*")]
-        return value == prefix or (
-            isinstance(value, str) and value.startswith(prefix + "/")
-        )
+        return value == prefix or (isinstance(value, str) and value.startswith(prefix + "/"))
     return value == pattern
 
 
@@ -68,7 +67,7 @@ def is_row_suppressed(
     not apply at this call site).
     """
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
     for rule in rules:
         if not is_rule_active(rule, now):
             continue
@@ -95,7 +94,7 @@ def apply_suppression_rules(df, rules_df, now: datetime | None = None):
     from pyspark.sql import functions as F
 
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
     rules = [r.asDict() for r in rules_df.collect() if r["expires_at"] > now]
     if not rules:

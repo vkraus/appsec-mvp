@@ -25,8 +25,7 @@ POLICY_PATH = Path(__file__).parent / "policy.yml"
 app = FastAPI(
     title="AppSec analytics App",
     description=(
-        "OLTP serving for AppSec analytics — security score lookup + "
-        "CI/CD pre-merge gate."
+        "OLTP serving for AppSec analytics — security score lookup + CI/CD pre-merge gate."
     ),
 )
 

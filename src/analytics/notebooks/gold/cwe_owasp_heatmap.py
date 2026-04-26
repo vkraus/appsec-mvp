@@ -45,7 +45,8 @@ SparkSession).
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping
+from collections.abc import Iterable, Mapping
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Canonical OWASP Top 10:2021 → CWE primary mapping.
@@ -55,71 +56,251 @@ from typing import Any, Iterable, Mapping
 # additions. CWE IDs are stored as the canonical "CWE-<n>" string form
 # matching :func:`src.platform.cwe._canonicalize`.
 
-OWASP_2021_A01_BROKEN_ACCESS_CONTROL: frozenset[str] = frozenset({
-    "CWE-22", "CWE-23", "CWE-35", "CWE-59", "CWE-200", "CWE-201",
-    "CWE-219", "CWE-264", "CWE-275", "CWE-276", "CWE-284", "CWE-285",
-    "CWE-352", "CWE-359", "CWE-377", "CWE-402", "CWE-425", "CWE-441",
-    "CWE-497", "CWE-538", "CWE-540", "CWE-548", "CWE-552", "CWE-566",
-    "CWE-601", "CWE-639", "CWE-651", "CWE-668", "CWE-706", "CWE-862",
-    "CWE-863", "CWE-913", "CWE-922", "CWE-1275",
-})
+OWASP_2021_A01_BROKEN_ACCESS_CONTROL: frozenset[str] = frozenset(
+    {
+        "CWE-22",
+        "CWE-23",
+        "CWE-35",
+        "CWE-59",
+        "CWE-200",
+        "CWE-201",
+        "CWE-219",
+        "CWE-264",
+        "CWE-275",
+        "CWE-276",
+        "CWE-284",
+        "CWE-285",
+        "CWE-352",
+        "CWE-359",
+        "CWE-377",
+        "CWE-402",
+        "CWE-425",
+        "CWE-441",
+        "CWE-497",
+        "CWE-538",
+        "CWE-540",
+        "CWE-548",
+        "CWE-552",
+        "CWE-566",
+        "CWE-601",
+        "CWE-639",
+        "CWE-651",
+        "CWE-668",
+        "CWE-706",
+        "CWE-862",
+        "CWE-863",
+        "CWE-913",
+        "CWE-922",
+        "CWE-1275",
+    }
+)
 
-OWASP_2021_A02_CRYPTOGRAPHIC_FAILURES: frozenset[str] = frozenset({
-    "CWE-261", "CWE-296", "CWE-310", "CWE-319", "CWE-321", "CWE-322",
-    "CWE-323", "CWE-324", "CWE-325", "CWE-326", "CWE-327", "CWE-328",
-    "CWE-329", "CWE-330", "CWE-331", "CWE-335", "CWE-336", "CWE-337",
-    "CWE-338", "CWE-340", "CWE-347", "CWE-523", "CWE-720", "CWE-757",
-    "CWE-759", "CWE-760", "CWE-780", "CWE-818", "CWE-916",
-})
+OWASP_2021_A02_CRYPTOGRAPHIC_FAILURES: frozenset[str] = frozenset(
+    {
+        "CWE-261",
+        "CWE-296",
+        "CWE-310",
+        "CWE-319",
+        "CWE-321",
+        "CWE-322",
+        "CWE-323",
+        "CWE-324",
+        "CWE-325",
+        "CWE-326",
+        "CWE-327",
+        "CWE-328",
+        "CWE-329",
+        "CWE-330",
+        "CWE-331",
+        "CWE-335",
+        "CWE-336",
+        "CWE-337",
+        "CWE-338",
+        "CWE-340",
+        "CWE-347",
+        "CWE-523",
+        "CWE-720",
+        "CWE-757",
+        "CWE-759",
+        "CWE-760",
+        "CWE-780",
+        "CWE-818",
+        "CWE-916",
+    }
+)
 
-OWASP_2021_A03_INJECTION: frozenset[str] = frozenset({
-    "CWE-20", "CWE-74", "CWE-75", "CWE-77", "CWE-78", "CWE-79", "CWE-80",
-    "CWE-83", "CWE-87", "CWE-88", "CWE-89", "CWE-90", "CWE-91", "CWE-93",
-    "CWE-94", "CWE-95", "CWE-96", "CWE-97", "CWE-98", "CWE-99", "CWE-100",
-    "CWE-113", "CWE-116", "CWE-138", "CWE-184", "CWE-470", "CWE-471",
-    "CWE-564", "CWE-610", "CWE-643", "CWE-644", "CWE-652", "CWE-917",
-})
+OWASP_2021_A03_INJECTION: frozenset[str] = frozenset(
+    {
+        "CWE-20",
+        "CWE-74",
+        "CWE-75",
+        "CWE-77",
+        "CWE-78",
+        "CWE-79",
+        "CWE-80",
+        "CWE-83",
+        "CWE-87",
+        "CWE-88",
+        "CWE-89",
+        "CWE-90",
+        "CWE-91",
+        "CWE-93",
+        "CWE-94",
+        "CWE-95",
+        "CWE-96",
+        "CWE-97",
+        "CWE-98",
+        "CWE-99",
+        "CWE-100",
+        "CWE-113",
+        "CWE-116",
+        "CWE-138",
+        "CWE-184",
+        "CWE-470",
+        "CWE-471",
+        "CWE-564",
+        "CWE-610",
+        "CWE-643",
+        "CWE-644",
+        "CWE-652",
+        "CWE-917",
+    }
+)
 
-OWASP_2021_A04_INSECURE_DESIGN: frozenset[str] = frozenset({
-    "CWE-73", "CWE-183", "CWE-209", "CWE-213", "CWE-235", "CWE-256",
-    "CWE-257", "CWE-266", "CWE-269", "CWE-280", "CWE-311", "CWE-312",
-    "CWE-313", "CWE-316", "CWE-419", "CWE-430", "CWE-434", "CWE-444",
-    "CWE-451", "CWE-472", "CWE-501", "CWE-522", "CWE-525", "CWE-539",
-    "CWE-579", "CWE-598", "CWE-602", "CWE-642", "CWE-646", "CWE-650",
-    "CWE-653", "CWE-656", "CWE-657", "CWE-799", "CWE-807", "CWE-840",
-    "CWE-841", "CWE-927", "CWE-1021", "CWE-1173",
-})
+OWASP_2021_A04_INSECURE_DESIGN: frozenset[str] = frozenset(
+    {
+        "CWE-73",
+        "CWE-183",
+        "CWE-209",
+        "CWE-213",
+        "CWE-235",
+        "CWE-256",
+        "CWE-257",
+        "CWE-266",
+        "CWE-269",
+        "CWE-280",
+        "CWE-311",
+        "CWE-312",
+        "CWE-313",
+        "CWE-316",
+        "CWE-419",
+        "CWE-430",
+        "CWE-434",
+        "CWE-444",
+        "CWE-451",
+        "CWE-472",
+        "CWE-501",
+        "CWE-522",
+        "CWE-525",
+        "CWE-539",
+        "CWE-579",
+        "CWE-598",
+        "CWE-602",
+        "CWE-642",
+        "CWE-646",
+        "CWE-650",
+        "CWE-653",
+        "CWE-656",
+        "CWE-657",
+        "CWE-799",
+        "CWE-807",
+        "CWE-840",
+        "CWE-841",
+        "CWE-927",
+        "CWE-1021",
+        "CWE-1173",
+    }
+)
 
-OWASP_2021_A05_SECURITY_MISCONFIGURATION: frozenset[str] = frozenset({
-    "CWE-2", "CWE-11", "CWE-13", "CWE-15", "CWE-16", "CWE-260", "CWE-315",
-    "CWE-520", "CWE-526", "CWE-537", "CWE-541", "CWE-547", "CWE-611",
-    "CWE-614", "CWE-756", "CWE-776", "CWE-942", "CWE-1004", "CWE-1032",
-    "CWE-1174",
-})
+OWASP_2021_A05_SECURITY_MISCONFIGURATION: frozenset[str] = frozenset(
+    {
+        "CWE-2",
+        "CWE-11",
+        "CWE-13",
+        "CWE-15",
+        "CWE-16",
+        "CWE-260",
+        "CWE-315",
+        "CWE-520",
+        "CWE-526",
+        "CWE-537",
+        "CWE-541",
+        "CWE-547",
+        "CWE-611",
+        "CWE-614",
+        "CWE-756",
+        "CWE-776",
+        "CWE-942",
+        "CWE-1004",
+        "CWE-1032",
+        "CWE-1174",
+    }
+)
 
-OWASP_2021_A06_VULNERABLE_AND_OUTDATED_COMPONENTS: frozenset[str] = frozenset({
-    "CWE-937", "CWE-1035", "CWE-1104",
-})
+OWASP_2021_A06_VULNERABLE_AND_OUTDATED_COMPONENTS: frozenset[str] = frozenset(
+    {
+        "CWE-937",
+        "CWE-1035",
+        "CWE-1104",
+    }
+)
 
-OWASP_2021_A07_IDENTIFICATION_AND_AUTHENTICATION_FAILURES: frozenset[str] = frozenset({
-    "CWE-255", "CWE-259", "CWE-287", "CWE-288", "CWE-290", "CWE-294",
-    "CWE-295", "CWE-297", "CWE-300", "CWE-302", "CWE-304", "CWE-306",
-    "CWE-307", "CWE-346", "CWE-384", "CWE-521", "CWE-613", "CWE-620",
-    "CWE-640", "CWE-798", "CWE-940", "CWE-1216",
-})
+OWASP_2021_A07_IDENTIFICATION_AND_AUTHENTICATION_FAILURES: frozenset[str] = frozenset(
+    {
+        "CWE-255",
+        "CWE-259",
+        "CWE-287",
+        "CWE-288",
+        "CWE-290",
+        "CWE-294",
+        "CWE-295",
+        "CWE-297",
+        "CWE-300",
+        "CWE-302",
+        "CWE-304",
+        "CWE-306",
+        "CWE-307",
+        "CWE-346",
+        "CWE-384",
+        "CWE-521",
+        "CWE-613",
+        "CWE-620",
+        "CWE-640",
+        "CWE-798",
+        "CWE-940",
+        "CWE-1216",
+    }
+)
 
-OWASP_2021_A08_SOFTWARE_AND_DATA_INTEGRITY_FAILURES: frozenset[str] = frozenset({
-    "CWE-345", "CWE-353", "CWE-426", "CWE-494", "CWE-502", "CWE-565",
-    "CWE-784", "CWE-829", "CWE-830", "CWE-915",
-})
+OWASP_2021_A08_SOFTWARE_AND_DATA_INTEGRITY_FAILURES: frozenset[str] = frozenset(
+    {
+        "CWE-345",
+        "CWE-353",
+        "CWE-426",
+        "CWE-494",
+        "CWE-502",
+        "CWE-565",
+        "CWE-784",
+        "CWE-829",
+        "CWE-830",
+        "CWE-915",
+    }
+)
 
-OWASP_2021_A09_SECURITY_LOGGING_AND_MONITORING_FAILURES: frozenset[str] = frozenset({
-    "CWE-117", "CWE-223", "CWE-532", "CWE-778",
-})
+OWASP_2021_A09_SECURITY_LOGGING_AND_MONITORING_FAILURES: frozenset[str] = frozenset(
+    {
+        "CWE-117",
+        "CWE-223",
+        "CWE-532",
+        "CWE-778",
+    }
+)
 
-OWASP_2021_A10_SERVER_SIDE_REQUEST_FORGERY: frozenset[str] = frozenset({
-    "CWE-918",
-})
+OWASP_2021_A10_SERVER_SIDE_REQUEST_FORGERY: frozenset[str] = frozenset(
+    {
+        "CWE-918",
+    }
+)
 
 
 def _build_cwe_to_category() -> dict[str, str]:

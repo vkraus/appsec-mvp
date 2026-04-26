@@ -35,9 +35,7 @@ def load_lookup(path: str) -> dict[str, str]:
         return yaml.safe_load(fh) or {}
 
 
-def normalize_severity(
-    native: str | None, cvss_v3: float | None, lookup: dict[str, str]
-) -> str:
+def normalize_severity(native: str | None, cvss_v3: float | None, lookup: dict[str, str]) -> str:
     """Return the canonical severity.
 
     Precedence (matches mapping.yml):

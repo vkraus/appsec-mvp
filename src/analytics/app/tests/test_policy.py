@@ -20,7 +20,6 @@ from src.analytics.app.policy import (
     load_policy,
 )
 
-
 # --- evaluate ---
 
 
@@ -36,9 +35,7 @@ def _f(finding_id: str, severity: str) -> dict:
 def test_evaluate_threshold_critical_allows_high_blocks_critical() -> None:
     """threshold='critical' lets high through; only critical blocks."""
     findings = [_f("F-1", "high"), _f("F-2", "critical"), _f("F-3", "low")]
-    allow, blocking, summary = evaluate(
-        findings, {"block_severity_threshold": "critical"}
-    )
+    allow, blocking, summary = evaluate(findings, {"block_severity_threshold": "critical"})
     assert allow is False
     assert [f["finding_id"] for f in blocking] == ["F-2"]
     assert "block" in summary.lower()
@@ -47,9 +44,7 @@ def test_evaluate_threshold_critical_allows_high_blocks_critical() -> None:
 def test_evaluate_threshold_critical_allows_when_no_critical() -> None:
     """threshold='critical' with no critical findings → allow."""
     findings = [_f("F-1", "high"), _f("F-2", "medium")]
-    allow, blocking, summary = evaluate(
-        findings, {"block_severity_threshold": "critical"}
-    )
+    allow, blocking, summary = evaluate(findings, {"block_severity_threshold": "critical"})
     assert allow is True
     assert blocking == []
     assert "critical" in summary.lower() or "allow" in summary.lower()
@@ -58,9 +53,7 @@ def test_evaluate_threshold_critical_allows_when_no_critical() -> None:
 def test_evaluate_threshold_high_blocks_high_and_critical() -> None:
     """threshold='high' blocks both high and critical."""
     findings = [_f("F-1", "high"), _f("F-2", "critical"), _f("F-3", "low")]
-    allow, blocking, summary = evaluate(
-        findings, {"block_severity_threshold": "high"}
-    )
+    allow, blocking, summary = evaluate(findings, {"block_severity_threshold": "high"})
     assert allow is False
     blocked_ids = {f["finding_id"] for f in blocking}
     assert blocked_ids == {"F-1", "F-2"}
@@ -138,9 +131,7 @@ def test_load_policy_missing_key_uses_default(tmp_path: Path) -> None:
 def test_load_policy_invalid_threshold_falls_back(tmp_path: Path) -> None:
     """An unrecognised threshold value falls back to the default."""
     policy_path = tmp_path / "policy.yml"
-    policy_path.write_text(
-        "block_severity_threshold: banana\n", encoding="utf-8"
-    )
+    policy_path.write_text("block_severity_threshold: banana\n", encoding="utf-8")
 
     policy = load_policy(policy_path)
     assert policy["block_severity_threshold"] == DEFAULT_THRESHOLD

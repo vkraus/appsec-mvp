@@ -93,9 +93,7 @@ def project_to_repository(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def merge_request_to_pull_request(
-    project_id: int | str, raw: dict[str, Any]
-) -> dict[str, Any]:
+def merge_request_to_pull_request(project_id: int | str, raw: dict[str, Any]) -> dict[str, Any]:
     """Project a GitLab merge-request row to a ``silver.pull_requests`` row.
 
     GitLab's *merge request* is GitHub's *pull request* (connector page §
@@ -127,9 +125,7 @@ _ACCESS_LEVEL_TO_ROLE = {
 }
 
 
-def protected_branch_to_policy(
-    project_id: int | str, raw: dict[str, Any]
-) -> dict[str, Any]:
+def protected_branch_to_policy(project_id: int | str, raw: dict[str, Any]) -> dict[str, Any]:
     """Project a protected-branch row to a ``silver.branch_policies`` row.
 
     ``allowed_to_push`` and ``allowed_to_merge`` are arrays of access-level
@@ -177,9 +173,7 @@ def _dedup_key_for(category: str, row: dict[str, Any]) -> tuple:
     return (row.get("finding_id"),)
 
 
-def vulnerability_to_finding(
-    project_id: int | str, raw: dict[str, Any]
-) -> dict[str, Any]:
+def vulnerability_to_finding(project_id: int | str, raw: dict[str, Any]) -> dict[str, Any]:
     """Project a Vulnerabilities-API row to a ``silver.findings`` row.
 
     The ``cve`` field is promoted when present; otherwise the connector
@@ -213,9 +207,7 @@ def vulnerability_to_finding(
         "repository_id": str(project_id),
         "file_path": location.get("file"),
         "start_line": location.get("start_line"),
-        "package_name": (location.get("dependency") or {})
-            .get("package", {})
-            .get("name"),
+        "package_name": (location.get("dependency") or {}).get("package", {}).get("name"),
         "url": None,
         "first_seen_at": parse_iso_utc(raw.get("created_at")),
         "last_seen_at": parse_iso_utc(raw.get("updated_at")),

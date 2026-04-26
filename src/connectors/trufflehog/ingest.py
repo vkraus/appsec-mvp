@@ -81,9 +81,7 @@ def derive_validity_status(verified: bool | None, verification_error: str | None
     return "unknown"
 
 
-def run_ingest_pipeline(
-    spark, volume_uri: str, bronze_table: str, *, run_id: str
-) -> None:
+def run_ingest_pipeline(spark, volume_uri: str, bronze_table: str, *, run_id: str) -> None:
     """Databricks entry point. Reads TruffleHog JSONL artefacts into bronze.
 
     ``volume_uri`` is a Databricks Volume URI rooted at the
@@ -93,10 +91,7 @@ def run_ingest_pipeline(
     """
     from pyspark.sql import functions as F
 
-    df = (
-        spark.read.option("multiLine", "false")
-        .json(f"{volume_uri.rstrip('/')}/{_PREFIX_ROOT}/")
-    )
+    df = spark.read.option("multiLine", "false").json(f"{volume_uri.rstrip('/')}/{_PREFIX_ROOT}/")
     # Record the trigger_context for observability; CI/CD-step is the
     # dominant deployment style for TruffleHog per the secrets reference.
     df = df.withColumn("trigger_context", F.lit("cicd"))

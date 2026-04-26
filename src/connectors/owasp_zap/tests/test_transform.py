@@ -208,10 +208,7 @@ def test_severity_round_trip_via_alerts_to_silver(spark: SparkSession) -> None:
     assert by_id["40012@https://app.test/search"]["severity_canonical"] == "high"
     assert by_id["10202@https://app.test/api/users"]["severity_canonical"] == "medium"
     assert by_id["10038@https://app.test/"]["severity_canonical"] == "low"
-    assert (
-        by_id["10049@https://app.test/static/main.js"]["severity_canonical"]
-        == "info"
-    )
+    assert by_id["10049@https://app.test/static/main.js"]["severity_canonical"] == "info"
 
 
 # ---------------------------------------------------------------------------
@@ -368,6 +365,7 @@ def test_unmatched_target_passes_through_unchanged(spark: SparkSession) -> None:
     # alerts_to_silver path stops at the silver_findings schema; the
     # join helper expects the caller to materialise `target`.
     from pyspark.sql import functions as F
+
     findings_with_target = findings.withColumn(
         "target", F.regexp_extract(F.col("url"), r"^(https?://[^/]+)", 1)
     )

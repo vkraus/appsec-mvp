@@ -206,7 +206,9 @@ def test_dedup_distinguishes_different_commits_of_same_secret() -> None:
 
 # REQ-TRF-STS is N/A for secrets sources. Record the non-applicability as a
 # skipped marker for the traceability matrix.
-@pytest.mark.skip(reason="N/A for secrets sources (references/secrets.md § Applicable REQ-IDs); transform.py MUST NOT include status-transition logic")
+@pytest.mark.skip(
+    reason="N/A for secrets sources (references/secrets.md § Applicable REQ-IDs); transform.py MUST NOT include status-transition logic"
+)
 @pytest.mark.requirement("REQ-TRF-STS")
 def test_req_trf_sts_na_for_secrets() -> None:  # pragma: no cover - documentation marker
     pass

@@ -156,9 +156,7 @@ def test_code_scanning_projection_uses_security_severity_level(
     raw = json.loads((_FIX / "code_scanning_alerts.json").read_text())
     by_num = {a["number"]: a for a in raw}
 
-    finding = code_scanning_alert_to_finding(
-        "repo-id-1", by_num[101], severity_map, status_map
-    )
+    finding = code_scanning_alert_to_finding("repo-id-1", by_num[101], severity_map, status_map)
     # Native rule.severity is ``warning``; security_severity_level is ``high``.
     # The mapping must take the latter path; ``warning`` would resolve to medium.
     assert finding["severity_canonical"] == "high"
@@ -170,9 +168,7 @@ def test_code_scanning_projection_uses_security_severity_level(
     assert finding["url"] == "https://github.com/acme/payments-api/security/code-scanning/101"
 
     # And the critical-rule alert resolves identity-style.
-    crit = code_scanning_alert_to_finding(
-        "repo-id-1", by_num[102], severity_map, status_map
-    )
+    crit = code_scanning_alert_to_finding("repo-id-1", by_num[102], severity_map, status_map)
     assert crit["severity_canonical"] == "critical"
 
 
@@ -188,9 +184,7 @@ def test_secret_scanning_projection_follows_locations(
     raw = json.loads((_FIX / "secret_scanning_alerts.json").read_text())
     by_num = {a["number"]: a for a in raw}
 
-    finding = secret_scanning_alert_to_finding(
-        "repo-id-1", by_num[7], severity_map, status_map
-    )
+    finding = secret_scanning_alert_to_finding("repo-id-1", by_num[7], severity_map, status_map)
     assert finding["category"] == "secret"
     assert finding["rule_id_native"] == "aws_access_key_id"
     assert finding["file_path"] == ".env.sample"
@@ -211,9 +205,7 @@ def test_dependabot_projection_extracts_cve_and_package(
     raw = json.loads((_FIX / "dependabot_alerts.json").read_text())
     by_num = {a["number"]: a for a in raw}
 
-    finding = dependabot_alert_to_finding(
-        "repo-id-1", by_num[22], severity_map, status_map
-    )
+    finding = dependabot_alert_to_finding("repo-id-1", by_num[22], severity_map, status_map)
     assert finding["category"] == "sca"
     assert finding["package_name"] == "lodash"
     assert finding["ecosystem"] == "npm"
@@ -340,9 +332,7 @@ def test_parse_iso_utc_nullable_passthrough() -> None:
 
 
 @pytest.mark.requirement("REQ-TRF-TS")
-def test_finding_timestamps_land_utc(
-    severity_map: SeverityMap, status_map: StatusMap
-) -> None:
+def test_finding_timestamps_land_utc(severity_map: SeverityMap, status_map: StatusMap) -> None:
     """REQ-TRF-TS: ``first_seen_at`` (created_at) and ``last_seen_at``
     (updated_at) on every finding shape are timezone-aware UTC datetimes.
     """
@@ -413,9 +403,7 @@ def test_dedup_key_branches_on_finding_shape(
         "py/sql-injection",
     )
 
-    sec = secret_scanning_alert_to_finding(
-        "repo-id-1", sec_raw, severity_map, status_map
-    )
+    sec = secret_scanning_alert_to_finding("repo-id-1", sec_raw, severity_map, status_map)
     assert sec["category"] == "secret"
     assert sec["dedup_key"] == (
         "repo-id-1",
@@ -424,9 +412,7 @@ def test_dedup_key_branches_on_finding_shape(
         3,
     )
 
-    dep = dependabot_alert_to_finding(
-        "repo-id-1", dep_raw, severity_map, status_map
-    )
+    dep = dependabot_alert_to_finding("repo-id-1", dep_raw, severity_map, status_map)
     assert dep["category"] == "sca"
     assert dep["dedup_key"] == (
         "repo-id-1",

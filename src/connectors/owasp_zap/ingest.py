@@ -59,12 +59,12 @@ DOCUMENTED_SCAN_KINDS: tuple[str, ...] = ("spider", "ascan")
 ZAP_ENDPOINTS = {
     "spider_action_scan": "/JSON/spider/action/scan/",
     "spider_view_status": "/JSON/spider/view/status/",
-    "ascan_action_scan":  "/JSON/ascan/action/scan/",
-    "ascan_view_status":  "/JSON/ascan/view/status/",
-    "alert_view_alerts":  "/JSON/alert/view/alerts/",
+    "ascan_action_scan": "/JSON/ascan/action/scan/",
+    "ascan_view_status": "/JSON/ascan/view/status/",
+    "alert_view_alerts": "/JSON/alert/view/alerts/",
     "alert_view_summary": "/JSON/alert/view/alertsSummary/",
-    "core_view_sites":    "/JSON/core/view/sites/",
-    "core_view_version":  "/JSON/core/view/version/",
+    "core_view_sites": "/JSON/core/view/sites/",
+    "core_view_version": "/JSON/core/view/version/",
 }
 
 
@@ -82,9 +82,7 @@ def classify_trigger(path_or_url: str, *, cicd_marker: str = "/cicd/zap/") -> st
     for on_demand). See `mkdocs/docs/connectors/dast/owasp-zap.md` §3.
     """
     if not isinstance(path_or_url, str) or not path_or_url:
-        raise ValueError(
-            f"owasp_zap.classify_trigger: empty input {path_or_url!r}"
-        )
+        raise ValueError(f"owasp_zap.classify_trigger: empty input {path_or_url!r}")
     object_storage_schemes = ("s3://", "s3a://", "abfss://", "gs://")
     if path_or_url.startswith(object_storage_schemes) and cicd_marker in path_or_url:
         return "cicd"
@@ -304,9 +302,7 @@ def ingest_contract(run_id: str, state: ConnectorState) -> BatchDescriptor:
     zap_api_key = extra.get("zap_api_key")
 
     if spark is None or not catalog:
-        raise ValueError(
-            "owasp_zap.ingest_contract requires state['extra'] with spark and catalog"
-        )
+        raise ValueError("owasp_zap.ingest_contract requires state['extra'] with spark and catalog")
 
     # REQ-ING-AUTH guard for the daemon path. The api key is the only
     # documented mechanism (query parameter, NOT a header).
@@ -336,7 +332,7 @@ def ingest_contract(run_id: str, state: ConnectorState) -> BatchDescriptor:
     return {
         "run_id": run_id,
         "source": "owasp_zap",
-        "record_count": 0,   # write-directly shape; count not surfaced in-process
+        "record_count": 0,  # write-directly shape; count not surfaced in-process
         "new_hwm_value": state.get("hwm_value"),
         "bronze_table": bronze_table,
     }

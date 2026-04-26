@@ -17,6 +17,7 @@ surface. This recovers from re-delivered events only; the canonical
 does NOT participate in. See
 ``mkdocs/docs/platform/reference/canonical-mapping.md``.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -43,26 +44,28 @@ REPLAY_DEDUP_KEY: tuple[str, ...] = (
 
 # Silver-side schema for silver.waf_events. Event-shape; deliberately not
 # reusing silver_findings (which is finding-shape).
-silver_waf_events = StructType([
-    StructField("event_id", StringType(), nullable=False),
-    StructField("tool_source", StringType(), nullable=False),
-    StructField("category", StringType(), nullable=False),
-    StructField("timestamp", TimestampType(), nullable=False),
-    StructField("webacl_arn", StringType(), nullable=False),
-    StructField("application_id", StringType(), nullable=True),   # resolved via ARN join
-    StructField("rule_id", StringType(), nullable=True),
-    StructField("rule_type", StringType(), nullable=True),
-    StructField("action", StringType(), nullable=False),
-    StructField("severity_canonical", StringType(), nullable=False),
-    StructField("status_canonical", StringType(), nullable=True), # N/A (append-only)
-    StructField("source_ip", StringType(), nullable=True),
-    StructField("country", StringType(), nullable=True),
-    StructField("request_uri", StringType(), nullable=True),
-    StructField("http_method", StringType(), nullable=True),
-    StructField("response_code", IntegerType(), nullable=True),
-    StructField("sampling_weight", LongType(), nullable=True),
-    StructField("ingested_at", TimestampType(), nullable=False),
-])
+silver_waf_events = StructType(
+    [
+        StructField("event_id", StringType(), nullable=False),
+        StructField("tool_source", StringType(), nullable=False),
+        StructField("category", StringType(), nullable=False),
+        StructField("timestamp", TimestampType(), nullable=False),
+        StructField("webacl_arn", StringType(), nullable=False),
+        StructField("application_id", StringType(), nullable=True),  # resolved via ARN join
+        StructField("rule_id", StringType(), nullable=True),
+        StructField("rule_type", StringType(), nullable=True),
+        StructField("action", StringType(), nullable=False),
+        StructField("severity_canonical", StringType(), nullable=False),
+        StructField("status_canonical", StringType(), nullable=True),  # N/A (append-only)
+        StructField("source_ip", StringType(), nullable=True),
+        StructField("country", StringType(), nullable=True),
+        StructField("request_uri", StringType(), nullable=True),
+        StructField("http_method", StringType(), nullable=True),
+        StructField("response_code", IntegerType(), nullable=True),
+        StructField("sampling_weight", LongType(), nullable=True),
+        StructField("ingested_at", TimestampType(), nullable=False),
+    ]
+)
 
 
 # Epoch-ms to UTC datetime helper, used by both the pure-Python normaliser
@@ -131,7 +134,7 @@ def normalise_event(raw: dict, severity_lookup: dict) -> dict:
         "rule_type": raw.get("terminatingRuleType"),
         "action": action,
         "severity_canonical": derive_severity(action, severity_lookup),
-        "status_canonical": None,   # N/A per append-only stream
+        "status_canonical": None,  # N/A per append-only stream
         "source_ip": http.get("clientIp"),
         "country": http.get("country"),
         "request_uri": http.get("uri"),

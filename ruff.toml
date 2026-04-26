@@ -3,3 +3,12 @@ target-version = "py311"
 
 [lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+
+# Per-file ignores: targeted suppressions for runtime patterns where the
+# warning is a known false positive (FastAPI default-args, Databricks notebook
+# `# COMMAND ----------` cell-level imports, mock context-manager nesting in
+# tests).
+[lint.per-file-ignores]
+"src/analytics/app/main.py" = ["B008"]                         # FastAPI Body() in default arg is the canonical FastAPI pattern
+"src/analytics/notebooks/**/*.py" = ["E402"]                   # Databricks notebooks have imports between `# COMMAND ----------` cells
+"src/analytics/app/tests/test_queries.py" = ["SIM117"]         # nested `with patch(...)` blocks for layered mock contexts

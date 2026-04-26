@@ -51,8 +51,9 @@ Spark application below is exercised on the Databricks job cluster.
 from __future__ import annotations
 
 import statistics
-from datetime import datetime
-from typing import Any, Iterable, Mapping
+from collections.abc import Iterable, Mapping
+from datetime import UTC, datetime
+from typing import Any
 
 from src.analytics.lib.suppression import is_row_suppressed
 
@@ -134,22 +135,26 @@ def compute_mttr_rows(
     # the manual sorted-index p90 per spec.
     out: list[dict[str, Any]] = []
     for (iso_year, iso_week, tool_source, severity), samples in buckets.items():
-        out.append({
-            "iso_year": iso_year,
-            "iso_week": iso_week,
-            "tool_source": tool_source,
-            "severity_canonical": severity,
-            "mttr_median_hours": float(statistics.median(samples)),
-            "mttr_p90_hours": _percentile(samples, 0.9),
-            "sample_size": len(samples),
-        })
+        out.append(
+            {
+                "iso_year": iso_year,
+                "iso_week": iso_week,
+                "tool_source": tool_source,
+                "severity_canonical": severity,
+                "mttr_median_hours": float(statistics.median(samples)),
+                "mttr_p90_hours": _percentile(samples, 0.9),
+                "sample_size": len(samples),
+            }
+        )
 
-    out.sort(key=lambda r: (
-        r["iso_year"],
-        r["iso_week"],
-        r["tool_source"],
-        r["severity_canonical"],
-    ))
+    out.sort(
+        key=lambda r: (
+            r["iso_year"],
+            r["iso_week"],
+            r["tool_source"],
+            r["severity_canonical"],
+        )
+    )
     return out
 
 
@@ -172,13 +177,14 @@ def _running_in_notebook() -> bool:
 
 # COMMAND ----------
 
+
 def _spark_main(target_catalog: str) -> None:
     """Spark-side aggregation. Kept in a function so the notebook body
     can import this module under pytest without executing a job. The
     function references ``spark`` from the notebook global scope at call
     time only.
     """
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from pyspark.sql import functions as F
 
@@ -191,19 +197,25 @@ def _spark_main(target_catalog: str) -> None:
     # Pre-filter rules in Python land; the helper handles the Column-side
     # match expression. ``application_id`` rules are silently skipped
     # because findings has no application_id column.
-    filtered = apply_suppression_rules(findings, rules, now=datetime.now(timezone.utc))
+    filtered = apply_suppression_rules(findings, rules, now=datetime.now(UTC))
 
     resolved = filtered.where(F.col("status_canonical") == F.lit("resolved"))
 
     # Per spec: resolved_at is the last_seen_at of the resolved row;
     # MTTR seconds = last_seen_at - first_seen_at.
-    with_mttr = resolved.withColumn(
-        "mttr_hours",
-        (F.unix_timestamp("last_seen_at") - F.unix_timestamp("first_seen_at")) / F.lit(3600.0),
-    ).withColumn(
-        "iso_year", F.year(F.expr("date_trunc('week', last_seen_at)")).cast("int"),
-    ).withColumn(
-        "iso_week", F.weekofyear("last_seen_at").cast("int"),
+    with_mttr = (
+        resolved.withColumn(
+            "mttr_hours",
+            (F.unix_timestamp("last_seen_at") - F.unix_timestamp("first_seen_at")) / F.lit(3600.0),
+        )
+        .withColumn(
+            "iso_year",
+            F.year(F.expr("date_trunc('week', last_seen_at)")).cast("int"),
+        )
+        .withColumn(
+            "iso_week",
+            F.weekofyear("last_seen_at").cast("int"),
+        )
     )
     # Spark's weekofyear is ISO-8601 by default. For iso_year we use the
     # extract(yearofweek FROM ts) function — wrap via expr because some
@@ -217,24 +229,20 @@ def _spark_main(target_catalog: str) -> None:
         F.expr("extract(yearofweek FROM last_seen_at)").cast("int"),
     )
 
-    grouped = (
-        with_mttr.groupBy(
-            "iso_year",
-            "iso_week",
-            "tool_source",
-            "severity_canonical",
-        )
-        .agg(
-            F.percentile_approx("mttr_hours", 0.5).alias("mttr_median_hours"),
-            F.percentile_approx("mttr_hours", 0.9).alias("mttr_p90_hours"),
-            F.count(F.lit(1)).cast("int").alias("sample_size"),
-        )
+    grouped = with_mttr.groupBy(
+        "iso_year",
+        "iso_week",
+        "tool_source",
+        "severity_canonical",
+    ).agg(
+        F.percentile_approx("mttr_hours", 0.5).alias("mttr_median_hours"),
+        F.percentile_approx("mttr_hours", 0.9).alias("mttr_p90_hours"),
+        F.count(F.lit(1)).cast("int").alias("sample_size"),
     )
 
     target = f"{catalog_prefix}gold.mttr_by_source_severity_weekly"
     (
-        grouped
-        .select(
+        grouped.select(
             F.col("iso_year").cast("int").alias("iso_year"),
             F.col("iso_week").cast("int").alias("iso_week"),
             F.col("tool_source"),

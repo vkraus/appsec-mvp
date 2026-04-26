@@ -190,7 +190,7 @@ def test_graphql_cursor_pagination_two_pages() -> None:
     }
 
     pages = [
-        (repos, "cursor-1", True),     # page 1 -> hasNextPage=True, endCursor="cursor-1"
+        (repos, "cursor-1", True),  # page 1 -> hasNextPage=True, endCursor="cursor-1"
         ([extra_repo], "cursor-2", False),  # page 2 -> hasNextPage=False
     ]
     seen_cursors: list[str | None] = []
@@ -232,9 +232,7 @@ def test_429_backoff_exponential_schedule() -> None:
             raise RateLimitError(retry_after=0.0)
         return "ok"
 
-    result = call_with_backoff(
-        fn, max_retries=5, base_delay=0.1, sleep=sleeps.append
-    )
+    result = call_with_backoff(fn, max_retries=5, base_delay=0.1, sleep=sleeps.append)
 
     assert result == "ok"
     assert len(calls) == 3  # two failures, one success

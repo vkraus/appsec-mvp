@@ -11,6 +11,7 @@ Connect pipelines), the envelope is synthesized in a downstream SQL
 view that reads the Lakeflow-managed ingestion columns; see
 ``src/connectors/<source>/sql/*_envelope.sql``.
 """
+
 from __future__ import annotations
 
 from pyspark.sql import DataFrame

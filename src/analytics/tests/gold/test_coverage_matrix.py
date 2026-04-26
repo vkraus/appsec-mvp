@@ -36,8 +36,7 @@ import pytest
 # onward, exec the helpers-only prefix into a fresh module namespace.
 
 _NOTEBOOK_PATH = (
-    Path(__file__).resolve().parents[3]
-    / "analytics" / "notebooks" / "gold" / "coverage_matrix.py"
+    Path(__file__).resolve().parents[3] / "analytics" / "notebooks" / "gold" / "coverage_matrix.py"
 )
 
 

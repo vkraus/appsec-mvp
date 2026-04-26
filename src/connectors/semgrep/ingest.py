@@ -136,14 +136,11 @@ def detect_format(key: str) -> Literal["json", "sarif"]:
     if key.endswith(".json"):
         return "json"
     raise ValueError(
-        f"unrecognised Semgrep artefact extension: {key!r} "
-        f"(expected one of {SUPPORTED_EXTENSIONS})"
+        f"unrecognised Semgrep artefact extension: {key!r} (expected one of {SUPPORTED_EXTENSIONS})"
     )
 
 
-def run_ingest_pipeline(
-    spark, bucket_uri: str, bronze_table: str, *, run_id: str
-) -> None:
+def run_ingest_pipeline(spark, bucket_uri: str, bronze_table: str, *, run_id: str) -> None:
     """Databricks entry point. Reads Semgrep JSON / SARIF artefacts into bronze.
 
     ``bucket_uri`` is the S3 (or volume) URI rooted at the artefact bucket

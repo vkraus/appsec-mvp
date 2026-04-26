@@ -1,4 +1,5 @@
 """Verify aws_waf.ingest and aws_waf.transform expose the section 2.4.1 contract."""
+
 from __future__ import annotations
 
 import inspect

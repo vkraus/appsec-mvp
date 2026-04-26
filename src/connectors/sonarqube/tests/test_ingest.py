@@ -121,9 +121,7 @@ def test_429_backoff_retries() -> None:
             raise RateLimitError(retry_after=0.0)
         return "ok"
 
-    result = call_with_backoff(
-        fn, max_retries=5, base_delay=0.1, sleep=sleeps.append
-    )
+    result = call_with_backoff(fn, max_retries=5, base_delay=0.1, sleep=sleeps.append)
 
     assert result == "ok"
     assert len(calls) == 3  # two failures, one success

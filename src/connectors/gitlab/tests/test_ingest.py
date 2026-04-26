@@ -16,6 +16,7 @@ fetchers.
 - REQ-ING-HWM  — updated_at is the documented high-water-mark column and
                   survives a resume via the common UpdatedAtHwm store
 """
+
 from __future__ import annotations
 
 import json

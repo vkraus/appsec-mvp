@@ -222,7 +222,7 @@ def record_to_silver_json(
         "status_canonical": _status_lookup("open"),
         "cwe_id": cwe_id,
         "rule_id_native": rule_id,
-        "rule_id": rule_id,           # carried explicitly so dedup key resolves
+        "rule_id": rule_id,  # carried explicitly so dedup key resolves
         "trigger_context": trigger_context,
         "repository_id": repository_id,
         "file_path": file_path,
@@ -399,8 +399,7 @@ def transform_artefact(
             trigger_context=trigger_context,
         )
     raise ValueError(
-        f"unrecognised Semgrep artefact format: {artefact_format!r} "
-        f"(expected 'json' or 'sarif')"
+        f"unrecognised Semgrep artefact format: {artefact_format!r} (expected 'json' or 'sarif')"
     )
 
 

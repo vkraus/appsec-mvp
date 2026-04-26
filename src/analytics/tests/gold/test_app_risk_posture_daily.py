@@ -7,7 +7,7 @@ local pytest (per CLAUDE.md "no local SparkSession").
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
@@ -16,7 +16,7 @@ from src.analytics.notebooks.gold.app_risk_posture_daily import (
     compute_posture_rows,
 )
 
-NOW = datetime(2026, 4, 26, 12, 0, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 4, 26, 12, 0, 0, tzinfo=UTC)
 FUTURE = NOW + timedelta(days=30)
 PAST = NOW - timedelta(days=1)
 SNAPSHOT = date(2026, 4, 26)

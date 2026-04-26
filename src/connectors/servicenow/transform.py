@@ -52,36 +52,42 @@ _SN_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 # shape; reused from `src.platform.schemas` would couple us to that module
 # while the broader CMDB triple is still being reconciled — define
 # locally and align column-by-column with `silver_applications` there.
-silver_applications = StructType([
-    StructField("application_id", StringType(), nullable=False),
-    StructField("name", StringType(), nullable=False),
-    StructField("short_description", StringType(), nullable=True),
-    StructField("business_criticality", StringType(), nullable=True),
-    StructField("operational_status", StringType(), nullable=True),
-    StructField("owned_by", StringType(), nullable=True),
-    StructField("used_by", StringType(), nullable=True),
-    StructField("valid_from", TimestampType(), nullable=True),
-    StructField("updated_at", TimestampType(), nullable=False),
-])
+silver_applications = StructType(
+    [
+        StructField("application_id", StringType(), nullable=False),
+        StructField("name", StringType(), nullable=False),
+        StructField("short_description", StringType(), nullable=True),
+        StructField("business_criticality", StringType(), nullable=True),
+        StructField("operational_status", StringType(), nullable=True),
+        StructField("owned_by", StringType(), nullable=True),
+        StructField("used_by", StringType(), nullable=True),
+        StructField("valid_from", TimestampType(), nullable=True),
+        StructField("updated_at", TimestampType(), nullable=False),
+    ]
+)
 
 
 # Silver-side schema for silver.teams.
-silver_teams = StructType([
-    StructField("team_id", StringType(), nullable=False),
-    StructField("name", StringType(), nullable=False),
-    StructField("description", StringType(), nullable=True),
-    StructField("email", StringType(), nullable=True),
-    StructField("manager", StringType(), nullable=True),
-    StructField("updated_at", TimestampType(), nullable=False),
-])
+silver_teams = StructType(
+    [
+        StructField("team_id", StringType(), nullable=False),
+        StructField("name", StringType(), nullable=False),
+        StructField("description", StringType(), nullable=True),
+        StructField("email", StringType(), nullable=True),
+        StructField("manager", StringType(), nullable=True),
+        StructField("updated_at", TimestampType(), nullable=False),
+    ]
+)
 
 
 # Silver-side schema for silver.app_repo_mapping.
-silver_app_repo_mapping = StructType([
-    StructField("application_id", StringType(), nullable=False),
-    StructField("repository_id", StringType(), nullable=False),
-    StructField("linked_at", TimestampType(), nullable=False),
-])
+silver_app_repo_mapping = StructType(
+    [
+        StructField("application_id", StringType(), nullable=False),
+        StructField("repository_id", StringType(), nullable=False),
+        StructField("linked_at", TimestampType(), nullable=False),
+    ]
+)
 
 
 def _coerce_empty(value: Any) -> Any:
@@ -132,9 +138,7 @@ def normalise_servicenow_datetime(
     if coerced is None:
         return None
     if not isinstance(coerced, str):
-        raise ValueError(
-            f"servicenow datetime must be a string, got {type(coerced).__name__}"
-        )
+        raise ValueError(f"servicenow datetime must be a string, got {type(coerced).__name__}")
     tz = _resolve_timezone(instance_timezone)
     parsed = datetime.strptime(coerced, _SN_DATETIME_FORMAT)
     # Attach the instance-local timezone, then convert to UTC. Naive
@@ -154,21 +158,21 @@ def normalise_application(
     they flow through additively at Bronze.
     """
     return {
-        "application_id":       _coerce_empty(raw.get("sys_id")),
-        "name":                 _coerce_empty(raw.get("name")),
-        "short_description":    _coerce_empty(raw.get("short_description")),
+        "application_id": _coerce_empty(raw.get("sys_id")),
+        "name": _coerce_empty(raw.get("name")),
+        "short_description": _coerce_empty(raw.get("short_description")),
         "business_criticality": _coerce_empty(raw.get("business_criticality")),
-        "operational_status":   _coerce_empty(raw.get("operational_status")),
-        "owned_by":             _coerce_empty(raw.get("owned_by")),
-        "used_by":              _coerce_empty(raw.get("used_by")),
-        "valid_from":           normalise_servicenow_datetime(
-                                    raw.get("sys_created_on"),
-                                    instance_timezone,
-                                ),
-        "updated_at":           normalise_servicenow_datetime(
-                                    raw.get("sys_updated_on"),
-                                    instance_timezone,
-                                ),
+        "operational_status": _coerce_empty(raw.get("operational_status")),
+        "owned_by": _coerce_empty(raw.get("owned_by")),
+        "used_by": _coerce_empty(raw.get("used_by")),
+        "valid_from": normalise_servicenow_datetime(
+            raw.get("sys_created_on"),
+            instance_timezone,
+        ),
+        "updated_at": normalise_servicenow_datetime(
+            raw.get("sys_updated_on"),
+            instance_timezone,
+        ),
     }
 
 
@@ -182,15 +186,15 @@ def normalise_team(
     are the canonical subset every deployment is expected to carry.
     """
     return {
-        "team_id":     _coerce_empty(raw.get("sys_id")),
-        "name":        _coerce_empty(raw.get("name")),
+        "team_id": _coerce_empty(raw.get("sys_id")),
+        "name": _coerce_empty(raw.get("name")),
         "description": _coerce_empty(raw.get("description")),
-        "email":       _coerce_empty(raw.get("email")),
-        "manager":     _coerce_empty(raw.get("manager")),
-        "updated_at":  normalise_servicenow_datetime(
-                           raw.get("sys_updated_on"),
-                           instance_timezone,
-                       ),
+        "email": _coerce_empty(raw.get("email")),
+        "manager": _coerce_empty(raw.get("manager")),
+        "updated_at": normalise_servicenow_datetime(
+            raw.get("sys_updated_on"),
+            instance_timezone,
+        ),
     }
 
 
@@ -216,11 +220,11 @@ def normalise_app_repo_link(
         return None
     return {
         "application_id": application_id,
-        "repository_id":  repo_id,
-        "linked_at":      normalise_servicenow_datetime(
-                              raw.get("sys_updated_on"),
-                              instance_timezone,
-                          ),
+        "repository_id": repo_id,
+        "linked_at": normalise_servicenow_datetime(
+            raw.get("sys_updated_on"),
+            instance_timezone,
+        ),
     }
 
 

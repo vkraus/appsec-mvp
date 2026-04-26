@@ -40,7 +40,7 @@ def test_silver_applications_has_cmdb_fields():
 
 def test_silver_repositories_keyed_by_full_name():
     fields = {f.name for f in silver_repositories.fields}
-    assert "repository_id" in fields           # canonical key, = full_name for github
+    assert "repository_id" in fields  # canonical key, = full_name for github
     assert "full_name" in fields
     assert "default_branch" in fields
     assert "updated_at" in fields

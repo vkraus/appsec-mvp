@@ -42,12 +42,6 @@ silver_df = transform(bronze_df)
 
 # COMMAND ----------
 
-(
-    silver_df.write.mode("append")
-    .option("mergeSchema", "false")
-    .saveAsTable(silver_table)
-)
+(silver_df.write.mode("append").option("mergeSchema", "false").saveAsTable(silver_table))
 
-print(
-    f"sonarqube transform complete: bronze={bronze_table} -> silver={silver_table}"
-)
+print(f"sonarqube transform complete: bronze={bronze_table} -> silver={silver_table}")

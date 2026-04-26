@@ -179,9 +179,7 @@ def ingest_contract(run_id: str, state: ConnectorState) -> BatchDescriptor:
             "dependency_track.ingest_contract requires state['extra'] "
             "with base_url, api_key, catalog"
         )
-    bronze_table = (
-        extra.get("bronze_table") or f"{catalog}.bronze_dependency_track.findings"
-    )
+    bronze_table = extra.get("bronze_table") or f"{catalog}.bronze_dependency_track.findings"
     spark = extra.get("spark")
     classifier_filter = extra.get("classifier_filter") or ("APPLICATION", "CONTAINER")
     run_ingest_pipeline(

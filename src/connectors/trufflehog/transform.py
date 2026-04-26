@@ -65,7 +65,7 @@ def _repository_id(repo_url: str | None) -> str | None:
     stripped = repo_url
     for scheme in ("https://", "http://", "git@", "ssh://git@"):
         if stripped.startswith(scheme):
-            stripped = stripped[len(scheme):]
+            stripped = stripped[len(scheme) :]
             break
     # Strip host and leading colon (for git@host:owner/repo shape).
     if ":" in stripped and "/" in stripped and stripped.index(":") < stripped.index("/"):
@@ -104,14 +104,16 @@ def record_to_silver(record: dict) -> dict:
         file_path or "",
         detector_name or "",
     ]
-    finding_id = "@".join(finding_id_parts[:2]) + ":" + finding_id_parts[2] + "#" + finding_id_parts[3]
+    finding_id = (
+        "@".join(finding_id_parts[:2]) + ":" + finding_id_parts[2] + "#" + finding_id_parts[3]
+    )
 
     return {
         "finding_id": finding_id,
         "tool_source": "trufflehog",
         "category": "secrets",
         "severity_canonical": "high",  # hard-coded per references/secrets.md
-        "status_canonical": "open",    # no source vocabulary; literal constant
+        "status_canonical": "open",  # no source vocabulary; literal constant
         "cwe_id": None,
         "rule_id_native": detector_name,
         "secret_type": detector_name,  # DetectorName substitutes for rule_id

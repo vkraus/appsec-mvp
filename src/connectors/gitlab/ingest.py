@@ -74,9 +74,7 @@ def fetch_group_projects(gl, group_path: str) -> Iterator[dict[str, Any]]:
         yield project.attributes
 
 
-def fetch_project_commits(
-    gl, project_id: int | str, since: str
-) -> Iterator[dict[str, Any]]:
+def fetch_project_commits(gl, project_id: int | str, since: str) -> Iterator[dict[str, Any]]:
     """Yield attribute dicts for commits in ``project_id`` at or after ``since``.
 
     ``since`` is an ISO-8601 timestamp; it is validated to be timezone-aware
@@ -106,9 +104,7 @@ def fetch_project_merge_requests(
         yield mr.attributes
 
 
-def fetch_project_protected_branches(
-    gl, project_id: int | str
-) -> Iterator[dict[str, Any]]:
+def fetch_project_protected_branches(gl, project_id: int | str) -> Iterator[dict[str, Any]]:
     """Yield attribute dicts for each protected branch in ``project_id``.
 
     Protected branches carry ``allowed_to_push`` / ``allowed_to_merge`` access

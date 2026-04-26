@@ -114,7 +114,9 @@ def test_sarif_results_to_silver_projects_every_consumed_field() -> None:
     assert error_row["trigger_context"] == "periodic"
 
     # `cwe:1004` (alternative tag form) must also resolve.
-    cookie_row = next(r for r in rows if r["rule_id"].endswith("express-cookie-session-no-httponly"))
+    cookie_row = next(
+        r for r in rows if r["rule_id"].endswith("express-cookie-session-no-httponly")
+    )
     assert cookie_row["cwe_id"] == "CWE-1004"
 
 
@@ -207,7 +209,16 @@ def test_severity_yml_covers_both_vocabularies() -> None:
     vocabularies — the lookup is required to be exhaustive over the
     documented vocabulary per references/sast.md."""
     text = (Path(__file__).resolve().parents[1] / "severity.yml").read_text()
-    for token in ("ERROR:", "WARNING:", "INFO:", "error:", "warning:", "note:", "none:", "default:"):
+    for token in (
+        "ERROR:",
+        "WARNING:",
+        "INFO:",
+        "error:",
+        "warning:",
+        "note:",
+        "none:",
+        "default:",
+    ):
         assert token in text, f"severity.yml missing token: {token}"
 
 
@@ -248,7 +259,9 @@ def test_transform_py_has_no_status_transition_logic() -> None:
     src = (Path(__file__).resolve().parents[1] / "transform.py").read_text()
     forbidden = ("triaged", "resolved", "false_positive", "dismissed")
     for token in forbidden:
-        assert token not in src.lower(), f"transform.py must not reference status vocabulary: {token}"
+        assert token not in src.lower(), (
+            f"transform.py must not reference status vocabulary: {token}"
+        )
 
 
 # --------------------------------------------------------------------------- #

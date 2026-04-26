@@ -55,9 +55,15 @@ def classify_ingestion_mode(mode: str) -> str:
     return mode
 
 
-def iter_sampled_requests(client, web_acl_arn: str, rule_metric_name: str,
-                          scope: str, start_time, end_time,
-                          max_items: int = 500) -> Iterator[dict]:
+def iter_sampled_requests(
+    client,
+    web_acl_arn: str,
+    rule_metric_name: str,
+    scope: str,
+    start_time,
+    end_time,
+    max_items: int = 500,
+) -> Iterator[dict]:
     """Yield records from boto3 ``wafv2.get_sampled_requests``.
 
     Used by the SDK-fallback mode only. ``Weight`` is preserved on each
@@ -122,9 +128,7 @@ def run_ingest_pipeline(
         )
 
     if not bucket or not prefix:
-        raise ValueError(
-            "aws_waf log_stream ingest requires bucket and prefix"
-        )
+        raise ValueError("aws_waf log_stream ingest requires bucket and prefix")
 
     df = (
         spark.read.format("json")
@@ -136,7 +140,7 @@ def run_ingest_pipeline(
         df,
         source_system="aws_waf",
         batch_id=run_id,
-        hwm_value=None,      # HWM is max(timestamp) observed; recorded out-of-band
+        hwm_value=None,  # HWM is max(timestamp) observed; recorded out-of-band
     )
     df.writeTo(bronze_table).append()
 
@@ -164,9 +168,7 @@ def ingest_contract(run_id: str, state: ConnectorState) -> BatchDescriptor:
     iam_credential_ref = extra.get("aws_credential_ref")
 
     if spark is None or not catalog:
-        raise ValueError(
-            "aws_waf.ingest_contract requires state['extra'] with spark, catalog"
-        )
+        raise ValueError("aws_waf.ingest_contract requires state['extra'] with spark, catalog")
     if not iam_credential_ref:
         raise ValueError(
             "aws_waf.ingest_contract requires state['extra']['aws_credential_ref'] "
@@ -186,7 +188,7 @@ def ingest_contract(run_id: str, state: ConnectorState) -> BatchDescriptor:
     return {
         "run_id": run_id,
         "source": "aws_waf",
-        "record_count": 0,   # write-directly shape; count not surfaced in-process
+        "record_count": 0,  # write-directly shape; count not surfaced in-process
         "new_hwm_value": state.get("hwm_value"),
         "bronze_table": bronze_table,
     }

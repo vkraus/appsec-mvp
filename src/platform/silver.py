@@ -59,8 +59,18 @@ def _collapse(df: DataFrame, keys: list[str]) -> DataFrame:
     w_keys = [F.col(k) for k in keys]
 
     # Non-key nullable columns that are collapsed via first()
-    _first_cols = ["finding_id", "category", "tool_source", "status_canonical",
-                   "cwe_id", "rule_id_native", "repository_id", "file_path", "start_line", "url"]
+    _first_cols = [
+        "finding_id",
+        "category",
+        "tool_source",
+        "status_canonical",
+        "cwe_id",
+        "rule_id_native",
+        "repository_id",
+        "file_path",
+        "start_line",
+        "url",
+    ]
 
     agg_exprs = [
         F.collect_set("tool_source").alias("tool_sources"),

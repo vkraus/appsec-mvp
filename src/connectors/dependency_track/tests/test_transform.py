@@ -74,9 +74,7 @@ def test_flatten_to_silver_row_projects_all_silver_columns() -> None:
     assert silver["status_canonical"] == "open"
     assert silver["rule_id_native"] == "CVE-2023-32681"
     assert silver["trigger_context"] == "periodic"
-    assert silver["first_seen_at"] == datetime(
-        2026, 4, 18, 12, 34, 56, tzinfo=UTC
-    )
+    assert silver["first_seen_at"] == datetime(2026, 4, 18, 12, 34, 56, tzinfo=UTC)
     assert silver["last_seen_at"] == silver["first_seen_at"]
     # Nullable per SCA shape
     assert silver["file_path"] is None
@@ -92,13 +90,7 @@ def test_mapping_yml_declares_every_silver_field() -> None:
     projection; every silver.findings column must be referenced so no
     required field is silently dropped in transform."""
     mapping = yaml.safe_load(
-        (
-            REPO_ROOT
-            / "src"
-            / "connectors"
-            / "dependency_track"
-            / "mapping.yml"
-        ).read_text()
+        (REPO_ROOT / "src" / "connectors" / "dependency_track" / "mapping.yml").read_text()
     )
     declared = set(mapping["fields"].keys())
     required = {
@@ -208,9 +200,7 @@ def test_unassigned_severity_routes_to_dq_default_not_dropped() -> None:
     silver = flatten_to_silver_row(lodash_bronze, SEV_LOOKUP, STATUS_LOOKUP)
     assert silver["severity_canonical"] == "medium"
     assert silver["status_canonical"] == "confirmed"
-    assert silver["last_seen_at"] == datetime(
-        2026, 4, 22, 0, 0, 0, tzinfo=UTC
-    )
+    assert silver["last_seen_at"] == datetime(2026, 4, 22, 0, 0, 0, tzinfo=UTC)
 
 
 @pytest.mark.requirement("REQ-DQ")

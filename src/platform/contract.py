@@ -15,6 +15,7 @@ Catalog control table, is queued as Future Work (see thesis section 4 on
 future work). The current wrappers accept ``state`` as a plain dict.
 Callers pass ``{}`` for first-run semantics.
 """
+
 from __future__ import annotations
 
 from typing import Any, NotRequired, TypedDict

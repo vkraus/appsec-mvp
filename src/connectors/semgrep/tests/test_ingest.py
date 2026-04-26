@@ -76,7 +76,9 @@ def test_detect_trigger_context_distinguishes_two_prefixes() -> None:
     prefixes route to the same Bronze table; only the discriminator
     differs."""
     assert mod.detect_trigger_context("cicd/semgrep/repo-a/abc.json") == "cicd"
-    assert mod.detect_trigger_context("periodic/semgrep/repo-a/20260420T100000Z.sarif") == "periodic"
+    assert (
+        mod.detect_trigger_context("periodic/semgrep/repo-a/20260420T100000Z.sarif") == "periodic"
+    )
 
 
 @pytest.mark.requirement("REQ-ING-HWM")
@@ -123,19 +125,25 @@ def test_ingest_contract_raises_without_extra_config() -> None:
 # matrix shows the deliberate N/A rather than a silent gap. The catalog
 # matrix at mkdocs/docs/platform/reference/catalog.md is the source of
 # truth for these markers on the Semgrep row.
-@pytest.mark.skip(reason="N/A for CLI-artefact SAST scanners (references/sast.md § Applicable REQ-IDs; catalog.md Semgrep row)")
+@pytest.mark.skip(
+    reason="N/A for CLI-artefact SAST scanners (references/sast.md § Applicable REQ-IDs; catalog.md Semgrep row)"
+)
 @pytest.mark.requirement("REQ-ING-AUTH")
 def test_req_ing_auth_na_for_cli_scanner() -> None:  # pragma: no cover - documentation marker
     pass
 
 
-@pytest.mark.skip(reason="N/A for CLI-artefact SAST scanners (references/sast.md § Applicable REQ-IDs; catalog.md Semgrep row)")
+@pytest.mark.skip(
+    reason="N/A for CLI-artefact SAST scanners (references/sast.md § Applicable REQ-IDs; catalog.md Semgrep row)"
+)
 @pytest.mark.requirement("REQ-ING-PAG")
 def test_req_ing_pag_na_for_cli_scanner() -> None:  # pragma: no cover - documentation marker
     pass
 
 
-@pytest.mark.skip(reason="N/A for CLI-artefact SAST scanners (references/sast.md § Applicable REQ-IDs; catalog.md Semgrep row)")
+@pytest.mark.skip(
+    reason="N/A for CLI-artefact SAST scanners (references/sast.md § Applicable REQ-IDs; catalog.md Semgrep row)"
+)
 @pytest.mark.requirement("REQ-ING-RL")
 def test_req_ing_rl_na_for_cli_scanner() -> None:  # pragma: no cover - documentation marker
     pass

@@ -35,8 +35,9 @@ and is unit-tested locally per CLAUDE.md (no local SparkSession).
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from datetime import datetime, timedelta
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Canonical AppSec tool categories the matrix tracks. Aligned with
@@ -105,13 +106,15 @@ def compute_coverage_rows(
         for cat in CANONICAL_CATEGORIES:
             last_scan_at = latest.get((repo, cat))
             is_stale = last_scan_at is None or last_scan_at < cutoff
-            out.append({
-                "repository_id": repo,
-                "category": cat,
-                "last_scan_at": last_scan_at,
-                "is_stale": is_stale,
-                "staleness_threshold_days": threshold_days,
-            })
+            out.append(
+                {
+                    "repository_id": repo,
+                    "category": cat,
+                    "last_scan_at": last_scan_at,
+                    "is_stale": is_stale,
+                    "staleness_threshold_days": threshold_days,
+                }
+            )
     return out
 
 
@@ -144,15 +147,12 @@ findings = (
 # COMMAND ----------
 
 # Cross-join repos × canonical categories so the matrix is dense.
-categories_df = spark.createDataFrame(
-    [(c,) for c in CANONICAL_CATEGORIES], ["category"]
-)
+categories_df = spark.createDataFrame([(c,) for c in CANONICAL_CATEGORIES], ["category"])
 matrix = repos.crossJoin(categories_df)
 
 # Latest scan per (repo, category) from findings.
-latest = (
-    findings.groupBy("repository_id", "category")
-    .agg(F.max("last_seen_at").alias("last_scan_at"))
+latest = findings.groupBy("repository_id", "category").agg(
+    F.max("last_seen_at").alias("last_scan_at")
 )
 
 # LEFT JOIN: every cell in the matrix gets a last_scan_at (or null).
@@ -160,17 +160,19 @@ joined = matrix.join(latest, on=["repository_id", "category"], how="left")
 
 # Staleness: null = never ran = stale; otherwise compare to cutoff.
 cutoff_expr = F.current_timestamp() - F.expr(f"INTERVAL {threshold_days} DAYS")
-result = joined.withColumn(
-    "is_stale",
-    F.col("last_scan_at").isNull() | (F.col("last_scan_at") < cutoff_expr),
-).withColumn(
-    "staleness_threshold_days", F.lit(threshold_days).cast("int")
-).select(
-    "repository_id",
-    "category",
-    "last_scan_at",
-    "is_stale",
-    "staleness_threshold_days",
+result = (
+    joined.withColumn(
+        "is_stale",
+        F.col("last_scan_at").isNull() | (F.col("last_scan_at") < cutoff_expr),
+    )
+    .withColumn("staleness_threshold_days", F.lit(threshold_days).cast("int"))
+    .select(
+        "repository_id",
+        "category",
+        "last_scan_at",
+        "is_stale",
+        "staleness_threshold_days",
+    )
 )
 
 # COMMAND ----------

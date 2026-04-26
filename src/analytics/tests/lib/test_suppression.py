@@ -7,7 +7,7 @@ job cluster; CLAUDE.md "Don'ts" prohibits a local SparkSession in tests.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -17,8 +17,7 @@ from src.analytics.lib.suppression import (
     rule_matches_value,
 )
 
-
-NOW = datetime(2026, 4, 26, 12, 0, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 4, 26, 12, 0, 0, tzinfo=UTC)
 FUTURE = NOW + timedelta(days=30)
 PAST = NOW - timedelta(days=1)
 
@@ -157,7 +156,7 @@ def test_default_now_uses_current_time() -> None:
     # Smoke test: when now is omitted, a rule expiring far in the past is
     # treated as inactive against the actual current time.
     row = {"tool_source": "semgrep"}
-    rules = [_rule("tool_source", "semgrep", expires=datetime(2000, 1, 1, tzinfo=timezone.utc))]
+    rules = [_rule("tool_source", "semgrep", expires=datetime(2000, 1, 1, tzinfo=UTC))]
     assert is_row_suppressed(row, rules) is False
 
 
@@ -165,6 +164,8 @@ def test_default_now_uses_current_time() -> None:
 # Spark-applied path — skip-marked per CLAUDE.md.
 
 
-@pytest.mark.skip(reason="apply_suppression_rules is Spark-applied; runs on the Databricks job cluster, not in local pytest (per CLAUDE.md)")
+@pytest.mark.skip(
+    reason="apply_suppression_rules is Spark-applied; runs on the Databricks job cluster, not in local pytest (per CLAUDE.md)"
+)
 def test_apply_suppression_rules_spark() -> None:
     raise AssertionError("unreachable — test is skip-marked")
