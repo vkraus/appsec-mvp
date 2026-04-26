@@ -9,6 +9,7 @@
       "owned_by": "abcdef0123456789abcdef0123456789",
       "used_by": "fedcba9876543210fedcba9876543210",
       "u_repository_id": "acme/checkout-frontend",
+      "u_app_id": "12345",
       "sys_created_on": "2024-09-15 08:30:00",
       "sys_updated_on": "2026-04-20 14:22:11"
     },
@@ -21,6 +22,7 @@
       "owned_by": "abcdef0123456789abcdef0123456789",
       "used_by": "",
       "u_repository_id": "acme/payments-api",
+      "u_app_id": "ABC12",
       "sys_created_on": "2024-09-15 08:30:00",
       "sys_updated_on": "2026-04-21 09:15:30"
     },
@@ -33,6 +35,7 @@
       "owned_by": "",
       "used_by": "",
       "u_repository_id": "",
+      "u_app_id": "",
       "sys_created_on": "2023-04-10 11:00:00",
       "sys_updated_on": "2026-04-19 18:00:00"
     }
