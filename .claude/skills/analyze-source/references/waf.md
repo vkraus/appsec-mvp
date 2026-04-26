@@ -63,4 +63,4 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. For 
 
 ## Lakeflow Connect availability
 
-No source in the waf category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk_dlt` for REST/SDK sources (the standard ingestion-tooling preference for this category).
+No source in the waf category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `artifact_path` for the canonical autoloader-from-S3 / Firehose log-stream pattern documented under "## Ingestion-tooling preference" above; `sdk_dlt` for the SDK-based sampled-request fallback when full-log ingestion is not yet provisioned.

@@ -60,4 +60,4 @@ Standard preference order applies: Lakeflow Connect > Databricks SDK > dlt. Serv
 
 ## Lakeflow Connect availability
 
-No source in the sca category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk_dlt` for REST/SDK sources (the standard ingestion-tooling preference for this category).
+No source in the sca category appears in the analyze-source LFC managed-source catalogue today. Resolution: category-canonical default applies — `sdk_dlt` for server-based REST/SDK sources; `artifact_path` for CLI-based SCA (package-manager audits invoked in CI/CD), per the artefact-collection pattern noted under "## Ingestion-tooling preference" above (mirrors the SAST CLI exception).
