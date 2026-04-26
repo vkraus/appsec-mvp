@@ -34,6 +34,7 @@ def test_silver_applications_has_cmdb_fields():
         "name",
         "owner_email",
         "criticality",
+        "app_code",
         "updated_at",
     }
 
@@ -48,7 +49,7 @@ def test_silver_repositories_keyed_by_full_name():
 
 def test_silver_app_repo_mapping_links_cmdb_to_scm():
     fields = {f.name for f in silver_app_repo_mapping.fields}
-    assert fields == {"application_id", "repository_id", "linked_at"}
+    assert fields == {"application_id", "repository_id", "link_source", "linked_at"}
 
 
 def test_silver_finding_location_covers_code_and_url():

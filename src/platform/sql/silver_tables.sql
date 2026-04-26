@@ -148,3 +148,12 @@ CREATE TABLE IF NOT EXISTS silver.waf_events (
   sampling_weight     BIGINT,
   ingested_at         TIMESTAMP NOT NULL
 ) USING DELTA;
+
+-- Idempotent column adds for environments where the CREATE TABLE blocks
+-- above already ran without these columns (Databricks DBR 12+ supports
+-- column-level IF NOT EXISTS on ALTER TABLE ADD COLUMNS).
+ALTER TABLE silver.applications
+  ADD COLUMNS IF NOT EXISTS (app_code STRING);
+
+ALTER TABLE silver.app_repo_mapping
+  ADD COLUMNS IF NOT EXISTS (link_source STRING);
