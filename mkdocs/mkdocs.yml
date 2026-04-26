@@ -106,6 +106,7 @@ nav:
           - Source characteristics: platform/reference/source-characteristics.md
           - Source capability matrix: platform/reference/source-capability-matrix.md
           - Connector skills: platform/reference/connector-skills.md
+          - Skill scope: platform/reference/skill-scope.md
   - Install connectors:
       - connectors/index.md
       - SCM:
