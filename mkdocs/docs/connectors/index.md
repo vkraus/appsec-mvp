@@ -34,7 +34,7 @@ Claude Code skills for the category.
 
 ## How connectors are produced
 
-Connectors in this framework are produced by three category aware skills: `analyze-source`, `generate-connector`, and `validate-implementation`. See [Connector skills](../platform/reference/connector-skills.md) for the standard statement of the contract, the procedural body of each skill, and the connector generation aggregator.
+Connectors in this framework are produced by four category aware skills: `analyze-source`, `provision-source`, `generate-connector`, and `validate-implementation`. See [Connector skills](../platform/reference/connector-skills.md) for the standard statement of the contract, the procedural body of each skill, and the connector generation aggregator.
 
 ## What each connector page contains
 

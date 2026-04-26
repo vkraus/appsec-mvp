@@ -211,8 +211,9 @@ appsec-mvp/
 │                                     dependency rule by design.
 │
 ├── mkdocs/                           docs site (published to vkraus.github.io/appsec-mvp/)
-└── .claude/skills/                   skill specializations (analyze-source, generate-connector,
-                                      validate-implementation), used by the connector skill chain
+└── .claude/skills/                   skill specializations (analyze-source, provision-source,
+                                      generate-connector, validate-implementation), used by the
+                                      connector skill chain
 ```
 
 ---
@@ -233,7 +234,7 @@ Adoption order (SCM first per the layering rule):
 | **DAST** | OWASP ZAP | ✅ implemented | `src/connectors/owasp_zap/` (artifact path plus scan-and-read) | Terraform: k8s daemon plus LoadBalancer |
 | **WAF** | AWS WAF | ✅ skill-generated | `src/connectors/aws_waf/` | (none; AWS account WAF is the source) |
 
-**Skill-generated** connectors were produced by the skill chain at `.claude/skills/` (`analyze-source`, then `generate-connector`, then `validate-implementation`). See [`mkdocs/docs/platform/reference/connector-skills.md`](mkdocs/docs/platform/reference/connector-skills.md) for the chain and Generation logs for each connector.
+**Skill-generated** connectors were produced by the skill chain at `.claude/skills/` (`analyze-source`, then `provision-source`, then `generate-connector`, then `validate-implementation`). See [`mkdocs/docs/platform/reference/connector-skills.md`](mkdocs/docs/platform/reference/connector-skills.md) for the chain and Implementation logs for each connector.
 
 ---
 
@@ -396,4 +397,4 @@ If you're a thesis reviewer or external reader, the right starting points are:
 
 ## Acknowledgements
 
-Built as a master's thesis at the Czech Technical University in Prague. The redesign and several connector implementations were assisted by Claude Code (Anthropic), via the `superpowers` brainstorm, plan, and execute skill chain plus a custom connector specialization chain (`analyze-source`, `generate-connector`, `validate-implementation`) at `.claude/skills/`.
+Built as a master's thesis at the Czech Technical University in Prague. The redesign and several connector implementations were assisted by Claude Code (Anthropic), via the `superpowers` brainstorm, plan, and execute skill chain plus a custom connector specialization chain (`analyze-source`, `provision-source`, `generate-connector`, `validate-implementation`) at `.claude/skills/`.

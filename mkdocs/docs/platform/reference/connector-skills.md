@@ -44,7 +44,7 @@ A single Markdown page emitted at `mkdocs/docs/connectors/<category>/<source-slu
 3. **Reference**: the seven API facts (see the bullet list under Procedure).
 4. **Setup**: configuration, bundle deployment, first run commands. Stub with `!!! info "Not implemented in MVP"` if out of scope.
 5. **Validation**: always stubbed on first emit with `!!! info "Pending validation"`. `validate-implementation` populates this later.
-6. **Implementation log**: a Markdown table with three rows. Row 1 is filled by this skill (see Implementation log row template below). Rows 2 and 3 are placeholders marked `(pending)` for `generate-connector` and `validate-implementation` to fill in.
+6. **Implementation log**: a Markdown table with four rows. Row 1 is filled by this skill (see Implementation log row template below). Rows 2, 3, and 4 are placeholders marked `(pending)` for `provision-source`, `generate-connector`, and `validate-implementation` to fill in.
 
 #### Procedure
 
@@ -312,6 +312,6 @@ Overwrite the `(pending)` placeholder for `validate-implementation` in the Imple
 - `{git_short_sha}`: output of `git rev-parse --short HEAD` on the repo for the skill.
 - `{branch}`: output of `git rev-parse --abbrev-ref HEAD`.
 
-Rows 1 (`analyze-source`) and 2 (`generate-connector`) MUST remain untouched.
+Rows 1 (`analyze-source`), 2 (`provision-source`), and 3 (`generate-connector`) MUST remain untouched.
 
 *Rendered from `.claude/skills/validate-implementation/SKILL.md`. Source of truth lives in the skill file.*
