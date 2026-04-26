@@ -50,20 +50,35 @@ flowchart LR
     BWAF[bronze_aws_waf]
   end
 
-  subgraph Silver["Silver (standard)"]
+  subgraph Silver["Silver (canonical entities)"]
     SR["silver.repositories"]
     SA["silver.applications"]
     SAR["silver.app_repo_mapping"]
     SF["silver.findings"]
-    SHW["silver.hwm"]
+    SW["silver.waf_events"]
+    SS["silver.suppression_rules"]
   end
 
   LINKER{{"app-repo linker
 (name match)"}}
 
   subgraph Gold["Gold (analytics)"]
-    GFD["gold.findings_summary
-(per-app, per-severity)"]
+    GOLAP["OLAP — 5 Delta tables refreshed daily
+app_risk_posture · mttr · coverage ·
+dedup_overlap · cwe_owasp_heatmap"]
+    GVIEW["gold.app_repo_findings_open
+(view)"]
+  end
+
+  subgraph OLTP["OLTP serving (Online Tables, ~5 min lag)"]
+    OAR["gold_online.app_risk_posture"]
+    OARF["silver_online.app_repo_findings"]
+  end
+
+  subgraph Consumers["Consumers"]
+    APP["Databricks App
+(security-score endpoint)"]
+    DASH["Dashboards & SQL"]
   end
 
   GH --> BG
@@ -84,7 +99,7 @@ flowchart LR
   BDT --> SF
   BTH --> SF
   BZAP --> SF
-  BWAF --> SF
+  BWAF --> SW
 
   SR --> LINKER
   SA --> LINKER
@@ -92,7 +107,21 @@ flowchart LR
 
   SR --> SF
   SAR --> SF
-  SF --> GFD
+
+  SF --> GOLAP
+  SAR --> GOLAP
+  SR --> GOLAP
+  SS --> GOLAP
+
+  SF --> GVIEW
+  SAR --> GVIEW
+
+  GOLAP --> OAR
+  GVIEW --> OARF
+
+  OAR --> APP
+  OARF --> APP
+  GOLAP --> DASH
 ```
 
 </div>

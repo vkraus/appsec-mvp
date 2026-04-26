@@ -26,7 +26,7 @@ This repository stores the MVP implementation part of my master's thesis. The co
 
 ## Overview
 
-**What it does.** Pulls findings, asset data, and CMDB records from up to nine AppSec sources into a Databricks lakehouse, normalizes severity, status, and dedup tuples per a published mapping contract, and exposes joinable Silver entities (`silver.findings`, `silver.repositories`, `silver.applications`, `silver.app_repo_mapping`, `silver.hwm`) plus projections for each connector (`silver_<source>.*`).
+**What it does.** Pulls findings, asset data, and CMDB records from up to nine AppSec sources into a Databricks lakehouse, normalizes severity, status, and dedup tuples per a published mapping contract, and exposes joinable Silver entities (`silver.findings`, `silver.repositories`, `silver.applications`, `silver.app_repo_mapping`, `silver.suppression_rules`, `silver.waf_events`, `silver.hwm`, `silver.finding_location`) plus per-connector projections (`silver_<source>.*`), five materialized Gold OLAP tables refreshed daily, a Gold view backing two OLTP Online Tables, and a Databricks App that serves a sub-50 ms security-score endpoint over the latter.
 
 **Why it exists.** Production AppSec stacks are a tangle of point integrations between scanner SaaS, CMDB, ticketing, and analytics. Each one comes with its own auth model, pagination contract, and severity vocabulary. This MVP is a thesis-grade reference for *how to ingest those tools systematically*. It provides a single framework primitive (HTTP client, paginator, HWM state, recommended normalization), a fixed connector contract (`ingest()`, `transform()`, `mapping.yml`, `config.yml`, `severity.yml`, `status.yml`), and a fixed deployment unit (DAB). Adding a tenth source is a fill-in-the-blanks exercise, not an integration project.
 
@@ -66,16 +66,35 @@ flowchart LR
     BWAF[bronze_aws_waf]
   end
 
-  subgraph Silver["Silver (standard)"]
+  subgraph Silver["Silver (canonical entities)"]
     SR["silver.repositories"]
+    SA["silver.applications"]
     SAR["silver.app_repo_mapping"]
     SF["silver.findings"]
-    SHW["silver.hwm"]
+    SW["silver.waf_events"]
+    SS["silver.suppression_rules"]
   end
 
+  LINKER{{"app-repo linker
+(name match)"}}
+
   subgraph Gold["Gold (analytics)"]
-    GFD["gold.findings_summary
-(per-app, per-severity)"]
+    GOLAP["OLAP — 5 Delta tables refreshed daily
+app_risk_posture · mttr · coverage ·
+dedup_overlap · cwe_owasp_heatmap"]
+    GVIEW["gold.app_repo_findings_open
+(view)"]
+  end
+
+  subgraph OLTP["OLTP serving (Online Tables, ~5 min lag)"]
+    OAR["gold_online.app_risk_posture"]
+    OARF["silver_online.app_repo_findings"]
+  end
+
+  subgraph Consumers["Consumers"]
+    APP["Databricks App
+(security-score endpoint)"]
+    DASH["Dashboards & SQL"]
   end
 
   GH --> BG
@@ -90,17 +109,35 @@ flowchart LR
 
   BG --> SR
   BGL --> SR
-  BSN --> SAR
+  BSN --> SA
   BSQ --> SF
   BSG --> SF
   BDT --> SF
   BTH --> SF
   BZAP --> SF
-  BWAF --> SF
+  BWAF --> SW
+
+  SR --> LINKER
+  SA --> LINKER
+  LINKER --> SAR
 
   SR --> SF
   SAR --> SF
-  SF --> GFD
+
+  SF --> GOLAP
+  SAR --> GOLAP
+  SR --> GOLAP
+  SS --> GOLAP
+
+  SF --> GVIEW
+  SAR --> GVIEW
+
+  GOLAP --> OAR
+  GVIEW --> OARF
+
+  OAR --> APP
+  OARF --> APP
+  GOLAP --> DASH
 ```
 
 **Layering principle (data-level dependency).** Within Phase 2 (connectors), an SCM connector (GitHub or GitLab) must be installed *first* because non-SCM connector findings reference `silver.repositories.repository_id` populated by SCM. This is an ordering at job-run time. Connector setup code remains independent. See [Architectural rules](#architectural-rules).
@@ -161,7 +198,7 @@ databricks bundle run servicenow-ingest
 
 ### Phase 3: Build analytics
 
-`src/analytics/` is currently scaffolding (gold layer DDL plus a placeholder job). Full analytics implementation is future work. The silver layer is connector agnostic and ready to read from.
+`src/analytics/` ships five Gold OLAP notebooks (`app_risk_posture_daily`, `mttr_by_source_severity_weekly`, `coverage_matrix`, `dedup_link_overlap`, `cwe_owasp_heatmap`) plus a Gold view (`app_repo_findings_open`), all driven by `analytics-job.yml` on a daily schedule, two Online Tables for OLTP serving (`gold_online.app_risk_posture`, `silver_online.app_repo_findings`), an operator-authored suppression-rules pipeline (`silver.suppression_rules` + `lib/suppression.py`), and a Databricks App (`src/analytics/app/`) that serves the security-score endpoint. See [Build analytics](https://vkraus.github.io/appsec-mvp/analytics/) on the docs site for per-dataset detail.
 
 ---
 
@@ -184,7 +221,7 @@ appsec-mvp/
 │   │   │   ├── platform.yml          catalog plus cross-source `silver` schema
 │   │   │   └── bootstrap-job.yml     one-time silver_tables.sql job
 │   │   ├── sql/
-│   │   │   └── silver_tables.sql     silver.findings, hwm, repositories, app_repo
+│   │   │   └── silver_tables.sql     silver.{findings, finding_location, hwm, repositories, applications, app_repo_mapping, waf_events, suppression_rules}
 │   │   ├── scripts/
 │   │   │   └── bootstrap.sh          post-deploy: scope, storage credential, external location
 │   │   └── tests/                    framework tests
@@ -200,9 +237,14 @@ appsec-mvp/
 │   │   ├── dependency_track/
 │   │   └── aws_waf/
 │   │
-│   └── analytics/                    Phase 3 scaffolding (silver to gold)
-│       ├── resources/{schemas,job}.yml
-│       └── sql/                      gold table DDL plus materializations (placeholder)
+│   └── analytics/                    Gold layer + OLTP serving + Databricks App
+│       ├── resources/{schemas,job,app,online_schemas,online_tables}.yml  DAB resources
+│       ├── notebooks/gold/           5 Gold OLAP notebooks + 1 view
+│       ├── notebooks/admin/          operator suppression-rules notebook
+│       ├── lib/suppression.py        apply_suppression_rules helper
+│       ├── app/                      Databricks App (security-score endpoint)
+│       ├── tests/                    Gold + suppression unit tests
+│       └── sql/                      gold-layer placeholder DDL
 │
 ├── examples/
 │   └── end-to-end-demo/              cross-scanner CI workflow recipe (Sonar, Semgrep, ZAP)
@@ -371,11 +413,15 @@ This README is the entry point for engineers. The deeper material lives in:
 - DAB bundle with resources distributed across components
 - Optional Terraform runtimes for several connectors (5 of them)
 - Cross-source silver standard tables (`findings`, `finding_location`, `hwm`, `repositories`, `applications`, `app_repo_mapping`, `waf_events`, `suppression_rules`)
+- Platform-layer [app-repo linker](mkdocs/docs/platform/app-repo-link.md) joining `silver.repositories` to `silver.applications` via embedded 5-digit app codes
+- Gold OLAP analytics: 5 daily-refreshed Delta tables (`app_risk_posture_daily`, `mttr_by_source_severity_weekly`, `coverage_matrix`, `dedup_link_overlap`, `cwe_owasp_heatmap`) plus a Gold view (`app_repo_findings_open`)
+- OLTP serving: 2 Databricks Online Tables (`gold_online.app_risk_posture`, `silver_online.app_repo_findings`) syncing continuously from Gold with ~5-min lag
+- Databricks App exposing a sub-50 ms security-score endpoint over the Online Tables
+- Operator-authored suppression rules (`silver.suppression_rules`) applied at Gold aggregation time
 - Co-located tests with traceability via `@pytest.mark.requirement`
 
 **Out of scope for the current iteration** (tracked as follow-ups):
 - Connector side population of `silver.repositories` is partial — the GitHub transform writes the canonical narrow shape; the wider target shape (`scm_source` / `org` / `name` / `url` / `archived` / `visibility`) is pending. `silver.app_repo_mapping` is populated by the platform-layer [app-repo linker](mkdocs/docs/platform/app-repo-link.md); the parallel CMDB-side `cmdb_rel_ci` and `u_repository_id` write paths are pending.
-- Full analytics implementation. `src/analytics/` is scaffolding.
 - Some skill generated connectors carry placeholder `ingest_entry.py` and `transform_entry.py` notebook wrappers. Full job orchestration for them is pending.
 - Inherited error handling sharp edges in `src/platform/scripts/bootstrap.sh` (`grep -v ALREADY_EXISTS || true`) and `src/connectors/servicenow/runtime/main.tf` (`local-exec curl` doesn't fail on HTTP 4xx). Flagged for a follow-up hardening task.
 
