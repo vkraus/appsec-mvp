@@ -1,4 +1,5 @@
 # Databricks notebook source
+# ruff: noqa: F821 — dbutils is injected by the Databricks notebook runtime
 """Databricks entry point for the github ingest task.
 
 Thin dispatcher: reads the three DAB job parameters (source_name,

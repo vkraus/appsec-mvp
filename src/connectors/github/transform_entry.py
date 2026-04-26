@@ -1,4 +1,5 @@
 # Databricks notebook source
+# ruff: noqa: F821 — dbutils is injected by the Databricks notebook runtime
 """Databricks entry point for the github transform task."""
 
 from pyspark.sql import SparkSession

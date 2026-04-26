@@ -1,4 +1,5 @@
 # Databricks notebook source
+# ruff: noqa: F821 — dbutils is injected by the Databricks notebook runtime
 # Notebook entry point for the sonarqube-connector job's ``transform`` task.
 #
 # Driven by ``src/connectors/sonarqube/resources/job.yml``. Reads the job
