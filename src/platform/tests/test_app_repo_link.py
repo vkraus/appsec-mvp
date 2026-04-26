@@ -167,3 +167,68 @@ def test_link_by_name_pylist_emits_multiple_rows_when_codes_collide() -> None:
         ("sysid-a", "acme/svc-12345"),
         ("sysid-b", "acme/svc-12345"),
     }
+
+
+# ----- link_by_name (Spark wrapper) ---------------------------------------
+#
+# A local SparkSession is used here per the per-connector convention
+# (see e.g. src/connectors/servicenow/tests — the framework forbids
+# *production* SparkSessions in pure-Python tests but accepts a local
+# session in connector tests; the platform tests follow the same rule).
+
+
+@pytest.fixture(scope="module")
+def spark():
+    from pyspark.sql import SparkSession
+    return (
+        SparkSession.builder
+        .appName("app-repo-link-tests")
+        .master("local[2]")
+        .config("spark.sql.shuffle.partitions", "1")
+        .getOrCreate()
+    )
+
+
+@pytest.mark.requirement("REQ-TRF-MAP")
+def test_link_by_name_spark_returns_silver_shaped_dataframe(spark) -> None:
+    """REQ-TRF-MAP: the Spark wrapper returns a DataFrame whose columns
+    match silver_app_repo_mapping in src/platform/schemas.py exactly."""
+    from src.platform.app_repo_link import link_by_name
+    from src.platform.schemas import (
+        silver_app_repo_mapping,
+        silver_applications,
+        silver_repositories,
+    )
+
+    apps = spark.createDataFrame(
+        [("sysid-a", "Checkout", None, None, "12345", datetime(2026, 4, 20, tzinfo=UTC))],
+        schema=silver_applications,
+    )
+    repos = spark.createDataFrame(
+        [("acme/svc-12345", "acme/svc-12345", "main", datetime(2026, 4, 20, tzinfo=UTC))],
+        schema=silver_repositories,
+    )
+
+    out = link_by_name(apps, repos, run_ts=datetime(2026, 4, 26, tzinfo=UTC))
+    assert [f.name for f in out.schema.fields] == [
+        f.name for f in silver_app_repo_mapping.fields
+    ]
+    rows = out.collect()
+    assert len(rows) == 1
+    assert rows[0]["application_id"] == "sysid-a"
+    assert rows[0]["repository_id"] == "acme/svc-12345"
+    assert rows[0]["link_source"] == "name_match"
+    assert rows[0]["linked_at"] == datetime(2026, 4, 26, tzinfo=UTC)
+
+
+@pytest.mark.requirement("REQ-DQ")
+def test_link_by_name_spark_handles_empty_inputs(spark) -> None:
+    """REQ-DQ: empty applications or empty repositories input yields an
+    empty silver.app_repo_mapping DataFrame, NOT an error."""
+    from src.platform.app_repo_link import link_by_name
+    from src.platform.schemas import silver_applications, silver_repositories
+
+    empty_apps = spark.createDataFrame([], schema=silver_applications)
+    empty_repos = spark.createDataFrame([], schema=silver_repositories)
+    out = link_by_name(empty_apps, empty_repos, run_ts=datetime(2026, 4, 26, tzinfo=UTC))
+    assert out.count() == 0
