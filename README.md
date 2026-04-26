@@ -75,10 +75,13 @@ flowchart LR
     SS["silver.suppression_rules"]
   end
 
-  subgraph Gold["Gold (analytics)"]
-    GOLAP["OLAP — 5 Delta tables refreshed daily
-app_risk_posture · mttr · coverage ·
-dedup_overlap · cwe_owasp_heatmap"]
+  subgraph Gold["Gold (analytics — 5 OLAP Delta tables refreshed daily + 1 view)"]
+    direction TB
+    GR1["gold.app_risk_posture_daily"]
+    GR2["gold.mttr_by_source_severity_weekly"]
+    GR3["gold.coverage_matrix"]
+    GR4["gold.dedup_link_overlap"]
+    GR5["gold.cwe_owasp_heatmap"]
     GVIEW["gold.app_repo_findings_open
 (view)"]
   end
@@ -120,20 +123,32 @@ dedup_overlap · cwe_owasp_heatmap"]
   SR --> SF
   SAR --> SF
 
-  SF --> GOLAP
-  SAR --> GOLAP
-  SR --> GOLAP
-  SS --> GOLAP
+  SF --> GR1
+  SF --> GR2
+  SF --> GR3
+  SF --> GR4
+  SF --> GR5
+  SAR --> GR1
+  SAR --> GR5
+  SR --> GR3
+  SS --> GR1
+  SS --> GR2
+  SS --> GR4
+  SS --> GR5
 
   SF --> GVIEW
   SAR --> GVIEW
 
-  GOLAP --> OAR
+  GR1 --> OAR
   GVIEW --> OARF
 
   OAR --> APP
   OARF --> APP
-  GOLAP --> DASH
+  GR1 --> DASH
+  GR2 --> DASH
+  GR3 --> DASH
+  GR4 --> DASH
+  GR5 --> DASH
 ```
 
 **Layering principle (data-level dependency).** Within Phase 2 (connectors), an SCM connector (GitHub or GitLab) must be installed *first* because non-SCM connector findings reference `silver.repositories.repository_id` populated by SCM. This is an ordering at job-run time. Connector setup code remains independent. See [Architectural rules](#architectural-rules).
