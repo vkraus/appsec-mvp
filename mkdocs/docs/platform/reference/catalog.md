@@ -15,6 +15,8 @@ Unity Catalog layout under each catalog for each environment (`appsec_dev`, `app
 
 The cross source `silver` schema contains the standard entities and findings every connector reads or writes. `silver.repositories` is populated by SCM connectors (the SCM first data dependency). `silver.app_repo_mapping` is populated by the CMDB connector. Both table structures live at [`src/platform/sql/silver_tables.sql`](https://github.com/vkraus/appsec-mvp/blob/main/src/platform/sql/silver_tables.sql) and are applied by the `platform-bootstrap` job described at [Platform bootstrap job](../platform-bootstrap-job.md).
 
+`silver.applications` carries a 5-digit `app_code` column (populated from `cmdb_ci_business_app.u_app_id` by the ServiceNow connector) used as the join key for the [app-repo linker](../app-repo-link.md). `silver.app_repo_mapping` carries a `link_source` discriminator column (`"name_match"` for rows produced by the linker; reserved future values: `"cmdb_rel_ci"`, `"u_repository_id"`) so multiple signals can coexist in the same table without conflict.
+
 ## Requirement catalog
 
 Each `REQ-*` identifier is bound to pytest markers in the reference implementation.
