@@ -43,6 +43,11 @@ source_runtime:
     - artifact_bucket
 
 databricks_runtime:
+  # Drives generate-connector emit branch. Resolved by analyze-source from the
+  # Maintained Python SDK catalogue (GitHub → PyGitHub).
+  # See .claude/skills/analyze-source/SKILL.md "## Maintained Python SDK catalogue".
+  ingestion_path: sdk
+  python_sdk_module: PyGitHub
   secret_scope: mvp-connectors
   bronze_schema: bronze_github
   silver_schema: silver_github  # resources/schemas.yml declares both bronze_github and silver_github
