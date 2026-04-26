@@ -9,9 +9,13 @@ The DDL lives at `src/platform/sql/silver_tables.sql`. It defines the
 standard Silver tables every connector reads or writes:
 
 - `silver.findings`: the cross-scanner findings table.
+- `silver.finding_location`: per-finding code/URL location detail.
 - `silver.hwm`: high water mark state for incremental ingestion.
 - `silver.repositories`: standard repository entity (populated by SCM connectors).
-- `silver.app_repo_mapping`: mapping from application to repository (populated by the CMDB connector).
+- `silver.applications`: standard business-application entity, including `app_code` (populated by the CMDB connector).
+- `silver.app_repo_mapping`: mapping from application to repository, keyed `(application_id, repository_id, link_source, linked_at)` (populated by the [app-repo linker](app-repo-link.md) and the deferred CMDB-side paths).
+- `silver.waf_events`: AWS WAF event stream (event-shape, NOT finding-shape).
+- `silver.suppression_rules`: operator-authored finding-suppression entries (analytics-layer concern).
 
 The job is intentionally separate from `databricks bundle deploy` because
 DAB has no native `tables` resource type. A table cannot be declared inline
@@ -48,15 +52,16 @@ otherwise additive only.
 SHOW TABLES IN appsec_dev.silver;
 ```
 
-Expected rows: `findings`, `hwm`, `repositories`, `app_repo`.
+Expected rows: `applications`, `app_repo_mapping`, `finding_location`, `findings`, `hwm`, `repositories`, `suppression_rules`, `waf_events`.
 
 ```sql
--- All four are empty after bootstrap; connectors populate them on their
--- first runs.
-SELECT count(*) FROM appsec_dev.silver.findings;       -- 0
-SELECT count(*) FROM appsec_dev.silver.repositories;   -- 0
-SELECT count(*) FROM appsec_dev.silver.app_repo_mapping;       -- 0
-SELECT count(*) FROM appsec_dev.silver.hwm;            -- 0
+-- Every table is empty after bootstrap; connectors and the app-repo linker
+-- populate them on their first runs.
+SELECT count(*) FROM appsec_dev.silver.findings;          -- 0
+SELECT count(*) FROM appsec_dev.silver.repositories;      -- 0
+SELECT count(*) FROM appsec_dev.silver.applications;      -- 0
+SELECT count(*) FROM appsec_dev.silver.app_repo_mapping;  -- 0
+SELECT count(*) FROM appsec_dev.silver.hwm;               -- 0
 ```
 
 ## Common errors
@@ -70,16 +75,9 @@ SELECT count(*) FROM appsec_dev.silver.hwm;            -- 0
 
 ## Note on connector-side population
 
-`silver.repositories` and `silver.app_repo_mapping` define the standard schema
-required by the data dependency that puts SCM first. Connector-side write logic for
-both tables is intentionally deferred. See the "Out of scope" section
-of the redesign spec. Until the GitHub transform is extended to populate
-`silver.repositories` and the ServiceNow transform is migrated to
-`silver.app_repo_mapping`, both tables exist but stay empty.
+`silver.repositories` is populated by the SCM connector transforms (GitHub, GitLab — wider-shape projection still in progress). `silver.applications` is populated by the ServiceNow transform. `silver.app_repo_mapping` is populated by the platform-layer [app-repo linker](app-repo-link.md), which joins `silver.repositories.full_name` to `silver.applications.app_code` on a 5-digit token. The CMDB-side paths (`u_repository_id` on the business-app record, `cmdb_rel_ci` graph rows) are deferred and will land alongside the linker via the `link_source` discriminator column.
 
-This is by design: the platform layer establishes the target schema so
-downstream analytics can compile against it. The connector follow-on work
-fills the data path.
+This is by design: the platform layer establishes the target schema so downstream analytics can compile against it; the linker fills the application↔repository data path independently of upstream CMDB graph hygiene.
 
 ## Phase 1 complete
 
