@@ -71,6 +71,7 @@ Reverse-engineered from `git show a086f9d:src/connectors/servicenow/...` (the on
 
 | Field | Type | Required | Default | Source-of-derivation |
 |---|---|---|---|---|
+| `ingestion_path` | string (enum: `lakeflow_connect`, `sdk_dlt`, `artifact_path`) | yes | (resolved by `analyze-source`) | `analyze-source` LFC managed-source catalogue match → `lakeflow_connect`. Otherwise category-canonical (`sdk_dlt` for CMDB by default; `artifact_path` for SAST CLI / secrets / DAST CLI per category quirks). |
 | `secret_scope` | string | yes | `mvp-connectors` | `scripts/load-secrets.sh` line `SCOPE="mvp-connectors"`; also referenced in `scripts/install.sh` "Loading … into the mvp-connectors scope". |
 | `bronze_schema` | string | yes | `bronze_{source}` | `resources/schemas.yml` `name: bronze_servicenow`; `resources/pipeline.yml` `target: bronze_servicenow`; `sql/business_applications_envelope.sql` `${catalog}.bronze_servicenow.business_applications_envelope`. |
 | `silver_schema` | string | yes | `silver_{source}` | `resources/schemas.yml` `name: silver_servicenow` (second schema entry alongside bronze). |
@@ -86,7 +87,7 @@ Reverse-engineered from `git show a086f9d:src/connectors/servicenow/...` (the on
 | `secret_env_vars` | list[{env_var,secret_key}] | yes | (none) | `scripts/load-secrets.sh` `databricks secrets put-secret "$SCOPE" <secret_key> --string-value "$<env_var>"` lines. ServiceNow: `(SERVICENOW_URL→servicenow_url, SERVICENOW_USERNAME→servicenow_username, SERVICENOW_PASSWORD→servicenow_password)`. |
 | `dab_connection_var_passthrough` | bool | yes | `true` | `resources/connection.yml` reads `${var.servicenow_host}` / `${var.servicenow_username}` / `${var.servicenow_password}` — DAB variables, not secret-scope reads. CMDB uses Lakeflow Connect's UC connection, which pulls credentials from the bundle vars at deploy time (see top-of-file comment in `load-secrets.sh`). |
 
-13 fields.
+14 fields.
 
 ## Databricks-side production-shape
 
