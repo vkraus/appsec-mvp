@@ -39,7 +39,6 @@ from src.connectors.github.ingest import (
     verify_webhook_signature,
 )
 
-
 # ---------------------------------------------------------------------------
 # REQ-ING-AUTH: contract wrapper rejects missing extras
 # ---------------------------------------------------------------------------

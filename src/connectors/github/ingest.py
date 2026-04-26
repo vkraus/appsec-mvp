@@ -87,8 +87,7 @@ def ingest_contract(run_id: str, state: ConnectorState) -> BatchDescriptor:
     catalog = extra.get("catalog")
     if not base_url or not token or not org or not catalog:
         raise ValueError(
-            "github.ingest_contract requires state['extra'] with "
-            "base_url, token, org, catalog"
+            "github.ingest_contract requires state['extra'] with base_url, token, org, catalog"
         )
 
     # The record_count is 0 in this contract wrapper because the SDK driver
