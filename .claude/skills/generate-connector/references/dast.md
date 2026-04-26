@@ -1,5 +1,7 @@
 # generate-connector — DAST reference
 
+> **Ingestion path:** all sources in this category resolve to `sdk_dlt` (or `artifact_path` per the category quirks documented below). The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches only. CLI-tool sources (Semgrep / TruffleHog / OWASP ZAP CLI) resolve to `artifact_path`; server-based sources (SonarQube / Snyk / OWASP ZAP daemon) resolve to `sdk_dlt`.
+
 Facts the generate-connector skill needs to emit a DAST connector module. DAST sources emit findings against deployed targets; the HWM is scan-scoped, not record-level.
 
 ## Contents

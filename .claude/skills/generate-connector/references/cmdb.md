@@ -91,9 +91,13 @@ Reverse-engineered from `git show a086f9d:src/connectors/servicenow/...` (the on
 
 ## Databricks-side production-shape
 
+CMDB sources branch on `databricks_runtime.ingestion_path`. The `lakeflow_connect` branch is the canonical CMDB shape today (ServiceNow); `sdk_dlt` is the fallback for any future CMDB source not on the LFC managed-source catalogue.
+
+### Branch: `lakeflow_connect`
+
 What `generate-connector` emits for the CMDB category. Templates use `{{ source }}`, `{{ category }}` for skill-input substitution and `{{ databricks_runtime.<field> }}` for `operational.yml` interpolation.
 
-### scripts/load-secrets.sh template
+#### scripts/load-secrets.sh template
 
 ```bash
 #!/usr/bin/env bash
@@ -127,7 +131,7 @@ databricks secrets put-secret "$SCOPE" {{ entry.secret_key }} --string-value "${
 echo "OK: {{ source }} secrets loaded into scope $SCOPE"
 ```
 
-### scripts/install.sh template
+#### scripts/install.sh template
 
 End-to-end installer wrapping load-secrets + Lakeflow pipeline trigger + verify-row-counts. CMDB-specific shape: triggers the Lakeflow pipeline (not a notebook job) via `--refresh-all`.
 
@@ -198,7 +202,7 @@ fi
 echo "OK: {{ source }} connector install complete."
 ```
 
-### install.sh (top-level) template
+#### install.sh (top-level) template
 
 Top-level orchestrator chaining `runtime/install.sh` (provision-source emit) → `scripts/load-secrets.sh` → `databricks bundle deploy`. CMDB sources are typically SaaS, so `runtime/install.sh` is often a no-op smoke-test.
 
@@ -242,11 +246,11 @@ databricks bundle deploy --target "${DATABRICKS_TARGET:-{{ databricks_runtime.de
 echo "OK: {{ source }} connector installed."
 ```
 
-### *_entry.py applicability
+#### *_entry.py applicability
 
 **N/A for CMDB.** Lakeflow Connect owns the ingest path; there is no notebook ingest task to wrap. The `resources/job.yml` `tasks.ingest.notebook_path` points to `../ingest.py` directly (a thin contract-wrapper that records the BatchDescriptor — emitted by the 8-file core, not a separate `ingest_entry.py`). `transform_entry.py` is also not emitted; the transform task points to `../transform.py`.
 
-### sql/<envelope>.sql template
+#### sql/<envelope>.sql template
 
 CMDB envelopes are **VIEW overlays** (not `CREATE TABLE`) because Lakeflow Connect owns the physical schema. The view projects the §2.2.2 metadata columns on top of the Lakeflow-managed table.
 
@@ -275,7 +279,7 @@ SELECT
 FROM {{ databricks_runtime.uc_catalog_var }}.{{ databricks_runtime.bronze_schema }}.{{ databricks_runtime.envelope_table }};
 ```
 
-### resources/extras (per category)
+#### resources/extras (per category)
 
 CMDB emits ALL FOUR resource fragments alongside `resources/job.yml`:
 
@@ -337,11 +341,11 @@ CMDB emits ALL FOUR resource fragments alongside `resources/job.yml`:
 
 `resources/job.yml` (already emitted by the 8-file core) for CMDB has `notebook_path: ../ingest.py` / `../transform.py` (NOT `*_entry.py`) and a `quartz_cron_expression` matching `databricks_runtime.cron_schedule`.
 
-### Page §4–§7 templates
+#### Page §4–§7 templates
 
 The connector page (`mkdocs/docs/connectors/{{ category }}/{{ slug }}.md`) gets these sections; reverse-engineered from `git show a086f9d:mkdocs/docs/connectors/cmdb/servicenow.md`.
 
-#### §Secrets (page §4)
+##### §Secrets (page §4)
 
 ```markdown
 ## Secrets
@@ -365,7 +369,7 @@ bash src/connectors/{{ source }}/scripts/load-secrets.sh
 ```
 ```
 
-#### §Run the job (page §5)
+##### §Run the job (page §5)
 
 CMDB-specific: triggers a **Lakeflow pipeline** via `--refresh-all`, NOT a notebook job.
 
@@ -387,7 +391,7 @@ bash src/connectors/{{ source }}/scripts/install.sh
 Wait ~2 minutes. Pipeline status is visible under **Workflows → Lakeflow Pipelines** in the Databricks UI.
 ```
 
-#### §Verify (page §6)
+##### §Verify (page §6)
 
 ```markdown
 ## Verify
@@ -406,7 +410,7 @@ SELECT application_id, repository_id, linked_at FROM {{ databricks_runtime.defau
 Expected: bronze rows for each Lakeflow-defined table; rows in `silver.app_repo_mapping` whose `repository_id` does not appear in `silver.repositories` indicate the SCM connector has not yet ingested the referenced repositories.
 ```
 
-#### §Troubleshooting (page §7)
+##### §Troubleshooting (page §7)
 
 ```markdown
 ## Troubleshooting
@@ -418,3 +422,17 @@ Expected: bronze rows for each Lakeflow-defined table; rows in `silver.app_repo_
 | 0 rows in bronze after a successful run | The source tenant may not expose the configured tables. Confirm by hitting the source REST endpoint directly with `curl`. |
 | `silver.app_repo_mapping` rows have `repository_id` values not present in `silver.repositories` | Install at least one SCM connector and run it before expecting the cross-source join to resolve. |
 ```
+
+### Branch: `sdk_dlt`
+
+> **Status: aspirational.** No CMDB source currently resolves to `sdk_dlt`. This branch is documented as a template against (a) Databricks deprecating the LFC ServiceNow managed connector or (b) a future CMDB source (e.g., BMC Helix, Atlassian Asset Management) being added without LFC support. Without this section a future maintainer might wonder why the branch exists at all and gradually let it bit-rot.
+
+For future CMDB sources without LFC catalogue coverage. Emits:
+- Full `ingest.py` with REST + offset-pagination helpers driven by `config.yml`'s `hwm_column` (`updated_at`-style).
+- Two-task `job.yml` (ingest + transform).
+- `ingest_entry.py` and `transform_entry.py` per the standard CMDB notebook-task shape.
+- NO `resources/pipeline.yml`.
+
+(Templates for this branch are identical to the SCM SDK shape per `references/scm.md`; CMDB does not have its own SDK template today because no live source exercises it.)
+
+<!-- TODO(generate-connector cmdb): when the second LFC source lands (e.g., a hypothetical Salesforce-as-CMDB row added to the analyze-source LFC catalogue), parameterise the `pipeline.yml` template above so it maps `operational.yml.databricks_runtime.lakeflow_source_objects` to the `ingestion_definition.objects[].table` block per-source rather than baking ServiceNow-specific assumptions into the template. The current template is bespoke-for-ServiceNow because it is the only LFC source today. -->

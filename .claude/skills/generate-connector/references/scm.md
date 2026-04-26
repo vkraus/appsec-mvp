@@ -1,5 +1,7 @@
 # generate-connector — SCM reference
 
+> **Ingestion path:** all sources in this category resolve to `sdk_dlt` (or `artifact_path` per the category quirks documented below). The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches only.
+
 Facts the generate-connector skill needs to emit an SCM connector module. SCM sources are dual-role: entities (always) plus platform-native findings (where the platform hosts native scanners — Dependabot, code scanning, secret scanning).
 
 ## Contents

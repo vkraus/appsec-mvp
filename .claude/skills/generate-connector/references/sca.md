@@ -1,5 +1,7 @@
 # generate-connector — SCA reference
 
+> **Ingestion path:** all sources in this category resolve to `sdk_dlt` (or `artifact_path` per the category quirks documented below). The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches only.
+
 Facts the generate-connector skill needs to emit an SCA connector module. SCA sources emit package-level findings keyed by dependency.
 
 ## Contents
