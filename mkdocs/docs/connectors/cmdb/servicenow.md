@@ -84,6 +84,12 @@ The fields below are the subset the connector reads from `cmdb_ci_business_app`.
 
 The ownership-table read (whichever table the deployment uses for team modelling) follows the same pattern: project the natural key (`sys_id`), display columns (`name`), the foreign-key references that link to applications, and `sys_updated_on` for HWM. The exact column list is per-deployment and is captured in the connector's `mapping.yml` for the chosen table.
 
+### Application code (`u_app_id` → `app_code`)
+
+The ServiceNow transform projects the custom column `u_app_id` from `cmdb_ci_business_app` to `silver.applications.app_code`. Only values matching the regex `^\d{5}$` exactly survive — empty strings, non-digit characters, and 4- or 6-digit values all coerce to `NULL`. The 5-digit form is the join key for the [app-repo linker](../../platform/app-repo-link.md), which extracts the same 5-digit token from repository names and joins back to `silver.applications.app_code`.
+
+If a deployment does not use 5-digit application codes, leave `u_app_id` unpopulated. The `app_code` column will be `NULL` for those applications and the name-based linker will skip them; the existing `u_repository_id` path remains available for explicit per-application linking.
+
 ### Enumerations
 
 **Severity.** N/A. CMDB sources emit no findings, so the standard four-level severity model (`critical`, `high`, `medium`, `low`) is not exercised. The lookup file `src/connectors/servicenow/severity.yml` contains only the comment `# N/A: CMDB sources emit no findings`. No mapping rows. The `mapping.yml` does not reference this lookup.
