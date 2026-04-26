@@ -29,7 +29,6 @@ import yaml
 
 from src.connectors.servicenow.ingest import ingest_contract
 
-
 # ----- framework-contract --------------------------------------------------
 
 
@@ -96,9 +95,7 @@ def test_pipeline_yml_declares_lakeflow_ingestion() -> None:
     objects. The validate-implementation skill marks the three REQs as N/A
     with rationale pointing to this test.
     """
-    pipeline_path = (
-        Path(__file__).resolve().parent.parent / "resources" / "pipeline.yml"
-    )
+    pipeline_path = Path(__file__).resolve().parent.parent / "resources" / "pipeline.yml"
     spec = yaml.safe_load(pipeline_path.read_text())
     pipelines = spec["resources"]["pipelines"]
     assert "servicenow_ingest" in pipelines
