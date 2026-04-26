@@ -180,11 +180,12 @@ def test_link_by_name_pylist_emits_multiple_rows_when_codes_collide() -> None:
 @pytest.fixture(scope="module")
 def spark():
     from pyspark.sql import SparkSession
+
     return (
-        SparkSession.builder
-        .appName("app-repo-link-tests")
+        SparkSession.builder.appName("app-repo-link-tests")
         .master("local[2]")
         .config("spark.sql.shuffle.partitions", "1")
+        .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()
     )
 
@@ -210,15 +211,23 @@ def test_link_by_name_spark_returns_silver_shaped_dataframe(spark) -> None:
     )
 
     out = link_by_name(apps, repos, run_ts=datetime(2026, 4, 26, tzinfo=UTC))
-    assert [f.name for f in out.schema.fields] == [
-        f.name for f in silver_app_repo_mapping.fields
-    ]
+    assert [f.name for f in out.schema.fields] == [f.name for f in silver_app_repo_mapping.fields]
     rows = out.collect()
     assert len(rows) == 1
     assert rows[0]["application_id"] == "sysid-a"
     assert rows[0]["repository_id"] == "acme/svc-12345"
     assert rows[0]["link_source"] == "name_match"
-    assert rows[0]["linked_at"] == datetime(2026, 4, 26, tzinfo=UTC)
+    # Spark TimestampType stores instants. PySpark's .collect() returns
+    # a naive Python datetime in the driver process's local timezone, so
+    # localise-then-normalise to UTC before comparing instants. (The
+    # production caller passes a tz-aware run_ts and Spark stores the
+    # instant correctly; this handling is only needed for the round-trip
+    # equality check.)
+    expected_ts = datetime(2026, 4, 26, tzinfo=UTC)
+    actual_ts = rows[0]["linked_at"]
+    if actual_ts.tzinfo is None:
+        actual_ts = actual_ts.astimezone(UTC)
+    assert actual_ts == expected_ts
 
 
 @pytest.mark.requirement("REQ-DQ")

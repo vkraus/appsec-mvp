@@ -106,3 +106,57 @@ def link_by_name_pylist(
         n_no_code,
     )
     return rows
+
+
+# ----- Spark wrapper ------------------------------------------------------
+
+
+def link_by_name(
+    applications_df,
+    repositories_df,
+    *,
+    run_ts: datetime,
+):
+    """Spark sibling of ``link_by_name_pylist``.
+
+    Reads ``silver.applications`` (must carry ``application_id``,
+    ``app_code``) and ``silver.repositories`` (must carry
+    ``repository_id``, ``full_name``), extracts the 5-digit code from
+    each repository name via ``NAME_RE``, joins on equality to
+    ``applications.app_code``, and returns a DataFrame shaped exactly
+    like ``src.platform.schemas.silver_app_repo_mapping``.
+
+    Returned columns (in order):
+
+    1. ``application_id`` (string, not null)
+    2. ``repository_id``  (string, not null)
+    3. ``link_source``    (string, literal ``"name_match"``)
+    4. ``linked_at``      (timestamp = ``run_ts``)
+
+    Caller is responsible for the write-side ``MERGE INTO`` against
+    ``silver.app_repo_mapping`` — see ``app_repo_link_entry.py``.
+    """
+    from pyspark.sql import functions as F
+
+    # Same tightened regex as the pure-Python NAME_RE — bounded by
+    # non-alphanumeric on both sides so "abc12345xyz" is rejected.
+    pattern = r"(?<![A-Za-z0-9])(\d{5})(?![A-Za-z0-9])"
+
+    repos_with_code = repositories_df.select(
+        F.col("repository_id"),
+        F.regexp_extract(F.col("full_name"), pattern, 1).alias("_app_code"),
+    ).filter(F.col("_app_code") != "")
+
+    apps_with_code = applications_df.select(
+        F.col("application_id"),
+        F.col("app_code").alias("_app_code"),
+    ).filter(F.col("app_code").isNotNull())
+
+    joined = repos_with_code.join(apps_with_code, on="_app_code", how="inner")
+
+    return joined.select(
+        F.col("application_id"),
+        F.col("repository_id"),
+        F.lit("name_match").alias("link_source"),
+        F.lit(run_ts).alias("linked_at"),
+    )
