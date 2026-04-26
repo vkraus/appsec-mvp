@@ -29,9 +29,30 @@ A single Markdown page emitted at `mkdocs/docs/connectors/<category>/<source-slu
 5. **Validation** — always stubbed on first emit with `!!! info "Pending validation"`; `validate-implementation` populates this later.
 6. **Implementation log** — a Markdown table with four rows. Row 1 is filled by this skill (see Implementation log row template below). Rows 2, 3, and 4 are placeholders marked `(pending)` for `provision-source`, `generate-connector`, and `validate-implementation` to fill in.
 
+## Lakeflow Connect managed-source catalogue
+
+Last refreshed: 2026-04-01 from https://docs.databricks.com/aws/en/ingestion/lakeflow-connect/
+
+| Source name | AppSec category in scope | LFC API surface |
+|---|---|---|
+| ServiceNow | cmdb | Table API v2 |
+| Salesforce | (n/a — not in MVP categories today) | REST API |
+| SQL Server | (n/a) | Change-tracking |
+| Google Analytics | (n/a) | Reporting API |
+
+Refresh obligation: re-fetch https://docs.databricks.com/aws/en/ingestion/lakeflow-connect/ (a) before any `analyze-source` run that targets a source not previously in the catalogue, and (b) at minimum once per skill release branch. The trigger is event-bound rather than calendar-bound — staleness shows up as a missed LFC opportunity for a new source, not a silent drift over time.
+
+The table drives `databricks_runtime.ingestion_path` resolution per the procedure step below.
+
+### Resolution precedence
+
+When the source name matches a row above AND the category is in scope, set `ingestion_path: lakeflow_connect`. Otherwise, defer to the per-category reference's ingestion-tooling preference: SAST CLI / secrets CLI / DAST CLI categories pin `artifact_path`; all others default to `sdk_dlt`. `AskUserQuestion` is reserved for future categories where the choice is genuinely ambiguous; today no category triggers it.
+
 ## Procedure
 
 1. Read `references/<category>.md` for category-specific facts that influence the Reference section's seven API facts — applicable REQ-IDs, default severity, HWM preference, dedup key shape, target Silver tables, auth norms, ingestion-tooling preference, quirks.
+
+   ALSO read the "## Lakeflow Connect managed-source catalogue" subsection above. The catalogue and category reference together drive `ingestion_path` resolution in the new step 9a below.
 2. Fetch the source's API documentation via WebFetch from the input URL. Cache the fetched content for citations.
 3. Identify the authentication mechanism the source supports; cross-check against the category's auth norm in `references/<category>.md`. If the source supports multiple auth modes, select the one matching the category convention.
 4. Enumerate the endpoints required to populate the Silver tables assigned to the source's category. Cross-reference the Silver Table Ownership table at `mkdocs/docs/platform/reference/catalog.md` and the canonical schemas at `mkdocs/docs/platform/reference/canonical-mapping.md`.
@@ -40,6 +61,9 @@ A single Markdown page emitted at `mkdocs/docs/connectors/<category>/<source-slu
 7. Produce severity and status lookup proposals per the canonical enumeration models at `mkdocs/docs/platform/reference/canonical-mapping.md`. For categories where severity or status do not apply (CMDB, secrets-status), record the N/A explicitly.
 8. Document quirks: deviations from category norms, format surprises, per-source handling policies. Cross-check `references/<category>.md` for category quirks the source may inherit.
 9. Assemble the six-section Markdown page and emit to the output path.
+9a. **Resolve `databricks_runtime.ingestion_path` and write it to `operational.yml`.** Apply the resolution precedence in the catalogue subsection: (a) source name + category match → `lakeflow_connect`; (b) category-canonical fallback (`artifact_path` for SAST CLI / secrets / DAST CLI; `sdk_dlt` otherwise); (c) `AskUserQuestion` only when the category reference flags the choice as ambiguous. Write the chosen value to `src/connectors/{source}/operational.yml` under `databricks_runtime.ingestion_path`. If `operational.yml` does not yet exist, stage the value as a Reference-section note for `generate-connector` to consume.
+
+   When the chosen value is `lakeflow_connect`, append one sentence to the Reference section's API surface fact: "Lakeflow Connect supports {source} as a managed connector via {api_surface} (per the analyze-source LFC managed-source catalogue, refreshed {date}); this connector chooses the `lakeflow_connect` ingestion path."
 10. Stub the Implementation log section with the row for this skill (date, inputs, outputs, skill repo ref via `git rev-parse --short HEAD`); leave rows for `generate-connector` and `validate-implementation` marked `(pending)`.
 
 The seven API facts captured under Reference are:
@@ -68,7 +92,7 @@ Category-specific invariants (applicable REQ-IDs, default severity convention, H
 Append exactly one row to the Implementation log table for this skill's invocation. Use this row shape verbatim, replacing the bracketed placeholders with the four data cells:
 
 ```
-| Source analysis | analyze-source ({category}) | name={source}; url={doc_url}; category={category} | mkdocs/docs/connectors/{category}/{slug}.md §1–§3 | {YYYY-MM-DD} | {git_short_sha} ({branch}) |
+| Source analysis | analyze-source ({category}) | name={source}; url={doc_url}; category={category}; ingestion_path={value} | mkdocs/docs/connectors/{category}/{slug}.md §1–§3 | {YYYY-MM-DD} | {git_short_sha} ({branch}) |
 ```
 
 - `{category}` — the AppSec category input (`cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, or `waf`).
@@ -79,7 +103,7 @@ Append exactly one row to the Implementation log table for this skill's invocati
 - `{git_short_sha}` — output of `git rev-parse --short HEAD` on the skill's repo.
 - `{branch}` — output of `git rev-parse --abbrev-ref HEAD`.
 
-Rows 2, 3, and 4 of the Implementation log table must be present and marked `(pending)` so that `provision-source`, `generate-connector`, and `validate-implementation` can overwrite them on their respective runs. The standard placeholder rows are:
+Rows 2, 3, and 4 of the Implementation log table must be present and marked `(pending)` so that `provision-source`, `generate-connector`, and `validate-implementation` can overwrite them on their respective runs. On re-emit, row 1 is overwritten in place rather than appended; the table never exceeds 4 rows. The first-emit history of any overwritten row lives in git rather than in the table itself. The standard placeholder rows are:
 
 ```
 | Source provisioning | provision-source ({category}) | (pending) | (pending) | (pending) | (pending) |
