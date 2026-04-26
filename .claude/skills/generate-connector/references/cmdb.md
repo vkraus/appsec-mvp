@@ -71,7 +71,8 @@ Reverse-engineered from `git show a086f9d:src/connectors/servicenow/...` (the on
 
 | Field | Type | Required | Default | Source-of-derivation |
 |---|---|---|---|---|
-| `ingestion_path` | string (enum: `lakeflow_connect`, `sdk_dlt`, `artifact_path`) | yes | (resolved by `analyze-source`) | `analyze-source` LFC managed-source catalogue match → `lakeflow_connect`. Otherwise category-canonical (`sdk_dlt` for CMDB by default; `artifact_path` for SAST CLI / secrets / DAST CLI per category quirks). |
+| `ingestion_path` | string (enum: `lakeflow_connect`, `sdk`, `dlt`, `artifact_path`) | yes | (resolved by `analyze-source`) | `analyze-source` four-step precedence: LFC managed-source catalogue match → `lakeflow_connect`; CLI/artefact category pin → `artifact_path`; Maintained Python SDK catalogue match → `sdk`; otherwise `dlt`. |
+| `python_sdk_module` | string | conditionally required when `ingestion_path == sdk` | (none) | The maintained Python SDK module name when `ingestion_path == sdk` (e.g. `PyGitHub`, `python-gitlab`, `boto3`). Resolved by `analyze-source` from the Maintained Python SDK catalogue. |
 | `secret_scope` | string | yes | `mvp-connectors` | `scripts/load-secrets.sh` line `SCOPE="mvp-connectors"`; also referenced in `scripts/install.sh` "Loading … into the mvp-connectors scope". |
 | `bronze_schema` | string | yes | `bronze_{source}` | `resources/schemas.yml` `name: bronze_servicenow`; `resources/pipeline.yml` `target: bronze_servicenow`; `sql/business_applications_envelope.sql` `${catalog}.bronze_servicenow.business_applications_envelope`. |
 | `silver_schema` | string | yes | `silver_{source}` | `resources/schemas.yml` `name: silver_servicenow` (second schema entry alongside bronze). |
@@ -87,11 +88,11 @@ Reverse-engineered from `git show a086f9d:src/connectors/servicenow/...` (the on
 | `secret_env_vars` | list[{env_var,secret_key}] | yes | (none) | `scripts/load-secrets.sh` `databricks secrets put-secret "$SCOPE" <secret_key> --string-value "$<env_var>"` lines. ServiceNow: `(SERVICENOW_URL→servicenow_url, SERVICENOW_USERNAME→servicenow_username, SERVICENOW_PASSWORD→servicenow_password)`. |
 | `dab_connection_var_passthrough` | bool | yes | `true` | `resources/connection.yml` reads `${var.servicenow_host}` / `${var.servicenow_username}` / `${var.servicenow_password}` — DAB variables, not secret-scope reads. CMDB uses Lakeflow Connect's UC connection, which pulls credentials from the bundle vars at deploy time (see top-of-file comment in `load-secrets.sh`). |
 
-14 fields.
+15 fields.
 
 ## Databricks-side production-shape
 
-CMDB sources branch on `databricks_runtime.ingestion_path`. The `lakeflow_connect` branch is the canonical CMDB shape today (ServiceNow); `sdk_dlt` is the fallback for any future CMDB source not on the LFC managed-source catalogue.
+CMDB sources branch on `databricks_runtime.ingestion_path`. The `lakeflow_connect` branch is the canonical CMDB shape today (ServiceNow); `sdk` and `dlt` are the fallback branches for any future CMDB source not on the LFC managed-source catalogue.
 
 ### Branch: `lakeflow_connect`
 
@@ -423,16 +424,20 @@ Expected: bronze rows for each Lakeflow-defined table; rows in `silver.app_repo_
 | `silver.app_repo_mapping` rows have `repository_id` values not present in `silver.repositories` | Install at least one SCM connector and run it before expecting the cross-source join to resolve. |
 ```
 
-### Branch: `sdk_dlt`
+### Branch: `sdk`
 
-> **Status: aspirational.** No CMDB source currently resolves to `sdk_dlt`. This branch is documented as a template against (a) Databricks deprecating the LFC ServiceNow managed connector or (b) a future CMDB source (e.g., BMC Helix, Atlassian Asset Management) being added without LFC support. Without this section a future maintainer might wonder why the branch exists at all and gradually let it bit-rot.
+> **Status: aspirational.** No CMDB source currently resolves to `sdk`. This branch is documented as a template against a future CMDB source whose vendor / community ships a maintained Python SDK. Without this section a future maintainer might wonder why the branch exists at all and gradually let it bit-rot.
 
-For future CMDB sources without LFC catalogue coverage. Emits:
-- Full `ingest.py` with REST + offset-pagination helpers driven by `config.yml`'s `hwm_column` (`updated_at`-style).
+For future CMDB sources resolved to `sdk` via the analyze-source Maintained Python SDK catalogue. Reads `databricks_runtime.python_sdk_module` to select the SDK template; templates for this branch are identical in shape to the SCM `sdk` templates per `references/scm.md` ("## Ingestion-path branch: sdk"). Emits a full `ingest.py` driven by the named SDK's accessor classes; two-task `job.yml`; `ingest_entry.py` + `transform_entry.py`. NO `resources/pipeline.yml`.
+
+### Branch: `dlt`
+
+> **Status: aspirational.** No CMDB source currently resolves to `dlt`. This branch is the fallback for any future CMDB source without LFC catalogue coverage AND without a maintained Python SDK. Without this section a future maintainer might wonder why the branch exists at all and gradually let it bit-rot.
+
+For future CMDB sources without LFC catalogue coverage and without an entry in the analyze-source Maintained Python SDK catalogue. Emits:
+- Full `ingest.py` with hand-rolled REST + offset-pagination helpers driven by `config.yml`'s `hwm_column` (`updated_at`-style).
 - Two-task `job.yml` (ingest + transform).
 - `ingest_entry.py` and `transform_entry.py` per the standard CMDB notebook-task shape.
 - NO `resources/pipeline.yml`.
-
-(Templates for this branch are identical to the SCM SDK shape per `references/scm.md`; CMDB does not have its own SDK template today because no live source exercises it.)
 
 <!-- TODO(generate-connector cmdb): when the second LFC source lands (e.g., a hypothetical Salesforce-as-CMDB row added to the analyze-source LFC catalogue), parameterise the `pipeline.yml` template above so it maps `operational.yml.databricks_runtime.lakeflow_source_objects` to the `ingestion_definition.objects[].table` block per-source rather than baking ServiceNow-specific assumptions into the template. The current template is bespoke-for-ServiceNow because it is the only LFC source today. -->

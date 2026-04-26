@@ -1,6 +1,6 @@
 # generate-connector — SAST reference
 
-> **Ingestion path:** all sources in this category resolve to `sdk_dlt` (or `artifact_path` per the category quirks documented below). The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches only. CLI-tool sources (Semgrep / TruffleHog / OWASP ZAP CLI) resolve to `artifact_path`; server-based sources (SonarQube / Snyk / OWASP ZAP daemon) resolve to `sdk_dlt`.
+> **Ingestion path:** SAST sources resolve to `dlt` (server-based REST: SonarQube), `artifact_path` (CLI: Semgrep), or — when a maintained Python SDK is added to the analyze-source catalogue — `sdk`. The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches.
 
 Facts the generate-connector skill needs to emit a SAST connector module. SAST sources emit code-level findings.
 
@@ -325,3 +325,7 @@ Expected: bronze rows for each scan; silver rows discriminated by `tool_source`.
 | Auto Loader not picking up new artefacts | UC Volume `{{ databricks_runtime.bronze_volume }}` may not have read access to `{{ databricks_runtime.bronze_volume_storage_location }}`. Check the workspace's AWS service credential. |
 {% endif %}
 ```
+
+## Ingestion-path branch: sdk
+
+> **Status: aspirational.** No source in this category currently uses the sdk branch; templates here cover dlt and artifact_path only. SonarQube is on `dlt` (no actively-maintained generic SDK), Semgrep CI is on `artifact_path`, and Semgrep AppSec Platform falls through to `dlt`. When a future SAST source enters the analyze-source Maintained Python SDK catalogue, this section will gain the per-SDK template (mirroring `references/scm.md` "## Ingestion-path branch: sdk").

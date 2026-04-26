@@ -1,6 +1,6 @@
 # generate-connector — WAF reference
 
-> **Ingestion path:** all sources in this category resolve to `sdk_dlt` (or `artifact_path` per the category quirks documented below). The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches only.
+> **Ingestion path:** WAF sources resolve to `sdk` (AWS WAF→boto3 per the analyze-source Maintained Python SDK catalogue) for the SDK-based sampled-request mode, or `artifact_path` for the canonical autoloader-from-S3 / Firehose log-stream pattern. The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches.
 
 Facts the generate-connector skill needs to emit a WAF connector module. WAF sources emit append-only edge-event records — event-shaped, not finding-shaped.
 
@@ -295,4 +295,71 @@ Expected: bronze count > 0 after the Firehose buffer flushes; silver rows in `si
 | `AccessDenied` on S3 read in the job log | The IAM principal is missing `s3:GetObject` (or `s3:ListBucket`) on the log bucket. Update the IAM policy, then re-run `bash src/connectors/{{ source }}/scripts/load-secrets.sh` and re-deploy the bundle. |
 | All `severity_canonical` values land on `medium` | The action-keyed lookup at `src/connectors/{{ source }}/severity.yml` fell through to the default. Inspect `raw_payload:action` in bronze and add the missing key to `severity.yml`. |
 | Firehose objects present but no rows in bronze | Autoloader has not picked up the prefix yet. Confirm the connector's `log_stream.prefix` in `src/connectors/{{ source }}/config.yml` (default `{{ databricks_runtime.log_stream_prefix }}`) matches the actual S3 layout, and trigger another run. |
+```
+
+## Ingestion-path branch: sdk
+
+When `databricks_runtime.ingestion_path == sdk`, the skill reads `databricks_runtime.python_sdk_module` and selects the matching template below.
+
+### Template: boto3 (`python_sdk_module: boto3`)
+
+Canonical `ingest.py` shape for AWS WAF (sampled-request fallback path):
+
+```python
+"""AWS WAF ingestion via boto3 (sampled-request mode).
+
+Per `databricks_runtime.ingestion_path = sdk` and `python_sdk_module = boto3`,
+this connector delegates auth, retry, and pagination to the boto3 wafv2
+client. The log-stream / Firehose-to-S3 path is the canonical mode (see the
+`artifact_path` branch); this `sdk` path is the sampled-request fallback.
+"""
+
+from __future__ import annotations
+
+import boto3
+from botocore.config import Config
+
+from src.platform.contract import BatchDescriptor, ConnectorState
+
+
+def build_wafv2_client(region: str):
+    """Construct a boto3 wafv2 client with retry tuned for AWS service throttling.
+
+    The boto3 standard retry mode covers HTTP 429 / `Throttling*` exceptions
+    via exponential backoff; auth resolution defers to the standard credential
+    chain (IAM role, ACCESS_KEY env vars, ~/.aws/credentials).
+    """
+    cfg = Config(
+        region_name=region,
+        retries={"max_attempts": 10, "mode": "standard"},
+    )
+    return boto3.client("wafv2", config=cfg)
+
+
+def ingest_contract(run_id: str, state: ConnectorState) -> BatchDescriptor:
+    """Framework contract wrapper. Validates `state['extra']` (`region`,
+    `web_acl_arn`, `scope`, `catalog`); builds the wafv2 client; calls
+    `get_sampled_requests` against the configured WebACL window. Pagination
+    is internal to boto3's response shape; the HWM is the `EndTime` of the
+    sampled window.
+    """
+    extra = state.get("extra") or {}
+    region = extra.get("region")
+    web_acl_arn = extra.get("web_acl_arn")
+    scope = extra.get("scope")  # "REGIONAL" | "CLOUDFRONT"
+    catalog = extra.get("catalog")
+    if not region or not web_acl_arn or not scope or not catalog:
+        raise ValueError(
+            "aws_waf.ingest_contract requires state['extra'] with region, web_acl_arn, scope, catalog"
+        )
+    # client = build_wafv2_client(region)
+    # resp = client.get_sampled_requests(WebAclArn=web_acl_arn, RuleMetricName="...",
+    #     Scope=scope, TimeWindow={"StartTime": ..., "EndTime": ...}, MaxItems=500)
+    return {
+        "run_id": run_id,
+        "source": "aws_waf",
+        "record_count": 0,
+        "new_hwm_value": state.get("hwm_value"),
+        "bronze_table": f"{catalog}.bronze_aws_waf.events",
+    }
 ```

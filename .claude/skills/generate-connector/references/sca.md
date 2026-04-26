@@ -1,6 +1,6 @@
 # generate-connector — SCA reference
 
-> **Ingestion path:** all sources in this category resolve to `sdk_dlt` (or `artifact_path` per the category quirks documented below). The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches only.
+> **Ingestion path:** SCA sources resolve to `dlt` (server-based REST: Dependency-Track) or `artifact_path` (CLI package-manager audit). The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches.
 
 Facts the generate-connector skill needs to emit an SCA connector module. SCA sources emit package-level findings keyed by dependency.
 
@@ -258,3 +258,7 @@ Expected: bronze rows after the first scheduled scan; silver rows discriminated 
 | 0 rows in `{{ databricks_runtime.bronze_tables[0] }}` | The host has no projects matching the classifier filter, OR no recent SBOM uploads. Verify with a direct `curl` against `/api/v1/project`. |
 | Severity values all default to `medium` | The CVSS-to-canonical mapping at `src/connectors/{{ source }}/severity.yml` does not cover the source's vocabulary. Inspect raw `severity` values in bronze and extend the lookup. |
 ```
+
+## Ingestion-path branch: sdk
+
+> **Status: aspirational.** No source in this category currently uses the sdk branch; templates here cover dlt and artifact_path only. Dependency-Track has an "Inofficial" `owasp-dependency-track-client` that does not meet the maintained-SDK bar, so the framework prefers `dlt`. When a future SCA source enters the analyze-source Maintained Python SDK catalogue, this section will gain the per-SDK template.

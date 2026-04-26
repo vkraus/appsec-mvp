@@ -1,6 +1,6 @@
 # generate-connector — SCM reference
 
-> **Ingestion path:** all sources in this category resolve to `sdk_dlt` (or `artifact_path` per the category quirks documented below). The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches only.
+> **Ingestion path:** SCM sources resolve to `sdk` (per the analyze-source Maintained Python SDK catalogue — GitHub→PyGitHub, GitLab→python-gitlab) or `dlt` for any future SCM source without a maintained SDK. The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches.
 
 Facts the generate-connector skill needs to emit an SCM connector module. SCM sources are dual-role: entities (always) plus platform-native findings (where the platform hosts native scanners — Dependabot, code scanning, secret scanning).
 
@@ -440,4 +440,147 @@ Expected: bronze rows for each entity/finding shape; silver rows discriminated b
 | 0 rows in `{{ databricks_runtime.bronze_schema }}.{{ databricks_runtime.bronze_tables[0] }}` | The token's scope does not cover the configured org/group, OR no entities exist in the org. Verify with `curl -H "Authorization: bearer $TOKEN" <api-url>` directly. |
 | Validation table shows `REQ-DEDUP` FAIL | Cross-tool dedup depends on multiple finding-emitting connectors having ingested the same repository. Run other connectors against the same SCM org first. |
 | No rows in `silver.repositories` | The transform task did not run, or `silver` schema bootstrap was skipped. Re-run the bundle deploy. |
+```
+
+## Ingestion-path branch: sdk
+
+When `databricks_runtime.ingestion_path == sdk`, the skill reads `databricks_runtime.python_sdk_module` and selects the matching template below. The SDK owns auth, pagination, and rate-limit signalling; `ingest.py` MUST NOT carry hand-rolled REST helpers.
+
+### Template: PyGitHub (`python_sdk_module: PyGitHub`)
+
+Canonical `ingest.py` shape for GitHub:
+
+```python
+"""GitHub SCM + GitHub Advanced Security ingestion via PyGitHub.
+
+Per `databricks_runtime.ingestion_path = sdk` and `python_sdk_module = PyGitHub`,
+this connector delegates auth, pagination, and rate-limit handling to the
+PyGitHub library. Live HTTP runs only inside the SDK's `Github` client; the
+only hand-rolled helper that remains is `verify_webhook_signature` (HMAC, not
+SDK territory).
+"""
+
+from __future__ import annotations
+
+import hashlib
+import hmac
+
+from github import Auth, Github, GithubRetry
+
+from src.platform.contract import BatchDescriptor, ConnectorState
+
+
+def build_github_client(token: str) -> Github:
+    """Construct an authenticated `Github` client with retry tuned for
+    secondary rate limits.
+
+    `GithubRetry` is a `urllib3.Retry` subclass that recognises GitHub's
+    HTTP 403 + `Retry-After` secondary-limit signal alongside the standard
+    HTTP 429 path.
+    """
+    auth = Auth.Token(token)
+    retry = GithubRetry(total=10, backoff_factor=2.0, secondary_rate_wait=60)
+    return Github(auth=auth, retry=retry, per_page=100)
+
+
+def verify_webhook_signature(secret: bytes, body: bytes, signature_header: str) -> bool:
+    """Verify GitHub's `X-Hub-Signature-256` header against the request body.
+
+    HMAC-SHA-256 keyed by the operator-supplied webhook secret; constant-time
+    compare. Hand-rolled because HMAC is not SDK territory.
+    """
+    if not signature_header or not signature_header.startswith("sha256="):
+        return False
+    received = signature_header.split("=", 1)[1].strip()
+    computed = hmac.new(secret, body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(received, computed)
+
+
+def ingest_contract(run_id: str, state: ConnectorState) -> BatchDescriptor:
+    """Framework contract wrapper. Validates required `state['extra']` keys
+    (`base_url`, `token`, `org`, `catalog`); builds the `Github` client; walks
+    `Repository`, `PullRequest`, and `CodeScanningAlert` accessors via
+    `PaginatedList`. The `since=` parameter on accessors that support it is
+    the HWM-filter mechanism.
+    """
+    extra = state.get("extra") or {}
+    token = extra.get("token")
+    org = extra.get("org")
+    catalog = extra.get("catalog")
+    if not token or not org or not catalog:
+        raise ValueError(
+            "github.ingest_contract requires state['extra'] with token, org, catalog"
+        )
+    # client = build_github_client(token)
+    # for repo in client.get_organization(org).get_repos(): ... (live path)
+    return {
+        "run_id": run_id,
+        "source": "github",
+        "record_count": 0,
+        "new_hwm_value": state.get("hwm_value"),
+        "bronze_table": f"{catalog}.bronze_github.repositories",
+    }
+```
+
+### Template: python-gitlab (`python_sdk_module: python-gitlab`)
+
+Canonical `ingest.py` shape for GitLab:
+
+```python
+"""GitLab ingestion via python-gitlab.
+
+Per `databricks_runtime.ingestion_path = sdk` and `python_sdk_module = python-gitlab`,
+auth, pagination, and rate-limit handling are delegated to the python-gitlab
+library. The library exposes lazy iterators and built-in retry; live HTTP runs
+only inside the `Gitlab` client.
+"""
+
+from __future__ import annotations
+
+import gitlab
+from gitlab import Gitlab
+
+from src.platform.contract import BatchDescriptor, ConnectorState
+
+
+def build_gitlab_client(base_url: str, token: str) -> Gitlab:
+    """Construct an authenticated python-gitlab client with retry-on-429.
+
+    `retry_transient_errors=True` enables the library's built-in 429 / 5xx
+    handling; `obey_rate_limit=True` honours the `RateLimit-Reset` response
+    header.
+    """
+    return Gitlab(
+        base_url,
+        private_token=token,
+        retry_transient_errors=True,
+        obey_rate_limit=True,
+        per_page=100,
+    )
+
+
+def ingest_contract(run_id: str, state: ConnectorState) -> BatchDescriptor:
+    """Framework contract wrapper. Validates `state['extra']` (`base_url`,
+    `token`, `group_id`, `catalog`); builds the `Gitlab` client; walks
+    `projects`, `mergerequests`, and `vulnerabilities` via the library's lazy
+    iterators (`iterator=True`), which cover keyset pagination internally.
+    """
+    extra = state.get("extra") or {}
+    base_url = extra.get("base_url")
+    token = extra.get("token")
+    group_id = extra.get("group_id")
+    catalog = extra.get("catalog")
+    if not base_url or not token or not group_id or not catalog:
+        raise ValueError(
+            "gitlab.ingest_contract requires state['extra'] with base_url, token, group_id, catalog"
+        )
+    # client = build_gitlab_client(base_url, token)
+    # for project in client.groups.get(group_id).projects.list(iterator=True): ...
+    return {
+        "run_id": run_id,
+        "source": "gitlab",
+        "record_count": 0,
+        "new_hwm_value": state.get("hwm_value"),
+        "bronze_table": f"{catalog}.bronze_gitlab.projects",
+    }
 ```

@@ -1,6 +1,6 @@
 # generate-connector — Secrets reference
 
-> **Ingestion path:** all sources in this category resolve to `sdk_dlt` (or `artifact_path` per the category quirks documented below). The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches only. CLI-tool sources (Semgrep / TruffleHog / OWASP ZAP CLI) resolve to `artifact_path`; server-based sources (SonarQube / Snyk / OWASP ZAP daemon) resolve to `sdk_dlt`.
+> **Ingestion path:** Secrets sources resolve to `artifact_path` (TruffleHog Go-CLI artefacts) or `dlt` (server-based secret-detection REST when no maintained Python SDK is catalogued). The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches.
 
 Facts the generate-connector skill needs to emit a secret-detection connector module. Secrets sources emit findings with reduced lifecycle metadata.
 
@@ -318,3 +318,7 @@ SELECT count(*) FROM {{ databricks_runtime.default_catalog }}.silver.findings
 | Auto Loader fails on permission error (S3 mode) | The `{{ source }}_aws_credentials` secret is missing or wrong. Re-export `AWS_ACCESS_KEY_ID`+`AWS_SECRET_ACCESS_KEY` and re-run `bash src/connectors/{{ source }}/scripts/load-secrets.sh`. |
 | Redaction check returns rows | The Bronze→Silver transform is not dropping `Raw` / `RawV2`. This is a bug in `transform.py` — secrets findings MUST drop raw fields per `references/secrets.md`. |
 ```
+
+## Ingestion-path branch: sdk
+
+> **Status: aspirational.** No source in this category currently uses the sdk branch; templates here cover dlt and artifact_path only. TruffleHog is a Go CLI scanner (artefact-only). When a future secrets source enters the analyze-source Maintained Python SDK catalogue, this section will gain the per-SDK template.

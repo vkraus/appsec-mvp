@@ -1,6 +1,6 @@
 # generate-connector — DAST reference
 
-> **Ingestion path:** all sources in this category resolve to `sdk_dlt` (or `artifact_path` per the category quirks documented below). The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches only. CLI-tool sources (Semgrep / TruffleHog / OWASP ZAP CLI) resolve to `artifact_path`; server-based sources (SonarQube / Snyk / OWASP ZAP daemon) resolve to `sdk_dlt`.
+> **Ingestion path:** DAST sources resolve to `artifact_path` (OWASP ZAP CI/CD JSON-report consumption — the framework's primary DAST pattern) or `dlt` (server-based REST when no maintained Python SDK is catalogued). The `lakeflow_connect` branch is documented in `cmdb.md`; templates here cover the non-LFC branches.
 
 Facts the generate-connector skill needs to emit a DAST connector module. DAST sources emit findings against deployed targets; the HWM is scan-scoped, not record-level.
 
@@ -301,3 +301,7 @@ SELECT count(*) FROM {{ databricks_runtime.default_catalog }}.silver.findings
 | 0 rows in `{{ databricks_runtime.bronze_schema }}.findings` | CI/CD-step path: no artefacts under `{{ databricks_runtime.cicd_prefix }}`. Daemon path: no scans executed. Check the corresponding source. |
 | Application linkage missing in silver | The transform-time join against `silver.deployments` did not match the `target` URL. Verify deployment rows exist with matching host. |
 ```
+
+## Ingestion-path branch: sdk
+
+> **Status: aspirational.** No source in this category currently uses the sdk branch; templates here cover dlt and artifact_path only. OWASP ZAP has a `zaproxy` Python client but the framework's primary DAST pattern is CI/CD step + JSON-report consumption (`artifact_path`). When a future DAST source enters the analyze-source Maintained Python SDK catalogue, this section will gain the per-SDK template.
