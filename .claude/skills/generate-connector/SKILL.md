@@ -55,7 +55,9 @@ A connector module composed of the eight-file core (per the baseline procedure a
 2. **Read `src/connectors/{source}/operational.yml.databricks_runtime:` sub-block and interactively gather any missing required fields.** Parse the `databricks_runtime:` sub-block. Cross-check every field declared `required` in the category schema. If `operational.yml` is missing, create it with the two top-level keys (`source_runtime:`, `databricks_runtime:`) empty before continuing. For each missing required field, invoke `AskUserQuestion` — batching up to 4 questions per call (the tool's max). Each question presents the schema's declared default (when one exists) as a "(Recommended)" option, "Use a placeholder for deploy-time fill" (writes the literal string `<your-{field-name}>`) for fields the operator typically supplies at deploy time, and the auto "Other" option for free-text input. Write each answer back to `operational.yml.databricks_runtime.<field>`, preserving structure and adjacent comments; never touch the `source_runtime:` sub-block. Re-validate the `databricks_runtime:` sub-block; if any required field is still missing AND `AskUserQuestion` is unavailable (headless / unattended run, tool not loaded, or error result), halt and report the structured list of missing fields (`<field>: <description>` per row) without partial-emitting any file. Otherwise proceed to step 3.
 3. Read the per-connector page and extract the seven API facts captured by `analyze-source`: authentication mechanism, pagination style, incremental hook (HWM column / webhook / scan-id / artefact prefix / full reload), endpoints, consumed-field schema, severity vocabulary, status vocabulary, quirks.
 4. Emit `src/connectors/{source}/config.yml` with the extracted parameters. Use the HWM shape per the category reference (record-level `updated_at` for SAST/SCA/CMDB/SCM; scan-id for DAST server; commit-SHA or scan-start timestamp for full-reload categories — secrets, CLI-artefact paths). Wire `bronze_table` from `operational.yml.databricks_runtime.bronze_table`; wire any `*_secret` references to the per-source `secret_scope` value.
-5. Select the ingestion tooling per the preference order in `references/<category>.md` (typical: Lakeflow Connect → Databricks SDK → dlt; CLI-artefact path is the documented exception for SAST CLI, secrets CLI, and DAST CLI). Emit `src/connectors/{source}/ingest.py` against the chosen tool.
+5. **Read `operational.yml.databricks_runtime.ingestion_path` and select the emit branch.** The field is one of `lakeflow_connect | sdk_dlt | artifact_path`, populated upstream by `analyze-source` (or stored in `operational.yml` from a prior run). The branch determines which ingestion-side files are emitted; transform-side files are unchanged across branches. See "## Ingestion-path branches" below for the per-branch emit matrix; the per-category reference fills in concrete templates per branch.
+
+   **Missing-field behaviour:** if `databricks_runtime.ingestion_path` is absent from `operational.yml`, halt with the actionable error message: `"operational.yml.databricks_runtime.ingestion_path missing for {source}; run analyze-source first to resolve it from the LFC managed-source catalogue, or set the field manually to one of: lakeflow_connect, sdk_dlt, artifact_path"`. Do NOT default-fallback — silent defaults would mask catalogue staleness. This is consistent with the existing halt-on-missing pattern for other required `databricks_runtime` fields documented in step 2.
 6. Emit `src/connectors/{source}/mapping.yml` with the shape required by the category reference: entity-only block (CMDB), finding-only block (SAST / SCA / secrets / DAST), dual entity+finding blocks (SCM), or event-shape block targeting `silver.waf_events` (WAF). Reference the severity and status lookup files by path.
 7. Emit `config/severity/{source}.yml` and `config/status/{source}.yml`. Cover every documented source value with a configurable default (`medium` for severity unless the category reference overrides) and a comment flagging the data-quality warning path. For CMDB, both files exist but contain `# N/A — CMDB sources emit no findings`. For secrets, severity is hard-coded `high` in `mapping.yml`; the lookup file exists with the comment `# default high; per-deployment override permitted for low-entropy detector classes`, and the status file is N/A. For WAF, status is N/A; severity is action-keyed (derived from the `action` field plus rule-group category).
 8. Emit `src/connectors/{source}/transform.py` applying the mapping plus the normalization rules from `mkdocs/docs/platform/reference/canonical-mapping.md`. For categories with a finding shape, encode the dedup-key tuple given in `references/<category>.md` literally (it drives `dedup_links` linkage in the transform). For DAST, emit the target → `silver.deployments` join. For SCA, emit the CVE-correlation step.
@@ -70,6 +72,51 @@ A connector module composed of the eight-file core (per the baseline procedure a
 17. **Insert the connector page §4 Setup, §Run-the-job, §Verify, §Troubleshooting sections** from the per-category templates in `references/<category>.md`. Interpolate per-source values (`secret_scope`, `bronze_table`, `cron_schedule`, etc.) from `operational.yml.databricks_runtime`. Do NOT modify §1–§3 (Reference) or §Source provisioning — those belong to `analyze-source` and `provision-source` respectively.
 18. Record the invocation: list the generated file paths, run `git rev-parse --short HEAD` for the skill repo ref, and compute `sha256sum mkdocs/docs/connectors/{category}/{slug}.md` for the page hash that pins this generation to a specific page revision.
 19. **Update the connector page's Implementation log section: fill in row 3 (`generate-connector`)** with the run date, inputs (page hash via `sha256sum mkdocs/docs/connectors/{category}/{slug}.md`), outputs (the full file set listed in the row template below), and the skill repo ref via `git rev-parse --short HEAD`. Row 1 (`analyze-source`), row 2 (`provision-source`), and row 4 (`validate-implementation`) MUST remain untouched. Row 4 stays marked `(pending)` so `validate-implementation` has a target to overwrite.
+
+## Ingestion-path branches
+
+The skill emits exactly ONE of three mutually-exclusive ingestion shapes per source, driven by `operational.yml.databricks_runtime.ingestion_path`:
+
+### `lakeflow_connect`
+
+LFC managed-source ingestion. Live HTTP is owned by Databricks; the connector module exists only to satisfy the framework contract and to host the downstream transform task.
+
+Emit:
+- `resources/pipeline.yml` — LFC `ingestion_definition` from the per-category template.
+- `ingest.py` — thin module: docstring stating LFC owns ingestion + `ingest_contract` that validates `state['extra']` (REQ-ING-AUTH) and raises a clear `RuntimeError` on accidental live-path invocation. NO source-API helpers; NO `run_ingest_pipeline`.
+- `resources/job.yml` — single-task transform-only shape: one `transform` task, no `ingest` task, on the same `cron_schedule` (offset by an hour to land after the LFC pipeline if the category convention demands).
+
+Do NOT emit:
+- `ingest_entry.py`
+- `transform_entry.py`
+
+### `sdk_dlt`
+
+Databricks SDK / dlt REST source path — the standard non-LFC shape. Live HTTP runs in a Python notebook task on the cluster.
+
+Emit:
+- `ingest.py` — full implementation with source-API helpers and the contract wrapper that calls `run_ingest_pipeline`.
+- `resources/job.yml` — two-task ingest+transform shape.
+- `ingest_entry.py` and `transform_entry.py` per the category template (where the category requires job-entry wrappers).
+
+Do NOT emit:
+- `resources/pipeline.yml`
+
+### `artifact_path`
+
+CLI-artefact path — the connector reads JSON artefacts written to S3 (or equivalent) by an external CLI run (e.g., Semgrep on EKS). Live ingest is Auto Loader.
+
+Emit:
+- `ingest.py` — Auto Loader-driven; reads the artefact bucket prefix; no live HTTP.
+- `resources/job.yml` — two-task ingest+transform shape.
+- `ingest_entry.py` and `transform_entry.py` per the category template.
+
+Do NOT emit:
+- `resources/pipeline.yml`
+
+### Invariant
+
+Every connector emits ingestion-side files matching exactly ONE branch. The branches are mutually exclusive: a `lakeflow_connect` source MUST NOT have `ingest_entry.py`; an `sdk_dlt` source MUST NOT have `pipeline.yml`. Drift here is the defect class this branching rule was introduced to prevent (cf. ServiceNow 2026-04-25 contradiction).
 
 ## Invariants
 
@@ -102,7 +149,7 @@ Overwrite row 3 (`generate-connector`) of the connector page's 4-row Implementat
 Use this row shape verbatim, replacing the bracketed placeholders:
 
 ```
-| Module generation | generate-connector ({category}) | page hash={sha256_of_page}, operational.yml.databricks_runtime fields=<comma-separated list of fields read> | src/connectors/{source}/{config.yml,ingest.py,transform.py,mapping.yml}, config/{severity,status}/{source}.yml, resources/{source}-job.yml, tests/connectors/{source}/, src/connectors/{source}/scripts/{load-secrets.sh,install.sh}, src/connectors/{source}/install.sh, src/connectors/{source}/{ingest_entry.py,transform_entry.py} (where applicable), src/connectors/{source}/sql/<envelope>.sql (where applicable), src/connectors/{source}/resources/{schemas,volumes,connection,pipeline}.yml (per category), mkdocs/docs/connectors/{category}/{slug}.md §4 Setup / §Run-the-job / §Verify / §Troubleshooting | {YYYY-MM-DD} | {git_short_sha} ({branch}) |
+| Module generation | generate-connector ({category}) | page hash={sha256_of_page}, ingestion_path={value}, operational.yml.databricks_runtime fields=<comma-separated list of fields read> | src/connectors/{source}/{config.yml,ingest.py,transform.py,mapping.yml}, config/{severity,status}/{source}.yml, resources/{source}-job.yml, tests/connectors/{source}/, src/connectors/{source}/scripts/{load-secrets.sh,install.sh}, src/connectors/{source}/install.sh, src/connectors/{source}/{ingest_entry.py,transform_entry.py} (where applicable), src/connectors/{source}/sql/<envelope>.sql (where applicable), src/connectors/{source}/resources/{schemas,volumes,connection,pipeline}.yml (per category), mkdocs/docs/connectors/{category}/{slug}.md §4 Setup / §Run-the-job / §Verify / §Troubleshooting | {YYYY-MM-DD} | {git_short_sha} ({branch}) |
 ```
 
 - `{category}` — the AppSec category input (`cmdb`, `scm`, `sast`, `sca`, `secrets`, `dast`, or `waf`).
