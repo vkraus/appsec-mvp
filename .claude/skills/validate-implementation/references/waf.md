@@ -69,3 +69,7 @@ Standard order: Lakeflow Connect → Databricks SDK → dlt. Autoloader-style in
 - **Append-only stream.** No status lifecycle; `REQ-TRF-STS` is N/A; no `status` field is projected. The `config/status/{source}.yml` lookup contains `# N/A — WAF events are append-only; no status lifecycle` per the generate-connector WAF reference.
 - **Action vocabulary.** Documented actions include `block`, `allow`, `count`, `challenge`, `captcha`. `REQ-TRF-SEV` asserts coverage over the full action vocabulary the source emits.
 - **Log-stream over SDK.** `REQ-ING-PAG` and `REQ-ING-RL` are bound only when the SDK fallback is in use. Log-stream-only deployments mark them `N/A` with the rationale "log-stream mode has no API pagination/rate limit".
+
+## sdk-branch validation note
+
+Sources on the `sdk` branch (per `databricks_runtime.ingestion_path == sdk` + `python_sdk_module`, e.g. AWS WAF on boto3 sampled-request mode) keep `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL`, `REQ-ING-HWM` PASS — the framework concerns are still exercised, but via library mocks (e.g. `MagicMock` on the boto3 wafv2 client) rather than HTTP mocks. No N/A overrides for the `sdk` branch. The N/A markings in this file's "## Applicable REQ-IDs" subsection apply only to the `artifact_path` (log-stream) branch.

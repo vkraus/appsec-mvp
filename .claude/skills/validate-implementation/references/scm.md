@@ -71,3 +71,7 @@ Per the standard order with the practical split documented in the generate-conne
 - **Cursor vs keyset pagination.** GraphQL cursor pagination and REST keyset pagination are both exercised by `REQ-ING-PAG` per endpoint; the test suite covers each style the source uses.
 - **Webhook replay.** Webhook-mode connectors include a fallback polling-window assertion under `REQ-ING-HWM`.
 - **Finding-shape branch.** The `REQ-DEDUP` test exercises every emitted shape (code-scanning, secret-scanning, Dependabot). Mis-branched dedup keys are flagged as `FAIL`.
+
+## sdk-branch validation note
+
+Sources on the `sdk` branch (per `databricks_runtime.ingestion_path == sdk` + `python_sdk_module`) keep `REQ-ING-AUTH`, `REQ-ING-PAG`, `REQ-ING-RL`, `REQ-ING-HWM` PASS — the framework concerns are still exercised, but via library mocks (e.g. `MagicMock` modeled on PyGitHub's `Github` / `Repository` / `PaginatedList` classes; or python-gitlab's `Gitlab` / `Project` classes) rather than HTTP mocks. No N/A overrides for the `sdk` branch.
