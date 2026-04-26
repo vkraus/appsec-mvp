@@ -15,6 +15,10 @@ source_runtime:
   terraform_required_version: ">= 1.7"
 
 databricks_runtime:
+  # Drives generate-connector emit branch. Resolved by analyze-source: Dependency-Track's
+  # `owasp-dependency-track-client` is "Inofficial" per its own README and does not meet
+  # the maintained-SDK bar; the framework prefers a thin dlt rest-source.
+  ingestion_path: dlt
   secret_scope: "mvp-connectors"
   bronze_schema: "bronze_dependency_track"
   bronze_tables:

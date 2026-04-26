@@ -25,6 +25,10 @@ source_runtime:
   analysis_token_length: 40
 
 databricks_runtime:
+  # Drives generate-connector emit branch. Resolved by analyze-source: SonarQube has no
+  # actively-maintained generic Python SDK (`python-sonarqube-api` is flagged Inactive on
+  # Snyk), so the framework prefers a thin dlt rest-source per the four-step precedence.
+  ingestion_path: dlt
   deployment_style: "server"
   secret_scope: "mvp-connectors"
   bronze_schema: "bronze_sonarqube"

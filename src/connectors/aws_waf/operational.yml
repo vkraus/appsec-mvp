@@ -22,6 +22,10 @@ source_runtime:
   terraform_required_version: ">= 1.5"
 
 databricks_runtime:
+  # Drives generate-connector emit branch. Resolved by analyze-source from the
+  # Maintained Python SDK catalogue (AWS WAF → boto3 `wafv2` client).
+  ingestion_path: sdk
+  python_sdk_module: boto3
   secret_scope: "mvp-connectors"
   bronze_schema: "bronze_aws_waf"
   bronze_tables:

@@ -44,6 +44,9 @@ source_runtime:
   clone_token_var_name: github_pat_for_clone  # runtime/variables.tf — sensitive, no default
 
 databricks_runtime:
+  # Drives generate-connector emit branch. Resolved by analyze-source: Semgrep CI mode
+  # is artefact-driven (Docker → JSON to S3) per the framework's documented CLI exception.
+  ingestion_path: artifact_path
   deployment_style: cli_artefact  # config.yml `prefixes:` and HWM `commit_sha`; semgrep has no API
   secret_scope: mvp-connectors  # scripts/load-secrets.sh `SCOPE="mvp-connectors"`
   bronze_schema: bronze_semgrep  # resources/schemas.yml `name: bronze_semgrep`

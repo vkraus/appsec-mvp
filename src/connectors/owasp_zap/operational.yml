@@ -41,6 +41,10 @@ source_runtime:
   api_key_env_var_name: ZAP_API_KEY  # kubernetes_secret.zap_api_key.data key
 
 databricks_runtime:
+  # Drives generate-connector emit branch. Resolved by analyze-source: the framework's
+  # primary DAST pattern is CI/CD step + JSON-report consumption; ZAP `zaproxy` Python
+  # client exists but is not the framework's chosen mode.
+  ingestion_path: artifact_path
   secret_scope: mvp-connectors  # scripts/load-secrets.sh `SCOPE="mvp-connectors"` + config.yml `bucket_secret_scope: mvp-connectors`
   bronze_schema: bronze_owasp_zap  # resources/schemas.yml `name: bronze_owasp_zap`
 

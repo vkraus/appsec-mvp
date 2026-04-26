@@ -22,6 +22,10 @@ source_runtime:
   terraform_required_version: ">= 1.7"
 
 databricks_runtime:
+  # Drives generate-connector emit branch. Resolved by analyze-source: TruffleHog is a
+  # Go CLI scanner (artefact-only); not an "API source". Falls into the documented
+  # CLI / artefact exception per the four-step precedence.
+  ingestion_path: artifact_path
   secret_scope: "mvp-connectors"
   bronze_schema: "bronze_trufflehog"
   bronze_tables:

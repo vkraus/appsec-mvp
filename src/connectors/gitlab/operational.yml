@@ -13,6 +13,10 @@ source_runtime:
   terraform_required_version: ">= 1.7"
 
 databricks_runtime:
+  # Drives generate-connector emit branch. Resolved by analyze-source from the
+  # Maintained Python SDK catalogue (GitLab → python-gitlab).
+  ingestion_path: sdk
+  python_sdk_module: python-gitlab
   secret_scope: "mvp-connectors"
   bronze_schema: "bronze_gitlab"
   bronze_tables:
