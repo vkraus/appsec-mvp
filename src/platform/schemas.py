@@ -66,3 +66,18 @@ silver_finding_location = StructType([
     StructField("end_line", IntegerType(), nullable=True),
     StructField("url", StringType(), nullable=True),
 ])
+
+
+# Suppression rules — INSERT-only operator-authored rows that mute findings
+# at Gold-layer aggregation time. Silver retains the canonical immutable
+# record; suppression is an analytics-layer concern (see
+# src/analytics/lib/suppression.py and mkdocs/docs/analytics/suppression-rules.md).
+silver_suppression_rules = StructType([
+    StructField("rule_id", StringType(), nullable=False),
+    StructField("scope", StringType(), nullable=False),
+    StructField("target_pattern", StringType(), nullable=False),
+    StructField("expires_at", TimestampType(), nullable=False),
+    StructField("reason", StringType(), nullable=True),
+    StructField("created_by", StringType(), nullable=False),
+    StructField("created_at", TimestampType(), nullable=False),
+])

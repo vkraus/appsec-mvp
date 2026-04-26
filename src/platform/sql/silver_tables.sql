@@ -101,6 +101,27 @@ CREATE TABLE IF NOT EXISTS silver.app_repo_mapping (
   linked_at       TIMESTAMP NOT NULL
 ) USING DELTA;
 
+-- Suppression rules — INSERT-only operator-authored rows that mute findings
+-- at Gold-layer aggregation time. Silver retains the canonical immutable
+-- record; suppression is applied analytics-side (see
+-- src/analytics/lib/suppression.py).
+--
+-- scope        = which finding column the rule matches against
+--                ('tool_source', 'category', 'application_id',
+--                 'repository_id', 'file_path', 'rule_id_native').
+-- target_pattern = literal value or trailing-wildcard ('repo/*').
+-- expires_at   = rule auto-expires at this timestamp.
+-- created_by   = operator email (for audit).
+CREATE TABLE IF NOT EXISTS silver.suppression_rules (
+  rule_id         STRING NOT NULL,
+  scope           STRING NOT NULL,
+  target_pattern  STRING NOT NULL,
+  expires_at      TIMESTAMP NOT NULL,
+  reason          STRING,
+  created_by      STRING NOT NULL,
+  created_at      TIMESTAMP NOT NULL
+) USING DELTA;
+
 -- WAF event stream — populated by the AWS WAF connector. Event-shape, NOT
 -- finding-shape; deliberately separate from `silver.findings` per the WAF
 -- category reference (`mkdocs/docs/connectors/waf/`). Schema matches

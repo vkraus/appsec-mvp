@@ -29,6 +29,7 @@ PAIRS = [
     ("silver_applications", "silver.applications"),
     ("silver_app_repo_mapping", "silver.app_repo_mapping"),
     ("silver_finding_location", "silver.finding_location"),
+    ("silver_suppression_rules", "silver.suppression_rules"),
 ]
 
 DDL_PATH = Path(__file__).resolve().parents[3] / "src/platform/sql/silver_tables.sql"
