@@ -20,6 +20,7 @@ silver_applications = StructType(
         StructField("name", StringType(), nullable=False),
         StructField("owner_email", StringType(), nullable=True),
         StructField("criticality", StringType(), nullable=True),
+        StructField("app_code", StringType(), nullable=True),
         StructField("updated_at", TimestampType(), nullable=False),
     ]
 )

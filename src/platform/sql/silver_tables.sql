@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS silver.applications (
   name            STRING NOT NULL,
   owner_email     STRING,
   criticality     STRING,
+  app_code        STRING,
   updated_at      TIMESTAMP NOT NULL
 ) USING DELTA;
 
