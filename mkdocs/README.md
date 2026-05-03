@@ -30,4 +30,4 @@ mkdocs build          # output in site/
 
 ## Deployment
 
-Published to GitHub Pages via [.github/workflows/docs.yml](../.github/workflows/docs.yml) on every push to `main` that touches `mkdocs/`.
+Published to GitHub Pages via [.github/workflows/build.yml](../.github/workflows/build.yml) on every push to `main`. The same workflow ships `appsec-mvp.zip` (source) and `appsec-mvp-docs.zip` (rendered site) — both uploaded as workflow artifacts and copied into the published site at `/appsec-mvp.zip` and `/appsec-mvp-docs.zip`.

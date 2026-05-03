@@ -1,15 +1,9 @@
-name: Build and deploy docs site
+name: Build
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'mkdocs/**'
-      - '.github/workflows/docs.yml'
   pull_request:
-    paths:
-      - 'mkdocs/**'
-      - '.github/workflows/docs.yml'
   workflow_dispatch:
 
 permissions:
@@ -18,7 +12,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: docs-pages
+  group: pages-build
   cancel-in-progress: false
 
 jobs:
@@ -35,13 +29,26 @@ jobs:
           cache: pip
           cache-dependency-path: mkdocs/requirements.txt
 
-      - name: Install dependencies
+      - name: Install docs dependencies
         working-directory: mkdocs
         run: pip install -r requirements.txt
 
-      - name: Build site
+      - name: Build docs site
         working-directory: mkdocs
         run: mkdocs build --strict
+
+      - name: Archive source tree
+        run: git archive --format=zip --output=appsec-mvp.zip HEAD
+
+      - name: Archive rendered docs
+        run: |
+          cd mkdocs/site
+          zip -r ../../appsec-mvp-docs.zip .
+
+      - name: Stage zips for Pages
+        run: |
+          cp appsec-mvp.zip mkdocs/site/appsec-mvp.zip
+          cp appsec-mvp-docs.zip mkdocs/site/appsec-mvp-docs.zip
 
       - name: Upload pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -49,11 +56,19 @@ jobs:
         with:
           path: mkdocs/site
 
-      - name: Upload dist (thesis attachment)
+      - name: Upload source zip
         uses: actions/upload-artifact@v7
         with:
-          name: dist
-          path: mkdocs/site/
+          name: appsec-mvp
+          path: appsec-mvp.zip
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Upload docs zip
+        uses: actions/upload-artifact@v7
+        with:
+          name: appsec-mvp-docs
+          path: appsec-mvp-docs.zip
           retention-days: 90
           if-no-files-found: error
 
