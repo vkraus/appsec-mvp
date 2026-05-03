@@ -33,16 +33,27 @@ jobs:
         working-directory: mkdocs
         run: pip install -r requirements.txt
 
-      - name: Build docs site
+      - name: Build docs site (online, for Pages)
         working-directory: mkdocs
         run: mkdocs build --strict
+
+      - name: Vendor Mermaid for offline build
+        working-directory: mkdocs
+        run: |
+          mkdir -p docs/assets/javascripts
+          curl -sSfL -o docs/assets/javascripts/mermaid.min.js \
+            https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js
+
+      - name: Build docs site (offline, for the zip)
+        working-directory: mkdocs
+        run: mkdocs build --strict -f mkdocs-offline.yml -d site-offline
 
       - name: Archive source tree
         run: git archive --format=zip --output=appsec-mvp.zip HEAD
 
-      - name: Archive rendered docs
+      - name: Archive rendered docs (offline build)
         run: |
-          cd mkdocs/site
+          cd mkdocs/site-offline
           zip -r ../../appsec-mvp-docs.zip .
 
       - name: Stage zips for Pages

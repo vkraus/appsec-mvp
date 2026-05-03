@@ -14,6 +14,9 @@ dist/
 
 # MkDocs build output
 mkdocs/site/
+mkdocs/site-offline/
+# Vendored Mermaid (fetched at build time by .github/workflows/build.yml for the offline zip)
+mkdocs/docs/assets/javascripts/mermaid.min.js
 .venv/
 
 # Terraform (per-connector runtime/ folders only — top-level infra/terraform/

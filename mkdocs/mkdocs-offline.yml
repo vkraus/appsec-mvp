@@ -1,0 +1,172 @@
+# Offline build overlay used to produce appsec-mvp-docs.zip.
+# Keep in sync with mkdocs.yml. Differences from the online build:
+#   - use_directory_urls: false  (links resolve under file:// without an index.html server)
+#   - theme.features: navigation.instant removed (incompatible with the offline plugin)
+#   - theme.features: content.action.edit removed (no remote edit target when offline)
+#   - plugins: + offline (bundles mermaid + other CDN-loaded JS into the build)
+
+site_name: Application Security Data Platform
+site_description: Product documentation for the AppSec data integration framework and its Databricks reference implementation
+site_url: https://vkraus.github.io/appsec-mvp/
+repo_url: https://github.com/vkraus/appsec-mvp
+repo_name: vkraus/appsec-mvp
+edit_uri: edit/main/mkdocs/docs/
+
+docs_dir: docs
+use_directory_urls: false
+
+theme:
+  name: material
+  features:
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra_css:
+  - stylesheets/extra.css
+
+# Mermaid is a third-party JS library; the Material `offline` plugin does NOT bundle it.
+# build.yml fetches mermaid.min.js into docs/assets/javascripts/ before this build runs,
+# and we load it eagerly here so Material's auto-init reuses the already-present global
+# instead of attempting a CDN dynamic-import that fails under file://.
+extra_javascript:
+  - assets/javascripts/mermaid.min.js
+
+plugins:
+  - search
+  - git-revision-date-localized:
+      enable_creation_date: true
+      fallback_to_build_date: true
+  - offline
+
+nav:
+  - Home: index.md
+  - Setup platform:
+      - platform/index.md
+      - Prerequisites: platform/prerequisites.md
+      - Bundle deploy: platform/bundle-deploy.md
+      - Secrets bootstrap: platform/secrets-bootstrap.md
+      - Platform bootstrap job: platform/platform-bootstrap-job.md
+      - App-repo linker: platform/app-repo-link.md
+      - Reference:
+          - Canonical mapping: platform/reference/canonical-mapping.md
+          - REQ catalog: platform/reference/catalog.md
+          - Project layout: platform/reference/project-layout.md
+          - Connector job template: platform/reference/connector-job-template.md
+          - Silver table ownership: platform/reference/silver-table-ownership.md
+          - Single silver.findings rationale: platform/reference/single-silver-findings-rationale.md
+          - Source characteristics: platform/reference/source-characteristics.md
+          - Source capability matrix: platform/reference/source-capability-matrix.md
+          - Connector skills: platform/reference/connector-skills.md
+          - Skill scope: platform/reference/skill-scope.md
+  - Install connectors:
+      - connectors/index.md
+      - SCM:
+          - connectors/scm/index.md
+          - Skills: connectors/scm/skills.md
+          - GitHub: connectors/scm/github.md
+          - GitLab: connectors/scm/gitlab.md
+      - CMDB:
+          - connectors/cmdb/index.md
+          - Skills: connectors/cmdb/skills.md
+          - ServiceNow: connectors/cmdb/servicenow.md
+      - SAST:
+          - connectors/sast/index.md
+          - Skills: connectors/sast/skills.md
+          - SonarQube: connectors/sast/sonarqube.md
+          - Semgrep: connectors/sast/semgrep.md
+      - SCA:
+          - connectors/sca/index.md
+          - Skills: connectors/sca/skills.md
+          - Dependency-Track: connectors/sca/dependency-track.md
+      - Secrets:
+          - connectors/secrets/index.md
+          - Skills: connectors/secrets/skills.md
+          - TruffleHog: connectors/secrets/trufflehog.md
+      - DAST:
+          - connectors/dast/index.md
+          - Skills: connectors/dast/skills.md
+          - OWASP ZAP: connectors/dast/owasp-zap.md
+      - WAF:
+          - connectors/waf/index.md
+          - Skills: connectors/waf/skills.md
+          - AWS WAF: connectors/waf/aws-waf.md
+  - Build analytics:
+      - analytics/index.md
+      - Gold datasets: analytics/gold-datasets.md
+      - Online tables: analytics/online-tables.md
+      - Databricks app: analytics/databricks-app.md
+      - Suppression rules: analytics/suppression-rules.md
+      - Dashboards: analytics/dashboards.md
+      - Evidence scenarios: analytics/evidence.md
+      - Tests & traceability: analytics/tests.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/vkraus/appsec-mvp
+
+copyright: Copyright &copy; 2026 Vojtěch Kraus

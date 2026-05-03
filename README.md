@@ -411,7 +411,7 @@ cd mkdocs && pip install -r requirements.txt && mkdocs serve
 # Open http://127.0.0.1:8000
 ```
 
-Docs are published to <https://vkraus.github.io/appsec-mvp/> via `.github/workflows/build.yml` on every push to `main`. The same workflow attaches two zip archives to the deploy — `appsec-mvp.zip` (source tree via `git archive HEAD`) and `appsec-mvp-docs.zip` (rendered site) — both uploaded as workflow artifacts and copied into the published site (downloadable at <https://vkraus.github.io/appsec-mvp/appsec-mvp.zip> and <https://vkraus.github.io/appsec-mvp/appsec-mvp-docs.zip>).
+Docs are published to <https://vkraus.github.io/appsec-mvp/> via `.github/workflows/build.yml` on every push to `main`. The same workflow attaches two zip archives to the deploy — `appsec-mvp.zip` (source tree via `git archive HEAD`) and `appsec-mvp-docs.zip` (rendered site) — both uploaded as workflow artifacts and copied into the published site (downloadable at <https://vkraus.github.io/appsec-mvp/appsec-mvp.zip> and <https://vkraus.github.io/appsec-mvp/appsec-mvp-docs.zip>). The docs zip is built from `mkdocs/mkdocs-offline.yml` (Material's `offline` plugin + locally vendored Mermaid) so it opens cleanly via `file://` — no local web server needed.
 
 ### Bundle deploy (against your own workspace)
 

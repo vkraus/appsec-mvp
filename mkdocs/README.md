@@ -31,3 +31,8 @@ mkdocs build          # output in site/
 ## Deployment
 
 Published to GitHub Pages via [.github/workflows/build.yml](../.github/workflows/build.yml) on every push to `main`. The same workflow ships `appsec-mvp.zip` (source) and `appsec-mvp-docs.zip` (rendered site) — both uploaded as workflow artifacts and copied into the published site at `/appsec-mvp.zip` and `/appsec-mvp-docs.zip`.
+
+Two MkDocs configs:
+
+- `mkdocs.yml` — online build deployed to Pages. Uses `navigation.instant`, directory URLs, and CDN-loaded Mermaid.
+- `mkdocs-offline.yml` — overlay for the zipped build. Adds Material's `offline` plugin, sets `use_directory_urls: false`, drops `navigation.instant`, and references a locally vendored `mermaid.min.js`. CI fetches Mermaid into `docs/assets/javascripts/` (gitignored) before this build runs. Result: the zip opens correctly via `file://` with all diagrams rendering.
